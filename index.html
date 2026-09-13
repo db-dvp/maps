@@ -222,6 +222,11 @@
   .premium-row-head{font-size:.64rem;font-weight:700;color:var(--ink-soft);background:var(--paper)!important;}
   .premium-row-head span:last-child{text-align:right;}
   .premium-amt{font-weight:700;text-align:right;}
+  .floor-chart{width:100%;height:180px;display:block;background:var(--paper);border:1px solid var(--line);border-radius:8px;}
+  .chart-legend{display:flex;gap:12px;flex-wrap:wrap;font-size:.68rem;color:var(--ink-soft);margin-bottom:6px;}
+  .chart-legend-item{display:flex;align-items:center;gap:4px;}
+  .chart-dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
+  .data-loading-note{padding:40px 16px;text-align:center;color:var(--ink-soft);font-size:.82rem;}
   @media (max-width:640px){
     .topbar{gap:8px;padding:10px 12px;}
     .filters{gap:4px;}
@@ -337,218 +342,7 @@
   var BRAND_ICON_DATA = "data:image/png;base64,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";
 
 
-  var PROJECTS = [
-    {
-      id:"busan-eco29",
-      name:"부산에코델타시티2차 대방 엘리움",
-      shortLabel:"부산에코델타시티2차 · 공동29블록",
-      block:"공동 29블록",
-      address:"부산광역시 강서구 강동동 4840-5",
-      fallbackLatLng:[35.0989, 128.8799],
-      status:"upcoming", statusLabel:"분양예정",
-      units:540, dateLabel:"2026년 하반기 분양예정",
-      typeInfo:"타입 정보 등록 예정"
-    },
-    {
-      id:"incheon-a21",
-      name:"인천계양 대방 엘리움(NEW)",
-      shortLabel:"인천계양 대방 엘리움 · A21블록",
-      block:"A21블록",
-      address:"인천광역시 계양구 병방동 64-2",
-      fallbackLatLng:[37.5565, 126.7356],
-      status:"upcoming", statusLabel:"분양예정",
-      units:536, dateLabel:"2027.01 분양예정",
-      typeInfo:"전용 84㎡ · 114㎡"
-    },
-    {
-      id:"gyeyang-kaive-uborah",
-      name:"계양신도시 카이브 유보라",
-      shortLabel:"계양신도시 카이브 유보라 · AC3·AC4블록",
-      block:"AC3·AC4블록",
-      address:"인천광역시 계양구 동양동 458-3",
-      fallbackLatLng:[37.567, 126.737],
-      status:"competitor", statusLabel:"분양예정(타사)",
-      units:1110, dateLabel:"2026년 하반기 분양예정 (사전의향서 접수중)",
-      typeInfo:"전용 84㎡ · 92㎡ (2개 타입)",
-      presalePrice:"미정 — 분양가상한제 적용 예정, 정식 분양가 미공개(2026.09 기준)",
-      competitionRate:"미정 (분양 전, 청약 미실시)",
-      panelNote:"반도건설 시행 · 계양신도시(3기 신도시) 내 첫 민간분양 단지. 온라인 공개 자료 기준으로 작성했으며, 정식 분양가·청약경쟁률은 분양 공고 후 업데이트 필요."
-    },
-    {
-      id:"gyeyang-a2-lh",
-      name:"인천계양 A2블록(LH 공공분양)",
-      shortLabel:"인천계양 A2블록 · LH 공공분양",
-      block:"A2블록",
-      address:"인천광역시 계양구 동양동 413-2",
-      fallbackLatLng:[37.563, 126.734],
-      status:"competitor", statusLabel:"분양완료·입주예정(타사)",
-      units:747, dateLabel:"2024.10 본청약 완료(당첨자발표 2024.10.31) · 2026.12 입주예정",
-      typeInfo:"전용 59㎡(539세대) · 74㎡(178세대) · 84㎡(30세대) — 3개 타입",
-      presalePrice:"59형 약 4.1~4.2억원 · 74형 약 5.1~5.13억원 · 84형 약 5.78~5.84억원(공공분양, 분양가상한제 적용)",
-      competitionRate:"일반공급 8.12대 1 (2024.09 본청약, 283가구 모집·2,299명 신청). 참고: 2021년 사전청약 당시 약 52대 1",
-      panelNote:"LH 시행 공공분양(3기 신도시 계양테크노밸리 지구 내) · 인천도시철도 1호선 박촌역 인근. A21과 같은 계양 3기 신도시 생활권 내 위치해 가격 비교 참고용으로 추가. 세대수·분양가·경쟁률은 LH청약플러스 공고 및 언론 보도 기준이며, 주소는 부지 지번 기준 추정치(온라인 공개 자료, 2026.09 확인)."
-    },
-    {
-      id:"jakjeon-doosanwebb-zenith",
-      name:"두산위브더제니스센트럴계양",
-      shortLabel:"두산위브더제니스센트럴계양 · 작전동",
-      block:"작전현대아파트구역 재개발",
-      address:"인천광역시 계양구 작전동 439-7",
-      fallbackLatLng:[37.5445, 126.7325],
-      status:"competitor", statusLabel:"분양완료·입주예정(타사)",
-      units:1370, dateLabel:"2024.02 완판 · 준공예정 2027.05",
-      typeInfo:"일반분양 620세대 — 49㎡(114) · 59A(368) · 59B(117) · 59T(8) · 74㎡(13)",
-      presalePrice:"49㎡ 3억9,010만원 · 59A 4억9,730만원 · 59B 5억470만원 · 59T 4억7,050만원 · 74㎡ 5억9,790만원(일반분양 기준)",
-      competitionRate:"1순위 평균 3.91대 1 (74B형 최고 43.63대 1, 49㎡형은 1순위 미달)",
-      unsoldStatus:"완판 (2024.02 확인, 한국경제 보도)",
-      floorPremium:{
-        note:"국토부 분양입주권(매매) 실거래(2021.01~2026.08) 기준, 타입별 분양가 대비 전용면적 근접 매칭으로 산정한 평균 피(만원)",
-        byFloor:[
-          {label:"저층", n:28, avg:721},
-          {label:"중층", n:43, avg:2409},
-          {label:"고층", n:28, avg:5079}
-        ]
-      },
-      panelNote:"두산건설·쌍용건설 컨소시엄 시공 · 작전동 재개발 단지, 초역세권(작전역). 층이 높을수록 피가 뚜렷하게 커지는 패턴이 실거래로 확인됨 — A21 층별 분양가 책정에 참고 가능."
-    },
-    {
-      id:"hyoseong-lottecastle-parkcity1",
-      name:"계양 롯데캐슬 파크시티 1단지",
-      shortLabel:"계양 롯데캐슬 파크시티 1단지 · 효성동",
-      block:"효성동 재개발 1단지",
-      address:"인천광역시 계양구 효성동 101-21",
-      fallbackLatLng:[37.548, 126.728],
-      status:"competitor", statusLabel:"분양완료·입주예정(타사)",
-      units:1964, dateLabel:"2025.05 완판 · 준공예정 2027.11",
-      typeInfo:"59A(229)·59B(90)·84A(433)·84B(406)·108A(514)·108B(269)·108C(23)",
-      presalePrice:"84㎡ 기준 5억8,700만~6억7,800만원(3.3㎡당 약 1,906만원, 계양구 역대 최고가)",
-      competitionRate:"타입별 편차 큼 — 59㎡A 2대1(당첨가점 34) · 59㎡B 1대1 · 84㎡A/B·108㎡A/B/C 미달(0대1, 리치고 추정치, 공식 보도자료 미발견) → 이후 잔여세대 임의공급·선착순 분양 진행 정황 확인(세종·SEN TV 2025.02)",
-      unsoldStatus:"완판 (2025.05.18 헤럴드경제, 1·2단지 합산 3,053가구 100% 계약완료)",
-      floorPremium:{
-        note:"국토부 분양입주권(매매) 실거래(2021.01~2026.08) 기준, 84㎡ 분양가 대비 평균 피(만원)",
-        byFloor:[
-          {label:"저층", n:6, avg:1387},
-          {label:"중층", n:5, avg:3423},
-          {label:"고층", n:8, avg:5001}
-        ]
-      },
-      panelNote:"롯데건설 시공(JK도시개발 시행) · 작전역과는 도보 약 1.5km로 다소 거리 있음. 84㎡ 피가 분양가 상단에 가까워 프리미엄 폭이 크지 않은 편."
-    },
-    {
-      id:"hyoseong-lottecastle-parkcity2",
-      name:"계양 롯데캐슬 파크시티 2단지",
-      shortLabel:"계양 롯데캐슬 파크시티 2단지 · 효성동",
-      block:"효성동 재개발 2단지(공4블럭)",
-      address:"인천광역시 계양구 효성동 123-30",
-      fallbackLatLng:[37.549, 126.729],
-      status:"competitor", statusLabel:"분양완료·입주예정(타사)",
-      units:1089, dateLabel:"2025.05 완판(1차 미달 이후) · 준공예정 2027.11",
-      typeInfo:"전용 84㎡ 단일면적, 10개동",
-      presalePrice:"84㎡ 6.6~6.7억원대(1단지와 유사)",
-      competitionRate:"0.8대 1 (944가구 모집 · 760명 신청, 1차 분양 당시)",
-      unsoldStatus:"1차 분양 당시 684가구(62.8%) 미분양 → 2025.05 완판 확인",
-      floorPremium:{
-        note:"국토부 분양입주권(매매) 실거래(2021.01~2026.08) 기준, 84㎡ 분양가 대비 평균 피(만원)",
-        byFloor:[
-          {label:"저층", n:12, avg:-1338},
-          {label:"중층", n:21, avg:507},
-          {label:"고층", n:26, avg:1561}
-        ]
-      },
-      panelNote:"롯데건설 시공(JK도시개발 시행) · 1차 미분양 이력이 있는 만큼 저층은 아직 마이너스 피 — 완판 단지도 초기 미분양 시 저층 프리미엄이 늦게 붙는 사례로 참고할 만함."
-    },
-    {
-      id:"hyoseong-jeilpk-winnersky-a",
-      name:"제일풍경채 계양 위너스카이 1단지",
-      shortLabel:"제일풍경채 계양 위너스카이 1단지 · 효성동",
-      block:"1단지(舊 A블록)",
-      address:"인천광역시 계양구 효성동 마장로544번길 10",
-      fallbackLatLng:[37.551, 126.726],
-      status:"under1", statusLabel:"입주완료(타사)",
-      units:874, dateLabel:"2023.09 청약·2023.10 계약 · 2025년 입주완료(국토부 매매 실거래·등기 확인, 2026.09 재확인)",
-      typeInfo:"아파트 777(59A·B, 75A·B·C, 84A·B·C·D) + 오피스텔 97(53·82㎡)",
-      presalePrice:"59㎡ 약4억2,400만원 · 75㎡ 약5억700만원 · 84㎡ 약5억8,900만원(3.3㎡당 평균 1,683만원)",
-      competitionRate:"평균 1.56대 1 (59A·B형 100% 순위내 마감, 84C형 3.41대 1) · 참고: 특공 단계 소진율 51%(2023.09 스트레이트뉴스)",
-      unsoldStatus:"확인 불가 (재검색에도 미분양 공고·기사 미발견 — 일반공급 순위내 마감 정황상 가능성 낮음, 최종 확정 자료는 없음)",
-      floorPremium:{
-        note:"국토부 분양입주권(매매) 실거래(2021.01~2026.08) 기준, 타입별 분양가 대비 평균 피(만원)",
-        byFloor:[
-          {label:"저층", n:41, avg:-581},
-          {label:"중층", n:53, avg:1027},
-          {label:"고층", n:67, avg:2656}
-        ]
-      },
-      panelNote:"제일건설 시행·시공 · 풍산금속 이전적지 개발. 아파트+오피스텔 복합. 분양 당시엔 'A블록'으로 불렸으나 2025년 입주 완료 후 국토부 등록명은 '1단지'(번지 690, 건축년도 2025, 등기 진행 확인) — 실거주 단지로 전환되었으나, 분양~전매 단계 층별 피 데이터는 A21 참고용으로 계속 유지."
-    },
-    {
-      id:"hyoseong-jeilpk-winnersky-b",
-      name:"제일풍경채 계양 위너스카이 2단지",
-      shortLabel:"제일풍경채 계양 위너스카이 2단지 · 효성동",
-      block:"2단지(舊 B블록)",
-      address:"인천광역시 계양구 효성동 안남로489번길 17",
-      fallbackLatLng:[37.552, 126.727],
-      status:"under1", statusLabel:"입주완료(타사)",
-      units:566, dateLabel:"2023.09 청약·2023.10 계약 · 2025년 입주완료(국토부 매매 실거래·등기 확인, 2026.09 재확인)",
-      typeInfo:"75, 84㎡ 위주 (아파트만 566세대)",
-      presalePrice:"1단지와 동일 수준 — 75㎡ 약5억700만원 · 84㎡ 약5억8,900만원",
-      competitionRate:"평균 1.69대 1 (최고 84D형 12.17대 1, 1,343세대 모집·2,164건 접수) · 참고: 특공 단계 소진율 32%(2023.09 스트레이트뉴스, 1단지보다 낮음)",
-      unsoldStatus:"확인 불가 (재검색에도 미분양 공고·기사 미발견 — 일반공급 순위내 마감 정황상 가능성 낮음, 최종 확정 자료는 없음)",
-      floorPremium:{
-        note:"국토부 분양입주권(매매) 실거래(2021.01~2026.08) 기준, 타입별 분양가 대비 평균 피(만원)",
-        byFloor:[
-          {label:"저층", n:33, avg:-526},
-          {label:"중층", n:42, avg:1999},
-          {label:"고층", n:35, avg:2687}
-        ]
-      },
-      panelNote:"제일건설 시행·시공 · 1단지와 같은 부지, 아파트 전용 단지. 분양 당시엔 'B블록'으로 불렸으나 2025년 입주 완료 후 국토부 등록명은 '2단지'(번지 691, 건축년도 2025, 등기 진행 확인) — 실거주 단지로 전환되었으나, 분양~전매 단계 층별 피 데이터는 A21 참고용으로 계속 유지."
-    },
-    {
-      id:"bakchon-a6-lh",
-      name:"인천계양 A6블록(LH 공공분양)",
-      shortLabel:"인천계양 A6블록 · LH 공공분양",
-      block:"A6블록",
-      address:"인천광역시 계양구 박촌동 일원",
-      fallbackLatLng:[37.566, 126.732],
-      status:"competitor", statusLabel:"청약진행중(타사)",
-      units:663, dateLabel:"본청약 진행중(일반공급 2026.09.30~10.02) · 입주예정 2029.06",
-      typeInfo:"전용 59~84㎡ 5개 타입",
-      presalePrice:"59㎡ 약5.3억원 · 84㎡(국민평형) 약7.1억원 (사전청약 대비 약1.8억원 상승)",
-      competitionRate:"본청약 미실시 (사전청약 당첨자 우선청약 9.17~18 · 일반공급 9.30~10.2 · 당첨자발표 10월 · 결과는 10월 이후 확인 필요, 2026.09.13 기준)",
-      unsoldStatus:"확인 불가 (계약 12월 예정이라 미분양 여부 판단 이름)",
-      panelNote:"LH 공공분양(3기 신도시 계양테크노밸리 지구) · 박촌역 인근. 아직 계약 전 단계라 분양권 전매 실거래가 없어 층별 피 데이터는 산출 불가 — 10~12월 청약·계약 결과 확인 후 업데이트 필요. 주소는 지구 내 위치 기준 추정치."
-    },
-    {
-      id:"dongyang-a9-lh-shinhon",
-      name:"인천계양 A9블록 신혼희망타운(LH)",
-      shortLabel:"인천계양 A9블록 · LH 신혼희망타운",
-      block:"A9블록",
-      address:"인천광역시 계양구 동양동 일원",
-      fallbackLatLng:[37.570, 126.740],
-      status:"competitor", statusLabel:"계약예정(타사)",
-      units:317, dateLabel:"신규청약 완료(2026.05.27~28) · 입주예정 2029.02",
-      typeInfo:"전용 55㎡ 단일타입",
-      presalePrice:"전용55㎡ 약4억9,653만원 (인근 A3블록 대비 약1억원 상승, 2026.08 파이낸셜뉴스)",
-      competitionRate:"확인 불가 (청약 완료·당첨자발표 6.18, 경쟁률 자료 미확인 — 재검색에도 미발견)",
-      unsoldStatus:"확인 불가 (계약 2026.10.1~7 예정이라 미분양 여부 판단 이름, 계약 종료 후 재확인 필요)",
-      panelNote:"LH 공공분양 신혼희망타운(3기 신도시 계양테크노밸리 지구) · 전매제한 3년, 실거주의무 없음. 계약이 2026.10월 진행되므로 분양권 전매 데이터는 그 이후 형성 — 11월 이후 업데이트 필요. 주소는 지구 내 위치 기준 추정치."
-    },
-    {
-      id:"jakjeon-efte",
-      name:"인천 작전 에피트",
-      shortLabel:"인천 작전 에피트 · 작전동",
-      block:"작전동 956",
-      address:"인천광역시 계양구 작전동 956",
-      fallbackLatLng:[37.538, 126.728],
-      status:"under1", statusLabel:"입주완료(타사)",
-      units:340, dateLabel:"2022.10 청약(1순위 10.12·2순위 10.14) · 2025.10.31~12.31 입주완료",
-      typeInfo:"지하2층~지상29층 4개동 — 84㎡A(173)·B(13)·C(25)·D(53)·E(54) · 98㎡A(22), 총 340세대",
-      presalePrice:"확인 불가 — 시행사 보도자료상 \"전세대 6억원 미만\"이라는 언급만 확인(구체적 타입별 분양가는 못 찾음). 참고: 2025.12~2026.05 분양권 전매 실거래(84㎡ 계열) 5억4,535만~6억1,655만원",
-      competitionRate:"확인 불가 (청약 결과 보도자료·기사 미발견)",
-      unsoldStatus:"확인 불가 (미분양 관련 보도 없음)",
-      panelNote:"HL디앤아이한라 시행. 작전역 인근. MOLIT 분양입주권(매매) 데이터에서 별도로 발견되어 이번에 추가 조사함 — 정확한 타입별 분양가·청약경쟁률·미분양여부는 추가 검색에도 확인하지 못해 층별 피 계산은 보류(baseline 분양가 불명확). 최근 전매 실거래 6건(모두 84㎡ 계열, 5·8·9·12·14·15층)만 참고용으로 확인됨."
-    }
-  ];
+  var PROJECTS = []; // Supabase complexes(role=own_upcoming/competitor) 데이터로 런타임에 채워짐
 
   // ------------------------------------------------------------
   // 비교단지 (인천계양 A21 주변 7개 랜드마크 인근 기존 아파트)
@@ -625,111 +419,205 @@
   // 층 구분(저층/중층/고층)은 전수조사에서 관찰된 최고층(maxFloorObs, 60㎡ 이하 포함 전체 거래 기준)을
   //   3등분한 상대적 구간이며, 건물의 실제 설계 총 층수와 다를 수 있음. 향(방향)별 데이터는
   //   국토부 자료에 없어 이번에도 제외.
-  var TX_HISTORY_DATA = {
-  "계산주공": {maxFloorObs:15, txHistory:[], earliestProxy:{amt:8000,area:49.94,f:15,y:2006,m:7}},
-  "계산 하나": {maxFloorObs:6, txHistory:[], earliestProxy:{amt:6350,area:37.17,f:1,y:2006,m:7}},
-  "계산 현대": {maxFloorObs:19, txHistory:[{f:1,amt:29500,area:84.945,y:2021,m:1,d:14},{f:13,amt:32500,area:84.945,y:2021,m:1,d:22},{f:18,amt:31800,area:84.945,y:2021,m:1,d:27},{f:14,amt:34000,area:84.945,y:2021,m:1,d:30},{f:8,amt:33000,area:84.945,y:2021,m:1,d:30},{f:13,amt:33500,area:84.945,y:2021,m:2,d:1},{f:9,amt:28000,area:71.175,y:2021,m:2,d:1},{f:6,amt:45000,area:129.73,y:2021,m:2,d:4},{f:15,amt:31700,area:84.945,y:2021,m:2,d:6},{f:14,amt:28600,area:71.175,y:2021,m:2,d:8},{f:1,amt:32500,area:84.945,y:2021,m:2,d:11},{f:2,amt:48000,area:129.73,y:2021,m:2,d:23},{f:15,amt:33800,area:84.945,y:2021,m:2,d:27},{f:2,amt:32000,area:84.945,y:2021,m:2,d:27},{f:2,amt:28750,area:71.175,y:2021,m:3,d:2},{f:15,amt:27700,area:71.175,y:2021,m:3,d:4},{f:16,amt:34000,area:84.945,y:2021,m:3,d:4},{f:13,amt:34000,area:84.945,y:2021,m:3,d:17},{f:6,amt:33250,area:84.945,y:2021,m:3,d:25},{f:16,amt:27450,area:71.175,y:2021,m:3,d:29},{f:4,amt:27900,area:71.175,y:2021,m:4,d:2},{f:1,amt:33200,area:84.945,y:2021,m:4,d:6},{f:4,amt:35500,area:84.945,y:2021,m:4,d:7},{f:18,amt:33000,area:84.945,y:2021,m:4,d:8},{f:3,amt:30000,area:71.175,y:2021,m:5,d:24},{f:19,amt:38000,area:84.945,y:2021,m:5,d:26},{f:17,amt:43000,area:84.945,y:2021,m:5,d:26},{f:3,amt:38500,area:84.945,y:2021,m:5,d:27},{f:14,amt:43000,area:84.945,y:2021,m:6,d:22},{f:1,amt:39500,area:84.945,y:2021,m:7,d:1},{f:2,amt:41500,area:84.945,y:2021,m:7,d:20},{f:5,amt:44700,area:84.945,y:2021,m:7,d:20},{f:6,amt:44300,area:84.945,y:2021,m:7,d:23},{f:6,amt:44300,area:84.945,y:2021,m:7,d:23},{f:8,amt:43000,area:84.945,y:2021,m:7,d:26},{f:9,amt:34750,area:71.175,y:2021,m:8,d:6},{f:12,amt:59800,area:129.73,y:2021,m:8,d:6},{f:1,amt:40800,area:84.945,y:2021,m:8,d:9},{f:10,amt:48300,area:84.945,y:2021,m:8,d:16},{f:13,amt:36000,area:71.175,y:2021,m:8,d:24},{f:6,amt:35000,area:71.175,y:2021,m:8,d:27},{f:10,amt:47000,area:84.945,y:2021,m:9,d:1},{f:12,amt:55000,area:129.73,y:2021,m:9,d:16},{f:3,amt:30000,area:71.175,y:2021,m:10,d:12},{f:15,amt:63000,area:129.73,y:2021,m:10,d:13},{f:17,amt:30000,area:71.175,y:2021,m:10,d:19},{f:4,amt:47000,area:84.945,y:2021,m:10,d:26},{f:15,amt:63000,area:129.73,y:2021,m:12,d:22},{f:11,amt:37650,area:71.175,y:2022,m:1,d:3},{f:10,amt:47000,area:84.945,y:2022,m:1,d:6},{f:9,amt:43000,area:84.945,y:2022,m:1,d:11},{f:15,amt:43000,area:84.945,y:2022,m:2,d:11},{f:10,amt:36200,area:71.175,y:2022,m:3,d:15},{f:4,amt:38000,area:71.175,y:2022,m:3,d:27},{f:9,amt:38400,area:71.175,y:2022,m:4,d:11},{f:6,amt:35000,area:71.175,y:2022,m:4,d:13},{f:5,amt:44500,area:84.945,y:2022,m:4,d:23},{f:1,amt:40500,area:84.945,y:2022,m:5,d:13},{f:16,amt:41000,area:84.945,y:2022,m:8,d:4},{f:4,amt:38500,area:84.945,y:2022,m:8,d:17},{f:5,amt:34000,area:71.175,y:2022,m:10,d:3},{f:13,amt:37800,area:84.945,y:2022,m:11,d:29},{f:6,amt:33800,area:84.945,y:2023,m:2,d:6},{f:3,amt:34000,area:84.945,y:2023,m:2,d:10},{f:2,amt:30500,area:84.945,y:2023,m:2,d:10},{f:11,amt:34800,area:84.945,y:2023,m:2,d:23},{f:11,amt:33000,area:71.175,y:2023,m:3,d:31},{f:14,amt:27000,area:71.175,y:2023,m:4,d:3},{f:1,amt:29500,area:84.945,y:2023,m:4,d:7},{f:13,amt:34000,area:84.945,y:2023,m:4,d:10},{f:16,amt:34200,area:84.945,y:2023,m:4,d:11},{f:11,amt:34300,area:84.945,y:2023,m:4,d:13},{f:13,amt:34800,area:84.945,y:2023,m:4,d:13},{f:9,amt:36400,area:84.945,y:2023,m:4,d:18},{f:7,amt:32000,area:71.175,y:2023,m:4,d:18},{f:3,amt:31650,area:84.945,y:2023,m:4,d:21},{f:11,amt:31300,area:71.175,y:2023,m:4,d:21},{f:13,amt:34000,area:84.945,y:2023,m:5,d:4},{f:11,amt:34500,area:84.945,y:2023,m:5,d:27},{f:17,amt:35000,area:84.945,y:2023,m:5,d:30},{f:1,amt:28000,area:84.945,y:2023,m:6,d:6},{f:14,amt:34700,area:84.945,y:2023,m:6,d:8},{f:6,amt:31000,area:71.175,y:2023,m:6,d:10},{f:2,amt:35000,area:84.945,y:2023,m:6,d:12},{f:1,amt:27000,area:71.175,y:2023,m:6,d:16},{f:7,amt:33650,area:84.945,y:2023,m:6,d:21},{f:8,amt:27700,area:71.175,y:2023,m:7,d:1},{f:4,amt:36000,area:84.945,y:2023,m:7,d:22},{f:16,amt:34700,area:84.945,y:2023,m:7,d:25},{f:6,amt:34800,area:84.945,y:2023,m:8,d:4},{f:11,amt:28850,area:71.175,y:2023,m:8,d:11},{f:5,amt:34800,area:84.945,y:2023,m:8,d:14},{f:9,amt:29900,area:71.175,y:2023,m:8,d:18},{f:11,amt:29250,area:71.175,y:2023,m:8,d:21},{f:2,amt:53000,area:129.73,y:2023,m:8,d:22},{f:12,amt:40000,area:84.945,y:2023,m:8,d:31},{f:2,amt:36000,area:84.945,y:2023,m:9,d:9},{f:3,amt:28000,area:71.175,y:2023,m:9,d:13},{f:13,amt:34000,area:84.945,y:2023,m:9,d:20},{f:6,amt:30500,area:71.175,y:2023,m:9,d:25},{f:5,amt:31000,area:71.175,y:2023,m:10,d:6},{f:3,amt:35700,area:84.945,y:2023,m:10,d:19},{f:6,amt:38000,area:84.945,y:2023,m:10,d:25},{f:6,amt:31500,area:71.175,y:2023,m:10,d:25},{f:2,amt:34000,area:84.945,y:2023,m:12,d:12},{f:9,amt:35500,area:84.945,y:2024,m:1,d:13},{f:16,amt:31500,area:71.175,y:2024,m:1,d:27},{f:13,amt:36000,area:84.945,y:2024,m:1,d:31},{f:3,amt:47000,area:129.73,y:2024,m:1,d:31},{f:3,amt:36000,area:84.945,y:2024,m:2,d:7},{f:12,amt:37000,area:84.945,y:2024,m:2,d:20},{f:12,amt:46000,area:129.73,y:2024,m:2,d:21},{f:4,amt:35500,area:84.945,y:2024,m:3,d:4},{f:2,amt:29000,area:71.175,y:2024,m:3,d:8},{f:13,amt:31500,area:71.175,y:2024,m:3,d:11},{f:4,amt:34500,area:84.945,y:2024,m:3,d:22},{f:7,amt:28500,area:71.175,y:2024,m:3,d:23},{f:13,amt:39000,area:84.945,y:2024,m:3,d:26},{f:3,amt:35500,area:84.945,y:2024,m:3,d:27},{f:5,amt:33500,area:84.945,y:2024,m:4,d:2},{f:8,amt:31500,area:71.175,y:2024,m:4,d:2},{f:13,amt:31500,area:71.175,y:2024,m:5,d:1},{f:6,amt:32000,area:71.175,y:2024,m:5,d:1},{f:11,amt:30700,area:71.175,y:2024,m:5,d:17},{f:10,amt:37000,area:84.945,y:2024,m:5,d:20},{f:17,amt:29000,area:71.175,y:2024,m:5,d:29},{f:5,amt:47000,area:129.73,y:2024,m:5,d:31},{f:1,amt:35000,area:84.945,y:2024,m:6,d:17},{f:16,amt:39100,area:84.945,y:2024,m:6,d:22},{f:5,amt:51000,area:129.73,y:2024,m:7,d:17},{f:3,amt:30100,area:71.175,y:2024,m:7,d:21},{f:16,amt:36900,area:84.945,y:2024,m:7,d:31},{f:7,amt:36800,area:84.945,y:2024,m:8,d:6},{f:2,amt:31000,area:71.175,y:2024,m:8,d:9},{f:16,amt:41500,area:84.945,y:2024,m:8,d:9},{f:11,amt:35000,area:84.945,y:2024,m:8,d:9},{f:5,amt:36000,area:84.945,y:2024,m:8,d:12},{f:9,amt:33250,area:71.175,y:2024,m:8,d:14},{f:19,amt:36400,area:84.945,y:2024,m:8,d:15},{f:19,amt:36400,area:84.945,y:2024,m:8,d:15},{f:13,amt:42000,area:84.945,y:2024,m:8,d:16},{f:1,amt:32000,area:84.945,y:2024,m:8,d:24},{f:17,amt:29500,area:71.175,y:2024,m:8,d:26},{f:15,amt:38500,area:84.945,y:2024,m:8,d:30},{f:1,amt:32000,area:84.945,y:2024,m:8,d:31},{f:1,amt:29500,area:71.175,y:2024,m:9,d:3},{f:14,amt:50500,area:129.73,y:2024,m:9,d:9},{f:1,amt:31500,area:84.945,y:2024,m:9,d:25},{f:11,amt:51500,area:129.73,y:2024,m:10,d:3},{f:16,amt:37000,area:84.945,y:2024,m:10,d:30},{f:6,amt:30800,area:71.175,y:2024,m:10,d:30},{f:9,amt:35500,area:84.945,y:2024,m:12,d:18},{f:15,amt:39700,area:84.945,y:2025,m:1,d:6},{f:16,amt:35000,area:84.945,y:2025,m:1,d:16},{f:12,amt:52000,area:129.73,y:2025,m:1,d:22},{f:16,amt:35000,area:84.945,y:2025,m:1,d:23},{f:5,amt:36500,area:84.945,y:2025,m:1,d:31},{f:4,amt:35000,area:84.945,y:2025,m:2,d:5},{f:15,amt:42000,area:84.945,y:2025,m:2,d:8},{f:13,amt:35500,area:84.945,y:2025,m:2,d:24},{f:13,amt:35000,area:84.945,y:2025,m:2,d:28},{f:14,amt:48000,area:129.73,y:2025,m:3,d:1},{f:15,amt:35500,area:84.945,y:2025,m:3,d:12},{f:3,amt:35700,area:84.945,y:2025,m:3,d:18},{f:1,amt:31800,area:84.945,y:2025,m:3,d:19},{f:1,amt:29500,area:71.175,y:2025,m:3,d:29},{f:1,amt:31500,area:84.945,y:2025,m:3,d:31},{f:15,amt:28700,area:71.175,y:2025,m:4,d:4},{f:4,amt:31600,area:71.175,y:2025,m:4,d:9},{f:10,amt:31000,area:71.175,y:2025,m:4,d:9},{f:16,amt:38800,area:84.945,y:2025,m:4,d:12},{f:1,amt:36500,area:84.945,y:2025,m:4,d:12},{f:2,amt:35000,area:84.945,y:2025,m:4,d:15},{f:11,amt:37500,area:84.945,y:2025,m:4,d:18},{f:13,amt:36000,area:84.945,y:2025,m:4,d:22},{f:13,amt:38000,area:84.945,y:2025,m:4,d:26},{f:1,amt:32400,area:84.945,y:2025,m:4,d:29},{f:15,amt:31700,area:71.175,y:2025,m:5,d:1},{f:6,amt:31500,area:71.175,y:2025,m:5,d:8},{f:1,amt:37500,area:84.945,y:2025,m:5,d:15},{f:7,amt:49000,area:129.73,y:2025,m:6,d:19},{f:2,amt:35500,area:84.945,y:2025,m:6,d:25},{f:1,amt:28100,area:71.175,y:2025,m:7,d:10},{f:17,amt:27000,area:71.175,y:2025,m:8,d:12},{f:3,amt:27300,area:71.175,y:2025,m:8,d:20},{f:14,amt:31300,area:71.175,y:2025,m:10,d:15},{f:9,amt:35600,area:84.945,y:2025,m:10,d:24},{f:16,amt:38300,area:84.945,y:2025,m:12,d:13},{f:6,amt:48000,area:129.73,y:2025,m:12,d:24},{f:14,amt:35900,area:84.945,y:2026,m:1,d:9},{f:1,amt:32200,area:84.945,y:2026,m:1,d:11},{f:13,amt:37200,area:84.945,y:2026,m:1,d:12},{f:16,amt:39000,area:84.945,y:2026,m:1,d:16},{f:2,amt:29600,area:71.175,y:2026,m:1,d:27},{f:18,amt:36500,area:84.945,y:2026,m:1,d:31},{f:17,amt:36000,area:84.945,y:2026,m:1,d:31},{f:17,amt:36000,area:84.945,y:2026,m:1,d:31},{f:10,amt:32000,area:71.175,y:2026,m:2,d:20},{f:19,amt:40000,area:84.945,y:2026,m:3,d:23},{f:19,amt:40000,area:84.945,y:2026,m:3,d:23},{f:16,amt:30000,area:71.175,y:2026,m:3,d:30},{f:5,amt:38300,area:84.945,y:2026,m:3,d:30},{f:18,amt:35000,area:84.945,y:2026,m:4,d:1},{f:10,amt:36000,area:84.945,y:2026,m:4,d:10},{f:16,amt:34400,area:129.73,y:2026,m:4,d:14},{f:9,amt:50000,area:129.73,y:2026,m:4,d:25},{f:13,amt:35400,area:84.945,y:2026,m:5,d:13},{f:7,amt:30000,area:71.175,y:2026,m:5,d:28},{f:14,amt:37000,area:84.945,y:2026,m:6,d:1},{f:14,amt:37000,area:84.945,y:2026,m:6,d:1},{f:1,amt:27800,area:71.175,y:2026,m:6,d:4},{f:15,amt:34000,area:84.945,y:2026,m:6,d:8},{f:11,amt:36500,area:84.945,y:2026,m:6,d:12},{f:6,amt:34500,area:84.945,y:2026,m:6,d:24},{f:14,amt:31500,area:71.175,y:2026,m:6,d:29},{f:4,amt:29000,area:71.175,y:2026,m:7,d:13},{f:7,amt:37500,area:84.945,y:2026,m:7,d:16},{f:16,amt:32800,area:71.175,y:2026,m:7,d:30},{f:4,amt:29500,area:71.175,y:2026,m:8,d:13},{f:2,amt:34000,area:84.945,y:2026,m:8,d:19},{f:4,amt:32000,area:71.175,y:2026,m:8,d:27},{f:14,amt:38000,area:84.945,y:2026,m:8,d:27}], earliestProxy:{amt:15300,area:84.945,f:3,y:2006,m:7}},
-  "계산 영남": {maxFloorObs:6, txHistory:[], earliestProxy:{amt:8000,area:54.54,f:1,y:2006,m:7}},
-  "유호": {maxFloorObs:18, txHistory:[{f:2,amt:22000,area:84.945,y:2021,m:3,d:10},{f:3,amt:25400,area:84.945,y:2021,m:3,d:18},{f:8,amt:24000,area:84.945,y:2021,m:4,d:7},{f:5,amt:28900,area:84.945,y:2021,m:4,d:14},{f:1,amt:28000,area:84.945,y:2021,m:4,d:24},{f:18,amt:35700,area:84.945,y:2021,m:5,d:6},{f:10,amt:38000,area:84.945,y:2021,m:8,d:9},{f:17,amt:35000,area:84.945,y:2021,m:10,d:12},{f:14,amt:34500,area:84.945,y:2021,m:12,d:18},{f:7,amt:30000,area:84.945,y:2022,m:8,d:13},{f:10,amt:30000,area:84.945,y:2022,m:8,d:13},{f:10,amt:30000,area:84.945,y:2022,m:12,d:13},{f:13,amt:27000,area:84.945,y:2022,m:12,d:17},{f:13,amt:27000,area:84.945,y:2022,m:12,d:17},{f:1,amt:26000,area:84.945,y:2022,m:12,d:26},{f:2,amt:27000,area:84.945,y:2023,m:3,d:20},{f:6,amt:31900,area:84.945,y:2023,m:5,d:12},{f:3,amt:27500,area:84.945,y:2023,m:7,d:3},{f:1,amt:25470,area:84.945,y:2023,m:12,d:28},{f:7,amt:28800,area:84.945,y:2024,m:1,d:24},{f:13,amt:23000,area:84.945,y:2024,m:2,d:1},{f:1,amt:24000,area:84.945,y:2024,m:3,d:23},{f:3,amt:28500,area:84.945,y:2024,m:3,d:29},{f:13,amt:26000,area:84.945,y:2024,m:4,d:22},{f:4,amt:25200,area:84.945,y:2024,m:5,d:6},{f:3,amt:28350,area:84.945,y:2024,m:7,d:23},{f:7,amt:26800,area:84.945,y:2024,m:8,d:13},{f:1,amt:24900,area:84.945,y:2024,m:8,d:31},{f:6,amt:28000,area:84.945,y:2024,m:9,d:12},{f:16,amt:26300,area:84.945,y:2024,m:10,d:21},{f:1,amt:24750,area:84.945,y:2024,m:12,d:17},{f:3,amt:25500,area:84.945,y:2025,m:1,d:25},{f:3,amt:25500,area:84.945,y:2025,m:1,d:25},{f:3,amt:25500,area:84.945,y:2025,m:1,d:25},{f:17,amt:27000,area:84.945,y:2025,m:3,d:10},{f:9,amt:26000,area:84.945,y:2025,m:6,d:28},{f:9,amt:26000,area:84.945,y:2025,m:6,d:28},{f:18,amt:25000,area:84.945,y:2025,m:10,d:24},{f:12,amt:28000,area:84.945,y:2026,m:4,d:23},{f:16,amt:28200,area:84.945,y:2026,m:7,d:7},{f:16,amt:28000,area:84.945,y:2026,m:7,d:26}], earliestProxy:{amt:16200,area:57.48,f:3,y:2008,m:7}},
-  "인천계양 코아루 센트럴파크": {maxFloorObs:21, txHistory:[{f:20,amt:55000,area:84.99,y:2021,m:1,d:4},{f:11,amt:55000,area:84.45,y:2021,m:1,d:9},{f:8,amt:54800,area:84.75,y:2021,m:1,d:25},{f:2,amt:54000,area:84.99,y:2021,m:1,d:25},{f:17,amt:59700,area:84.45,y:2021,m:2,d:5},{f:1,amt:46900,area:74.61,y:2021,m:2,d:26},{f:14,amt:61000,area:84.95,y:2021,m:4,d:1},{f:6,amt:63000,area:84.45,y:2021,m:4,d:24},{f:20,amt:71400,area:84.75,y:2021,m:7,d:5},{f:6,amt:68500,area:84.95,y:2021,m:8,d:16},{f:19,amt:73800,area:84.95,y:2021,m:9,d:11},{f:4,amt:67000,area:84.75,y:2021,m:9,d:13},{f:13,amt:79000,area:84.99,y:2021,m:9,d:30},{f:7,amt:67500,area:84.75,y:2021,m:11,d:15},{f:5,amt:69500,area:84.45,y:2022,m:4,d:6},{f:4,amt:65200,area:84.75,y:2022,m:5,d:13},{f:10,amt:65000,area:84.95,y:2022,m:9,d:5},{f:18,amt:59000,area:84.75,y:2023,m:2,d:13},{f:16,amt:54000,area:74.61,y:2023,m:3,d:27},{f:12,amt:52000,area:84.45,y:2023,m:4,d:20},{f:15,amt:54000,area:84.75,y:2023,m:4,d:24},{f:15,amt:54500,area:84.45,y:2023,m:6,d:7},{f:6,amt:54500,area:84.99,y:2023,m:6,d:15},{f:9,amt:53000,area:84.75,y:2023,m:7,d:3},{f:20,amt:52000,area:84.75,y:2023,m:9,d:13},{f:18,amt:61000,area:84.99,y:2023,m:9,d:20},{f:3,amt:44700,area:74.61,y:2023,m:9,d:25},{f:20,amt:61300,area:84.45,y:2023,m:9,d:26},{f:8,amt:52700,area:84.75,y:2023,m:10,d:12},{f:5,amt:56000,area:84.99,y:2023,m:10,d:18},{f:7,amt:57000,area:84.99,y:2023,m:11,d:6},{f:20,amt:50000,area:84.95,y:2023,m:11,d:10},{f:6,amt:54500,area:84.95,y:2023,m:11,d:11},{f:3,amt:50000,area:84.95,y:2023,m:11,d:21},{f:8,amt:53000,area:84.75,y:2024,m:1,d:12},{f:13,amt:63000,area:84.99,y:2024,m:1,d:24},{f:13,amt:63000,area:84.99,y:2024,m:1,d:24},{f:20,amt:57500,area:84.45,y:2024,m:2,d:5},{f:4,amt:52000,area:84.95,y:2024,m:2,d:6},{f:17,amt:56000,area:84.75,y:2024,m:3,d:16},{f:16,amt:54000,area:84.75,y:2024,m:3,d:26},{f:7,amt:53000,area:74.61,y:2024,m:3,d:30},{f:20,amt:50000,area:84.95,y:2024,m:4,d:1},{f:20,amt:55000,area:84.99,y:2024,m:4,d:8},{f:3,amt:50000,area:84.99,y:2024,m:4,d:23},{f:4,amt:50000,area:84.95,y:2024,m:4,d:30},{f:13,amt:57000,area:84.99,y:2024,m:5,d:11},{f:14,amt:55500,area:84.45,y:2024,m:5,d:17},{f:15,amt:63000,area:84.45,y:2024,m:5,d:20},{f:7,amt:56000,area:84.75,y:2024,m:6,d:8},{f:11,amt:56500,area:84.95,y:2024,m:6,d:22},{f:19,amt:63800,area:84.95,y:2024,m:6,d:26},{f:19,amt:63000,area:84.99,y:2024,m:7,d:9},{f:15,amt:59000,area:84.95,y:2024,m:7,d:13},{f:7,amt:54800,area:74.61,y:2024,m:7,d:25},{f:8,amt:61000,area:84.75,y:2024,m:8,d:8},{f:11,amt:50000,area:74.61,y:2024,m:8,d:10},{f:14,amt:60000,area:84.75,y:2024,m:8,d:30},{f:20,amt:59000,area:84.75,y:2024,m:9,d:2},{f:7,amt:61500,area:84.75,y:2024,m:9,d:6},{f:12,amt:60500,area:84.95,y:2024,m:9,d:7},{f:19,amt:59000,area:84.95,y:2024,m:10,d:5},{f:7,amt:63900,area:84.75,y:2024,m:11,d:25},{f:6,amt:53000,area:74.61,y:2024,m:12,d:12},{f:20,amt:52000,area:74.61,y:2025,m:2,d:8},{f:5,amt:47500,area:84.99,y:2025,m:2,d:25},{f:13,amt:60000,area:84.75,y:2025,m:3,d:8},{f:14,amt:60000,area:84.99,y:2025,m:4,d:18},{f:5,amt:55300,area:84.95,y:2025,m:4,d:19},{f:3,amt:52000,area:84.95,y:2025,m:4,d:22},{f:17,amt:57500,area:84.95,y:2025,m:5,d:16},{f:15,amt:54700,area:84.45,y:2025,m:5,d:28},{f:2,amt:55400,area:84.45,y:2025,m:6,d:2},{f:14,amt:60500,area:84.99,y:2025,m:6,d:6},{f:14,amt:57600,area:84.75,y:2025,m:6,d:25},{f:21,amt:65800,area:84.75,y:2025,m:6,d:26},{f:18,amt:61500,area:84.75,y:2025,m:7,d:1},{f:14,amt:59400,area:84.75,y:2025,m:7,d:19},{f:10,amt:60500,area:84.75,y:2025,m:9,d:6},{f:10,amt:60500,area:84.75,y:2025,m:9,d:6},{f:11,amt:61500,area:84.75,y:2025,m:9,d:13},{f:3,amt:60500,area:84.75,y:2025,m:9,d:22},{f:5,amt:55000,area:74.61,y:2025,m:9,d:23},{f:1,amt:56500,area:84.45,y:2025,m:11,d:22},{f:6,amt:59800,area:84.75,y:2025,m:12,d:13},{f:4,amt:58000,area:84.75,y:2025,m:12,d:22},{f:17,amt:60000,area:84.75,y:2025,m:12,d:27},{f:11,amt:63800,area:84.99,y:2025,m:12,d:27},{f:16,amt:55500,area:84.75,y:2025,m:12,d:29},{f:11,amt:50000,area:74.61,y:2026,m:2,d:4},{f:7,amt:64000,area:84.99,y:2026,m:3,d:25},{f:12,amt:54000,area:84.45,y:2026,m:4,d:1},{f:12,amt:55500,area:84.75,y:2026,m:4,d:16},{f:18,amt:62000,area:84.75,y:2026,m:5,d:22},{f:13,amt:65000,area:84.75,y:2026,m:6,d:27},{f:6,amt:50000,area:84.75,y:2026,m:6,d:29},{f:18,amt:54000,area:84.75,y:2026,m:7,d:15},{f:9,amt:64000,area:84.75,y:2026,m:7,d:15},{f:20,amt:59000,area:84.45,y:2026,m:7,d:28},{f:20,amt:56500,area:84.45,y:2026,m:8,d:3}], earliestProxy:{amt:71400,area:84.75,f:20,y:2021,m:7}},
-  "용종마을 신대진": {maxFloorObs:17, txHistory:[{f:13,amt:34100,area:84.962,y:2021,m:1,d:9},{f:1,amt:29200,area:84.962,y:2021,m:1,d:21},{f:14,amt:33700,area:84.962,y:2021,m:2,d:4},{f:9,amt:39700,area:84.962,y:2021,m:2,d:18},{f:15,amt:40000,area:84.962,y:2021,m:2,d:20},{f:9,amt:35200,area:84.962,y:2021,m:2,d:24},{f:7,amt:33800,area:84.962,y:2021,m:2,d:26},{f:2,amt:33000,area:84.962,y:2021,m:3,d:13},{f:3,amt:40000,area:84.962,y:2021,m:3,d:17},{f:5,amt:40000,area:84.962,y:2021,m:3,d:26},{f:6,amt:39000,area:84.962,y:2021,m:4,d:23},{f:16,amt:45300,area:84.962,y:2021,m:5,d:17},{f:5,amt:46400,area:84.962,y:2021,m:5,d:26},{f:14,amt:46000,area:84.962,y:2021,m:5,d:29},{f:11,amt:43000,area:84.962,y:2021,m:6,d:21},{f:13,amt:49000,area:84.962,y:2021,m:7,d:19},{f:13,amt:49700,area:84.962,y:2021,m:8,d:18},{f:13,amt:48800,area:84.962,y:2021,m:8,d:26},{f:7,amt:46500,area:84.962,y:2021,m:11,d:1},{f:11,amt:47000,area:84.962,y:2021,m:11,d:30},{f:1,amt:41000,area:84.962,y:2022,m:5,d:10},{f:15,amt:48000,area:84.962,y:2022,m:6,d:13},{f:6,amt:44800,area:84.962,y:2022,m:7,d:5},{f:6,amt:44800,area:84.962,y:2022,m:7,d:9},{f:1,amt:44500,area:84.962,y:2022,m:8,d:6},{f:4,amt:42000,area:84.962,y:2022,m:9,d:17},{f:3,amt:38000,area:84.962,y:2023,m:3,d:24},{f:1,amt:34000,area:84.962,y:2023,m:4,d:22},{f:2,amt:28000,area:84.962,y:2023,m:4,d:28},{f:11,amt:36000,area:84.962,y:2023,m:5,d:11},{f:9,amt:37300,area:84.962,y:2023,m:6,d:5},{f:2,amt:34500,area:84.962,y:2023,m:8,d:9},{f:6,amt:34000,area:84.962,y:2023,m:8,d:9},{f:10,amt:37000,area:84.962,y:2023,m:8,d:24},{f:2,amt:33600,area:84.962,y:2023,m:9,d:21},{f:17,amt:35000,area:84.962,y:2023,m:10,d:19},{f:7,amt:39000,area:84.962,y:2023,m:10,d:25},{f:16,amt:40200,area:84.962,y:2023,m:10,d:31},{f:1,amt:31000,area:84.962,y:2024,m:1,d:12},{f:7,amt:36000,area:84.962,y:2024,m:2,d:19},{f:10,amt:38900,area:84.962,y:2024,m:2,d:24},{f:9,amt:38400,area:84.962,y:2024,m:3,d:20},{f:15,amt:40000,area:84.962,y:2024,m:5,d:3},{f:12,amt:35700,area:84.962,y:2024,m:5,d:11},{f:17,amt:35000,area:84.962,y:2024,m:7,d:9},{f:14,amt:39000,area:84.962,y:2024,m:7,d:17},{f:7,amt:37500,area:84.962,y:2024,m:8,d:19},{f:16,amt:38000,area:84.962,y:2024,m:10,d:9},{f:15,amt:37000,area:84.962,y:2024,m:11,d:21},{f:11,amt:36000,area:84.962,y:2024,m:12,d:18},{f:15,amt:38000,area:84.962,y:2025,m:1,d:11},{f:15,amt:38000,area:84.962,y:2025,m:2,d:14},{f:15,amt:38000,area:84.962,y:2025,m:2,d:14},{f:16,amt:38800,area:84.962,y:2025,m:3,d:19},{f:3,amt:36800,area:84.962,y:2025,m:3,d:31},{f:10,amt:36000,area:84.962,y:2025,m:4,d:4},{f:7,amt:36500,area:84.962,y:2025,m:4,d:25},{f:16,amt:35500,area:84.962,y:2025,m:5,d:10},{f:9,amt:41000,area:84.962,y:2025,m:5,d:15},{f:4,amt:37000,area:84.962,y:2025,m:6,d:18},{f:10,amt:40000,area:84.962,y:2025,m:7,d:18},{f:14,amt:41500,area:84.962,y:2025,m:8,d:23},{f:13,amt:41300,area:84.962,y:2025,m:12,d:25},{f:11,amt:38000,area:84.962,y:2026,m:2,d:24},{f:17,amt:36800,area:84.962,y:2026,m:2,d:28},{f:10,amt:37500,area:84.962,y:2026,m:3,d:2},{f:4,amt:37500,area:84.962,y:2026,m:6,d:29},{f:3,amt:38000,area:84.962,y:2026,m:7,d:11},{f:5,amt:37500,area:84.962,y:2026,m:8,d:11}], earliestProxy:{amt:17800,area:84.962,f:5,y:2006,m:7}},
-  "초정마을 하나": {maxFloorObs:19, txHistory:[{f:3,amt:31500,area:84.99,y:2021,m:1,d:7},{f:6,amt:31300,area:84.99,y:2021,m:1,d:8},{f:1,amt:30000,area:84.99,y:2021,m:1,d:18},{f:5,amt:33300,area:84.99,y:2021,m:1,d:19},{f:19,amt:33500,area:84.99,y:2021,m:1,d:19},{f:5,amt:35800,area:84.99,y:2021,m:1,d:19},{f:14,amt:36500,area:84.99,y:2021,m:1,d:21},{f:3,amt:32600,area:84.99,y:2021,m:1,d:22},{f:1,amt:30000,area:84.99,y:2021,m:1,d:25},{f:15,amt:33800,area:84.99,y:2021,m:1,d:25},{f:15,amt:31000,area:84.99,y:2021,m:1,d:26},{f:15,amt:37600,area:84.99,y:2021,m:1,d:26},{f:8,amt:35000,area:84.99,y:2021,m:2,d:3},{f:2,amt:32800,area:84.99,y:2021,m:2,d:4},{f:14,amt:40000,area:84.99,y:2021,m:2,d:20},{f:7,amt:36500,area:84.99,y:2021,m:2,d:23},{f:3,amt:35000,area:84.99,y:2021,m:2,d:25},{f:6,amt:39500,area:84.99,y:2021,m:3,d:1},{f:19,amt:37800,area:84.99,y:2021,m:3,d:4},{f:19,amt:40800,area:84.99,y:2021,m:3,d:4},{f:10,amt:37000,area:84.99,y:2021,m:3,d:5},{f:2,amt:34000,area:84.99,y:2021,m:3,d:5},{f:8,amt:40000,area:84.99,y:2021,m:3,d:5},{f:16,amt:34800,area:84.99,y:2021,m:3,d:8},{f:3,amt:39000,area:84.99,y:2021,m:3,d:10},{f:16,amt:45000,area:84.99,y:2021,m:3,d:12},{f:2,amt:35000,area:84.99,y:2021,m:3,d:13},{f:1,amt:35800,area:84.99,y:2021,m:3,d:18},{f:13,amt:42000,area:84.99,y:2021,m:3,d:22},{f:4,amt:38000,area:84.99,y:2021,m:3,d:25},{f:15,amt:47000,area:84.99,y:2021,m:3,d:30},{f:14,amt:42500,area:84.99,y:2021,m:4,d:13},{f:12,amt:46700,area:84.99,y:2021,m:4,d:14},{f:2,amt:44900,area:84.99,y:2021,m:4,d:19},{f:2,amt:42000,area:84.99,y:2021,m:4,d:30},{f:16,amt:48500,area:84.99,y:2021,m:5,d:20},{f:8,amt:46500,area:84.99,y:2021,m:5,d:28},{f:8,amt:47500,area:84.99,y:2021,m:6,d:2},{f:2,amt:45000,area:84.99,y:2021,m:6,d:7},{f:7,amt:46000,area:84.99,y:2021,m:6,d:9},{f:14,amt:47500,area:84.99,y:2021,m:6,d:12},{f:5,amt:45800,area:84.99,y:2021,m:6,d:18},{f:9,amt:35000,area:84.99,y:2021,m:6,d:21},{f:16,amt:47000,area:84.99,y:2021,m:6,d:25},{f:5,amt:45700,area:84.99,y:2021,m:6,d:25},{f:13,amt:50000,area:84.99,y:2021,m:7,d:13},{f:11,amt:44000,area:84.99,y:2021,m:7,d:31},{f:16,amt:52000,area:84.99,y:2021,m:8,d:12},{f:3,amt:48500,area:84.99,y:2021,m:8,d:13},{f:18,amt:49500,area:84.99,y:2021,m:8,d:28},{f:3,amt:45000,area:84.99,y:2021,m:8,d:28},{f:8,amt:50000,area:84.99,y:2021,m:9,d:2},{f:9,amt:49500,area:84.99,y:2021,m:9,d:6},{f:15,amt:48000,area:84.99,y:2021,m:10,d:19},{f:19,amt:51000,area:84.99,y:2021,m:11,d:16},{f:1,amt:43800,area:84.99,y:2022,m:1,d:29},{f:17,amt:52300,area:84.99,y:2022,m:2,d:15},{f:15,amt:48000,area:84.99,y:2022,m:2,d:26},{f:11,amt:50000,area:84.99,y:2022,m:5,d:6},{f:18,amt:44800,area:84.99,y:2022,m:5,d:12},{f:1,amt:38000,area:84.99,y:2022,m:7,d:13},{f:4,amt:48500,area:84.99,y:2022,m:7,d:22},{f:4,amt:48500,area:84.99,y:2022,m:7,d:22},{f:7,amt:41300,area:84.99,y:2022,m:8,d:29},{f:13,amt:39500,area:84.99,y:2022,m:10,d:8},{f:10,amt:40000,area:84.99,y:2022,m:10,d:31},{f:8,amt:39800,area:84.99,y:2022,m:12,d:1},{f:3,amt:37000,area:84.99,y:2023,m:1,d:27},{f:14,amt:39300,area:84.99,y:2023,m:1,d:28},{f:1,amt:29000,area:84.99,y:2023,m:2,d:22},{f:15,amt:39700,area:84.99,y:2023,m:3,d:7},{f:6,amt:35500,area:84.99,y:2023,m:3,d:11},{f:13,amt:39000,area:84.99,y:2023,m:3,d:18},{f:9,amt:36000,area:84.99,y:2023,m:4,d:3},{f:12,amt:35800,area:84.99,y:2023,m:4,d:14},{f:16,amt:35000,area:84.99,y:2023,m:4,d:19},{f:6,amt:34900,area:84.99,y:2023,m:4,d:22},{f:12,amt:35000,area:84.99,y:2023,m:4,d:26},{f:16,amt:38000,area:84.99,y:2023,m:4,d:26},{f:15,amt:37500,area:84.99,y:2023,m:4,d:27},{f:9,amt:36500,area:84.99,y:2023,m:5,d:2},{f:4,amt:34300,area:84.99,y:2023,m:5,d:23},{f:13,amt:39000,area:84.99,y:2023,m:6,d:10},{f:8,amt:37000,area:84.99,y:2023,m:7,d:6},{f:10,amt:39000,area:84.99,y:2023,m:7,d:28},{f:7,amt:36500,area:84.99,y:2023,m:8,d:4},{f:11,amt:40000,area:84.99,y:2023,m:8,d:4},{f:10,amt:37000,area:84.99,y:2023,m:8,d:15},{f:9,amt:37000,area:84.99,y:2023,m:8,d:17},{f:4,amt:35000,area:84.99,y:2023,m:8,d:23},{f:5,amt:34300,area:84.99,y:2023,m:8,d:26},{f:6,amt:36000,area:84.99,y:2023,m:8,d:29},{f:6,amt:36000,area:84.99,y:2023,m:9,d:5},{f:15,amt:35300,area:84.99,y:2023,m:9,d:9},{f:2,amt:35500,area:84.99,y:2023,m:9,d:9},{f:14,amt:38800,area:84.99,y:2023,m:9,d:20},{f:19,amt:40000,area:84.99,y:2023,m:10,d:13},{f:5,amt:36000,area:84.99,y:2023,m:10,d:31},{f:3,amt:34000,area:84.99,y:2023,m:12,d:21},{f:5,amt:35000,area:84.99,y:2024,m:1,d:31},{f:10,amt:37000,area:84.99,y:2024,m:2,d:5},{f:10,amt:37000,area:84.99,y:2024,m:2,d:5},{f:8,amt:43000,area:84.99,y:2024,m:3,d:4},{f:18,amt:42000,area:84.99,y:2024,m:3,d:9},{f:3,amt:34500,area:84.99,y:2024,m:3,d:23},{f:18,amt:40500,area:84.99,y:2024,m:3,d:23},{f:15,amt:37000,area:84.99,y:2024,m:4,d:27},{f:15,amt:42000,area:84.99,y:2024,m:5,d:7},{f:14,amt:39100,area:84.99,y:2024,m:5,d:11},{f:18,amt:39800,area:84.99,y:2024,m:6,d:8},{f:1,amt:31500,area:84.99,y:2024,m:6,d:27},{f:7,amt:35500,area:84.99,y:2024,m:7,d:5},{f:11,amt:35000,area:84.99,y:2024,m:7,d:9},{f:6,amt:39000,area:84.99,y:2024,m:7,d:10},{f:15,amt:37500,area:84.99,y:2024,m:7,d:25},{f:6,amt:38000,area:84.99,y:2024,m:7,d:26},{f:5,amt:35800,area:84.99,y:2024,m:8,d:5},{f:9,amt:38850,area:84.99,y:2024,m:8,d:21},{f:8,amt:38500,area:84.99,y:2024,m:8,d:22},{f:2,amt:37750,area:84.99,y:2024,m:8,d:28},{f:1,amt:33700,area:84.99,y:2024,m:9,d:10},{f:10,amt:39150,area:84.99,y:2024,m:9,d:29},{f:7,amt:40000,area:84.99,y:2024,m:10,d:5},{f:8,amt:37800,area:84.99,y:2024,m:10,d:21},{f:2,amt:35500,area:84.99,y:2024,m:12,d:13},{f:2,amt:35500,area:84.99,y:2024,m:12,d:13},{f:17,amt:38000,area:84.99,y:2024,m:12,d:31},{f:15,amt:39000,area:84.99,y:2025,m:1,d:2},{f:8,amt:38000,area:84.99,y:2025,m:1,d:9},{f:3,amt:38500,area:84.99,y:2025,m:2,d:6},{f:4,amt:36200,area:84.99,y:2025,m:2,d:11},{f:8,amt:37000,area:84.99,y:2025,m:2,d:11},{f:17,amt:39000,area:84.99,y:2025,m:2,d:22},{f:4,amt:34000,area:84.99,y:2025,m:2,d:27},{f:18,amt:36300,area:84.99,y:2025,m:3,d:3},{f:10,amt:37500,area:84.99,y:2025,m:3,d:8},{f:3,amt:37000,area:84.99,y:2025,m:3,d:17},{f:12,amt:38500,area:84.99,y:2025,m:4,d:2},{f:5,amt:37300,area:84.99,y:2025,m:4,d:10},{f:18,amt:38300,area:84.99,y:2025,m:4,d:15},{f:7,amt:38500,area:84.99,y:2025,m:4,d:16},{f:5,amt:37000,area:84.99,y:2025,m:4,d:17},{f:7,amt:35000,area:84.99,y:2025,m:4,d:22},{f:14,amt:38200,area:84.99,y:2025,m:4,d:30},{f:3,amt:38000,area:84.99,y:2025,m:5,d:6},{f:14,amt:46500,area:84.99,y:2025,m:5,d:12},{f:14,amt:38000,area:84.99,y:2025,m:6,d:3},{f:9,amt:36900,area:84.99,y:2025,m:6,d:9},{f:17,amt:38000,area:84.99,y:2025,m:6,d:28},{f:19,amt:38000,area:84.99,y:2025,m:7,d:26},{f:14,amt:37500,area:84.99,y:2025,m:8,d:12},{f:8,amt:42000,area:84.99,y:2025,m:8,d:15},{f:1,amt:33000,area:84.99,y:2025,m:9,d:9},{f:11,amt:38000,area:84.99,y:2025,m:9,d:13},{f:16,amt:39500,area:84.99,y:2025,m:9,d:17},{f:18,amt:37500,area:84.99,y:2025,m:10,d:13},{f:9,amt:41000,area:84.99,y:2025,m:10,d:25},{f:14,amt:42900,area:84.99,y:2025,m:10,d:31},{f:14,amt:38000,area:84.99,y:2025,m:11,d:13},{f:7,amt:34200,area:84.99,y:2025,m:11,d:19},{f:13,amt:36800,area:84.99,y:2025,m:11,d:20},{f:6,amt:37200,area:84.99,y:2025,m:11,d:24},{f:16,amt:41000,area:84.99,y:2026,m:1,d:3},{f:8,amt:38500,area:84.99,y:2026,m:1,d:19},{f:1,amt:34700,area:84.99,y:2026,m:1,d:20},{f:8,amt:37000,area:84.99,y:2026,m:2,d:2},{f:8,amt:37000,area:84.99,y:2026,m:2,d:2},{f:13,amt:35500,area:84.99,y:2026,m:2,d:24},{f:1,amt:35000,area:84.99,y:2026,m:2,d:24},{f:2,amt:33000,area:84.99,y:2026,m:3,d:3},{f:4,amt:37700,area:84.99,y:2026,m:3,d:17},{f:15,amt:35000,area:84.99,y:2026,m:3,d:26},{f:12,amt:35300,area:84.99,y:2026,m:4,d:1},{f:3,amt:36400,area:84.99,y:2026,m:4,d:3},{f:11,amt:41900,area:84.99,y:2026,m:4,d:8},{f:15,amt:38500,area:84.99,y:2026,m:4,d:22},{f:1,amt:32800,area:84.99,y:2026,m:5,d:1},{f:3,amt:39000,area:84.99,y:2026,m:5,d:1},{f:10,amt:37500,area:84.99,y:2026,m:5,d:7},{f:4,amt:39000,area:84.99,y:2026,m:5,d:18},{f:17,amt:36000,area:84.99,y:2026,m:5,d:20},{f:5,amt:36000,area:84.99,y:2026,m:5,d:29},{f:9,amt:36500,area:84.99,y:2026,m:6,d:3},{f:10,amt:41300,area:84.99,y:2026,m:6,d:5},{f:15,amt:38700,area:84.99,y:2026,m:6,d:26},{f:4,amt:39000,area:84.99,y:2026,m:7,d:15},{f:8,amt:38000,area:84.99,y:2026,m:7,d:18},{f:11,amt:36800,area:84.99,y:2026,m:7,d:31},{f:7,amt:37200,area:84.99,y:2026,m:8,d:8},{f:14,amt:38700,area:84.99,y:2026,m:8,d:8},{f:7,amt:42800,area:84.99,y:2026,m:8,d:17},{f:15,amt:40300,area:84.99,y:2026,m:8,d:20},{f:9,amt:37700,area:84.99,y:2026,m:8,d:26}], earliestProxy:{amt:20800,area:84.99,f:16,y:2006,m:7}},
-  "초정마을 두산·쌍용": {maxFloorObs:20, txHistory:[{f:10,amt:44300,area:96.15,y:2021,m:1,d:9},{f:9,amt:39000,area:96.15,y:2021,m:1,d:9},{f:18,amt:50500,area:122.04,y:2021,m:1,d:13},{f:1,amt:37700,area:96.15,y:2021,m:1,d:18},{f:18,amt:50500,area:122.04,y:2021,m:1,d:20},{f:12,amt:42000,area:96.15,y:2021,m:2,d:3},{f:13,amt:45200,area:96.15,y:2021,m:2,d:8},{f:11,amt:59500,area:122.04,y:2021,m:2,d:9},{f:2,amt:36500,area:96.15,y:2021,m:2,d:22},{f:6,amt:52000,area:122.04,y:2021,m:2,d:23},{f:14,amt:42500,area:96.15,y:2021,m:2,d:23},{f:1,amt:40000,area:96.15,y:2021,m:2,d:25},{f:10,amt:43900,area:96.15,y:2021,m:3,d:1},{f:20,amt:54800,area:122.04,y:2021,m:3,d:4},{f:17,amt:43700,area:96.15,y:2021,m:3,d:5},{f:14,amt:52800,area:96.15,y:2021,m:3,d:9},{f:2,amt:40700,area:96.15,y:2021,m:3,d:12},{f:8,amt:57000,area:96.15,y:2021,m:3,d:23},{f:17,amt:64500,area:122.04,y:2021,m:4,d:5},{f:1,amt:55000,area:122.04,y:2021,m:4,d:6},{f:12,amt:52500,area:96.15,y:2021,m:4,d:28},{f:6,amt:70000,area:122.04,y:2021,m:5,d:7},{f:8,amt:59500,area:96.15,y:2021,m:5,d:14},{f:16,amt:66000,area:122.04,y:2021,m:5,d:22},{f:10,amt:70000,area:122.04,y:2021,m:6,d:25},{f:10,amt:70000,area:122.04,y:2021,m:6,d:25},{f:14,amt:64500,area:122.04,y:2021,m:7,d:16},{f:17,amt:59300,area:96.15,y:2021,m:8,d:18},{f:15,amt:58500,area:96.15,y:2021,m:8,d:23},{f:4,amt:60000,area:96.15,y:2021,m:9,d:11},{f:16,amt:70500,area:122.04,y:2021,m:10,d:14},{f:9,amt:59000,area:96.15,y:2021,m:10,d:14},{f:5,amt:56700,area:96.15,y:2021,m:11,d:16},{f:8,amt:57500,area:96.15,y:2021,m:11,d:19},{f:13,amt:60000,area:96.15,y:2021,m:12,d:13},{f:18,amt:58300,area:96.15,y:2021,m:12,d:16},{f:10,amt:64000,area:122.04,y:2022,m:1,d:17},{f:9,amt:64000,area:96.15,y:2022,m:4,d:14},{f:18,amt:69300,area:122.04,y:2022,m:4,d:30},{f:5,amt:62500,area:122.04,y:2022,m:5,d:6},{f:13,amt:55000,area:96.15,y:2022,m:5,d:6},{f:2,amt:53500,area:96.15,y:2022,m:5,d:28},{f:19,amt:72000,area:122.04,y:2022,m:9,d:24},{f:19,amt:44500,area:96.15,y:2022,m:11,d:14},{f:17,amt:65000,area:122.04,y:2023,m:3,d:4},{f:1,amt:40000,area:96.15,y:2023,m:3,d:20},{f:11,amt:44500,area:96.15,y:2023,m:4,d:18},{f:11,amt:53000,area:122.04,y:2023,m:5,d:11},{f:15,amt:45000,area:96.15,y:2023,m:5,d:25},{f:9,amt:61000,area:122.04,y:2023,m:7,d:27},{f:11,amt:62800,area:122.04,y:2023,m:8,d:3},{f:8,amt:52500,area:96.15,y:2023,m:8,d:15},{f:7,amt:45000,area:96.15,y:2023,m:8,d:18},{f:20,amt:45000,area:96.15,y:2023,m:9,d:6},{f:17,amt:50000,area:96.15,y:2023,m:9,d:6},{f:16,amt:56000,area:96.15,y:2023,m:9,d:6},{f:15,amt:59000,area:122.04,y:2023,m:10,d:16},{f:6,amt:47800,area:96.15,y:2023,m:10,d:31},{f:6,amt:54500,area:96.15,y:2024,m:1,d:6},{f:14,amt:50000,area:96.15,y:2024,m:1,d:19},{f:19,amt:56000,area:122.04,y:2024,m:4,d:27},{f:13,amt:54000,area:122.04,y:2024,m:4,d:30},{f:15,amt:53000,area:96.15,y:2024,m:5,d:11},{f:13,amt:52500,area:96.15,y:2024,m:5,d:29},{f:6,amt:45000,area:96.15,y:2024,m:6,d:17},{f:3,amt:52800,area:96.15,y:2024,m:6,d:22},{f:12,amt:54500,area:122.04,y:2024,m:6,d:26},{f:6,amt:61000,area:122.04,y:2024,m:7,d:13},{f:18,amt:54800,area:96.15,y:2024,m:7,d:29},{f:12,amt:52000,area:96.15,y:2024,m:10,d:26},{f:18,amt:61000,area:122.04,y:2024,m:10,d:29},{f:10,amt:51000,area:96.15,y:2024,m:11,d:23},{f:11,amt:58000,area:122.04,y:2024,m:11,d:30},{f:9,amt:52000,area:96.15,y:2024,m:12,d:18},{f:2,amt:43800,area:96.15,y:2025,m:2,d:4},{f:11,amt:52000,area:96.15,y:2025,m:2,d:8},{f:20,amt:55000,area:122.04,y:2025,m:2,d:18},{f:3,amt:57000,area:122.04,y:2025,m:3,d:8},{f:15,amt:46000,area:122.04,y:2025,m:3,d:10},{f:11,amt:58000,area:122.04,y:2025,m:3,d:13},{f:2,amt:41000,area:96.15,y:2025,m:4,d:9},{f:14,amt:47000,area:96.15,y:2025,m:4,d:25},{f:13,amt:57000,area:122.04,y:2025,m:5,d:7},{f:1,amt:42500,area:96.15,y:2025,m:5,d:8},{f:14,amt:59500,area:122.04,y:2025,m:5,d:15},{f:17,amt:59000,area:122.04,y:2025,m:8,d:27},{f:11,amt:63000,area:122.04,y:2025,m:9,d:18},{f:4,amt:47000,area:96.15,y:2025,m:10,d:20},{f:4,amt:56500,area:122.04,y:2025,m:11,d:5},{f:10,amt:52000,area:96.15,y:2025,m:12,d:27},{f:18,amt:55000,area:122.04,y:2025,m:12,d:31},{f:9,amt:52500,area:96.15,y:2026,m:1,d:22},{f:9,amt:52500,area:96.15,y:2026,m:1,d:22},{f:8,amt:51000,area:96.15,y:2026,m:4,d:2},{f:14,amt:55000,area:122.04,y:2026,m:4,d:11},{f:14,amt:45000,area:96.15,y:2026,m:4,d:11},{f:11,amt:55500,area:122.04,y:2026,m:4,d:22},{f:12,amt:44000,area:96.15,y:2026,m:4,d:22},{f:14,amt:45000,area:96.15,y:2026,m:4,d:25},{f:1,amt:41100,area:96.15,y:2026,m:5,d:9},{f:11,amt:57000,area:122.04,y:2026,m:5,d:30},{f:10,amt:50000,area:96.15,y:2026,m:5,d:31},{f:3,amt:47500,area:96.15,y:2026,m:6,d:5},{f:5,amt:50000,area:96.15,y:2026,m:6,d:11},{f:4,amt:46800,area:96.15,y:2026,m:6,d:26},{f:10,amt:49000,area:122.04,y:2026,m:6,d:30}], earliestProxy:{amt:32500,area:122.04,f:20,y:2006,m:7}},
-  "용종마을 중앙": {maxFloorObs:17, txHistory:[{f:4,amt:35400,area:84.798,y:2021,m:1,d:7},{f:5,amt:35500,area:84.798,y:2021,m:1,d:13},{f:13,amt:36900,area:84.798,y:2021,m:2,d:17},{f:1,amt:31700,area:84.798,y:2021,m:2,d:18},{f:17,amt:36500,area:84.798,y:2021,m:2,d:20},{f:9,amt:52800,area:84.798,y:2021,m:9,d:30},{f:9,amt:52800,area:84.798,y:2021,m:9,d:30},{f:5,amt:50000,area:84.798,y:2021,m:11,d:11},{f:5,amt:46700,area:84.798,y:2022,m:3,d:19},{f:11,amt:39800,area:84.798,y:2022,m:11,d:7},{f:2,amt:33300,area:84.798,y:2023,m:4,d:25},{f:1,amt:32000,area:84.798,y:2023,m:5,d:2},{f:2,amt:33000,area:84.798,y:2023,m:7,d:21},{f:1,amt:33000,area:84.798,y:2023,m:7,d:21},{f:2,amt:38800,area:84.798,y:2023,m:8,d:14},{f:14,amt:40500,area:84.798,y:2023,m:9,d:9},{f:6,amt:40500,area:84.798,y:2023,m:9,d:13},{f:7,amt:37000,area:84.798,y:2023,m:11,d:15},{f:10,amt:41000,area:84.798,y:2024,m:1,d:22},{f:15,amt:37400,area:84.798,y:2024,m:2,d:2},{f:17,amt:37000,area:84.798,y:2024,m:2,d:24},{f:17,amt:37000,area:84.798,y:2024,m:2,d:24},{f:9,amt:38000,area:84.798,y:2024,m:2,d:28},{f:6,amt:40000,area:84.798,y:2024,m:3,d:15},{f:17,amt:39300,area:84.798,y:2024,m:3,d:18},{f:17,amt:37000,area:84.798,y:2024,m:4,d:12},{f:15,amt:42000,area:84.798,y:2024,m:4,d:20},{f:2,amt:34000,area:84.798,y:2024,m:4,d:24},{f:8,amt:38700,area:84.798,y:2024,m:5,d:31},{f:14,amt:40000,area:84.798,y:2024,m:6,d:18},{f:2,amt:34800,area:84.798,y:2024,m:6,d:24},{f:3,amt:38000,area:84.798,y:2024,m:7,d:13},{f:8,amt:39800,area:84.798,y:2024,m:8,d:19},{f:17,amt:40000,area:84.798,y:2024,m:10,d:23},{f:15,amt:36000,area:84.798,y:2024,m:12,d:11},{f:12,amt:39500,area:84.798,y:2024,m:12,d:11},{f:14,amt:40850,area:84.798,y:2025,m:3,d:10},{f:16,amt:42000,area:84.798,y:2025,m:4,d:12},{f:9,amt:41700,area:84.798,y:2025,m:4,d:16},{f:5,amt:40000,area:84.798,y:2025,m:6,d:30},{f:7,amt:41500,area:84.798,y:2025,m:12,d:3},{f:17,amt:38500,area:84.798,y:2025,m:12,d:8},{f:17,amt:38250,area:84.798,y:2026,m:2,d:3},{f:17,amt:41000,area:84.798,y:2026,m:4,d:28},{f:3,amt:39000,area:84.798,y:2026,m:5,d:4},{f:2,amt:38000,area:84.798,y:2026,m:5,d:8},{f:11,amt:39500,area:84.798,y:2026,m:7,d:10},{f:5,amt:40000,area:84.798,y:2026,m:7,d:13},{f:14,amt:42000,area:84.798,y:2026,m:8,d:8}], earliestProxy:{amt:17000,area:84.798,f:15,y:2006,m:7}},
-  "동보1차": {maxFloorObs:20, txHistory:[{f:3,amt:26500,area:84.58,y:2021,m:1,d:9},{f:17,amt:29000,area:84.58,y:2021,m:1,d:15},{f:18,amt:27900,area:84.58,y:2021,m:1,d:17},{f:20,amt:29900,area:84.58,y:2021,m:2,d:26},{f:17,amt:31750,area:84.58,y:2021,m:2,d:27},{f:9,amt:43500,area:118.38,y:2021,m:2,d:27},{f:5,amt:38500,area:118.38,y:2021,m:3,d:4},{f:2,amt:28000,area:84.58,y:2021,m:3,d:11},{f:10,amt:30500,area:84.58,y:2021,m:3,d:16},{f:10,amt:32500,area:84.58,y:2021,m:3,d:16},{f:1,amt:25750,area:84.58,y:2021,m:3,d:19},{f:7,amt:27500,area:84.58,y:2021,m:4,d:13},{f:4,amt:35000,area:84.58,y:2021,m:4,d:17},{f:6,amt:31800,area:84.58,y:2021,m:5,d:6},{f:10,amt:38000,area:84.58,y:2021,m:5,d:15},{f:3,amt:38000,area:84.58,y:2021,m:5,d:16},{f:6,amt:38000,area:84.58,y:2021,m:6,d:15},{f:10,amt:38000,area:84.58,y:2021,m:6,d:17},{f:6,amt:39700,area:84.58,y:2021,m:6,d:26},{f:15,amt:37800,area:84.58,y:2021,m:6,d:30},{f:15,amt:42700,area:84.58,y:2021,m:7,d:2},{f:15,amt:37700,area:84.58,y:2021,m:7,d:6},{f:4,amt:39500,area:84.58,y:2021,m:8,d:9},{f:11,amt:37500,area:84.58,y:2021,m:8,d:10},{f:3,amt:28000,area:84.58,y:2021,m:9,d:27},{f:5,amt:40500,area:84.58,y:2021,m:9,d:30},{f:16,amt:41500,area:84.58,y:2021,m:11,d:1},{f:4,amt:42000,area:84.58,y:2021,m:11,d:1},{f:8,amt:40500,area:84.58,y:2022,m:1,d:8},{f:9,amt:39500,area:84.58,y:2022,m:3,d:30},{f:15,amt:39500,area:84.58,y:2022,m:4,d:12},{f:5,amt:43000,area:84.58,y:2022,m:4,d:18},{f:8,amt:38500,area:84.58,y:2022,m:4,d:21},{f:8,amt:40000,area:84.58,y:2022,m:4,d:23},{f:7,amt:40600,area:84.58,y:2022,m:5,d:11},{f:18,amt:43500,area:84.58,y:2022,m:5,d:13},{f:18,amt:43500,area:84.58,y:2022,m:5,d:13},{f:4,amt:35000,area:84.58,y:2022,m:8,d:11},{f:6,amt:35000,area:84.58,y:2022,m:8,d:18},{f:15,amt:39000,area:84.58,y:2022,m:9,d:12},{f:18,amt:37000,area:84.58,y:2022,m:9,d:19},{f:13,amt:45000,area:118.38,y:2022,m:9,d:22},{f:14,amt:32000,area:84.58,y:2023,m:3,d:7},{f:1,amt:28000,area:84.58,y:2023,m:3,d:25},{f:9,amt:30000,area:84.58,y:2023,m:4,d:22},{f:15,amt:31500,area:84.58,y:2023,m:5,d:4},{f:12,amt:34000,area:84.58,y:2023,m:6,d:7},{f:7,amt:28500,area:84.58,y:2023,m:6,d:17},{f:8,amt:31000,area:84.58,y:2023,m:7,d:7},{f:7,amt:29800,area:84.58,y:2023,m:7,d:17},{f:11,amt:32000,area:84.58,y:2023,m:7,d:29},{f:9,amt:28500,area:84.58,y:2023,m:8,d:4},{f:6,amt:31500,area:84.58,y:2023,m:9,d:15},{f:16,amt:32000,area:84.58,y:2023,m:10,d:31},{f:2,amt:27500,area:84.58,y:2023,m:12,d:6},{f:16,amt:40000,area:118.38,y:2023,m:12,d:12},{f:11,amt:30800,area:84.58,y:2024,m:1,d:7},{f:16,amt:33000,area:84.58,y:2024,m:1,d:25},{f:4,amt:40000,area:118.38,y:2024,m:1,d:25},{f:19,amt:31000,area:84.58,y:2024,m:2,d:5},{f:4,amt:31000,area:84.58,y:2024,m:2,d:28},{f:2,amt:29850,area:84.58,y:2024,m:3,d:15},{f:15,amt:31000,area:84.58,y:2024,m:3,d:15},{f:19,amt:30000,area:84.58,y:2024,m:3,d:16},{f:18,amt:31200,area:84.58,y:2024,m:4,d:8},{f:7,amt:34500,area:84.58,y:2024,m:4,d:13},{f:6,amt:30500,area:84.58,y:2024,m:5,d:8},{f:8,amt:31200,area:84.58,y:2024,m:5,d:10},{f:20,amt:30700,area:84.58,y:2024,m:5,d:16},{f:9,amt:33500,area:84.58,y:2024,m:5,d:29},{f:17,amt:31500,area:84.58,y:2024,m:6,d:1},{f:4,amt:30000,area:84.58,y:2024,m:6,d:1},{f:17,amt:32000,area:84.58,y:2024,m:6,d:2},{f:20,amt:41000,area:118.38,y:2024,m:6,d:10},{f:1,amt:34500,area:84.58,y:2024,m:6,d:20},{f:10,amt:42500,area:118.38,y:2024,m:7,d:9},{f:10,amt:42500,area:118.38,y:2024,m:7,d:9},{f:1,amt:30800,area:84.58,y:2024,m:7,d:15},{f:9,amt:32500,area:84.58,y:2024,m:7,d:18},{f:1,amt:30400,area:84.58,y:2024,m:7,d:25},{f:17,amt:32700,area:84.58,y:2024,m:7,d:27},{f:13,amt:35700,area:84.58,y:2024,m:8,d:29},{f:18,amt:32000,area:84.58,y:2024,m:9,d:19},{f:13,amt:44000,area:118.38,y:2024,m:9,d:20},{f:1,amt:30500,area:84.58,y:2024,m:9,d:20},{f:9,amt:41000,area:118.38,y:2024,m:10,d:1},{f:19,amt:30000,area:84.58,y:2024,m:10,d:19},{f:9,amt:30200,area:84.58,y:2024,m:10,d:30},{f:2,amt:30000,area:84.58,y:2024,m:11,d:21},{f:2,amt:30000,area:84.58,y:2024,m:11,d:21},{f:10,amt:45750,area:118.38,y:2024,m:11,d:28},{f:5,amt:29500,area:84.58,y:2025,m:1,d:15},{f:13,amt:42550,area:118.38,y:2025,m:1,d:22},{f:10,amt:31000,area:84.58,y:2025,m:1,d:24},{f:11,amt:31000,area:84.58,y:2025,m:1,d:26},{f:18,amt:45200,area:118.38,y:2025,m:2,d:22},{f:19,amt:32500,area:84.58,y:2025,m:2,d:27},{f:8,amt:34800,area:84.58,y:2025,m:2,d:27},{f:19,amt:32500,area:84.58,y:2025,m:2,d:27},{f:18,amt:34300,area:84.58,y:2025,m:3,d:4},{f:19,amt:46500,area:118.38,y:2025,m:3,d:19},{f:18,amt:33500,area:84.58,y:2025,m:3,d:21},{f:15,amt:32500,area:84.58,y:2025,m:3,d:27},{f:8,amt:30800,area:84.58,y:2025,m:4,d:2},{f:13,amt:34500,area:84.58,y:2025,m:4,d:10},{f:3,amt:34200,area:84.58,y:2025,m:4,d:23},{f:9,amt:32000,area:84.58,y:2025,m:6,d:6},{f:12,amt:34000,area:84.58,y:2025,m:8,d:27},{f:1,amt:30500,area:84.58,y:2025,m:8,d:27},{f:7,amt:30900,area:84.58,y:2025,m:9,d:4},{f:10,amt:31000,area:84.58,y:2025,m:9,d:9},{f:9,amt:43500,area:118.38,y:2025,m:10,d:10},{f:3,amt:33500,area:84.58,y:2025,m:10,d:14},{f:1,amt:27750,area:84.58,y:2025,m:10,d:15},{f:14,amt:32500,area:84.58,y:2025,m:10,d:16},{f:5,amt:31500,area:84.58,y:2025,m:10,d:19},{f:12,amt:29000,area:84.58,y:2025,m:11,d:13},{f:19,amt:30700,area:84.58,y:2025,m:11,d:30},{f:1,amt:30000,area:84.58,y:2025,m:12,d:24},{f:2,amt:28100,area:84.58,y:2026,m:1,d:10},{f:14,amt:31000,area:84.58,y:2026,m:1,d:12},{f:2,amt:28100,area:84.58,y:2026,m:1,d:13},{f:9,amt:32300,area:84.58,y:2026,m:1,d:24},{f:13,amt:33200,area:84.58,y:2026,m:2,d:20},{f:3,amt:34200,area:84.58,y:2026,m:3,d:3},{f:3,amt:34200,area:84.58,y:2026,m:3,d:3},{f:18,amt:30000,area:84.58,y:2026,m:3,d:4},{f:8,amt:32000,area:84.58,y:2026,m:3,d:11},{f:2,amt:28500,area:84.58,y:2026,m:3,d:19},{f:16,amt:32700,area:84.58,y:2026,m:4,d:1},{f:9,amt:34700,area:84.58,y:2026,m:4,d:25},{f:14,amt:32900,area:84.58,y:2026,m:5,d:4},{f:14,amt:32900,area:84.58,y:2026,m:5,d:4},{f:17,amt:31700,area:84.58,y:2026,m:6,d:24},{f:11,amt:34000,area:84.58,y:2026,m:6,d:30},{f:5,amt:32000,area:84.58,y:2026,m:7,d:6},{f:9,amt:33000,area:84.58,y:2026,m:7,d:26}], earliestProxy:{amt:11500,area:59.88,f:3,y:2006,m:7}},
-  "작전신진": {maxFloorObs:5, txHistory:[], earliestProxy:{amt:5500,area:40.66,f:3,y:2006,m:7}},
-  "작전 한신": {maxFloorObs:11, txHistory:[{f:11,amt:18400,area:60.48,y:2021,m:1,d:4},{f:11,amt:18900,area:60.48,y:2021,m:1,d:24},{f:11,amt:23300,area:84.97,y:2021,m:1,d:29},{f:6,amt:19000,area:60.48,y:2021,m:2,d:10},{f:3,amt:23350,area:84.97,y:2021,m:2,d:19},{f:2,amt:22700,area:84.97,y:2021,m:2,d:24},{f:3,amt:22800,area:84.97,y:2021,m:2,d:25},{f:10,amt:24000,area:84.97,y:2021,m:3,d:22},{f:8,amt:18000,area:60.48,y:2021,m:3,d:27},{f:5,amt:20000,area:60.48,y:2021,m:4,d:1},{f:9,amt:19800,area:60.48,y:2021,m:4,d:9},{f:4,amt:26000,area:84.97,y:2021,m:4,d:16},{f:1,amt:19000,area:60.48,y:2021,m:4,d:23},{f:1,amt:27500,area:84.97,y:2021,m:4,d:27},{f:5,amt:24900,area:60.48,y:2021,m:7,d:5},{f:7,amt:37500,area:84.97,y:2021,m:7,d:20},{f:1,amt:35000,area:84.97,y:2021,m:9,d:7},{f:3,amt:34500,area:84.97,y:2021,m:9,d:18},{f:2,amt:35500,area:84.97,y:2021,m:11,d:15},{f:5,amt:34200,area:84.97,y:2021,m:11,d:29},{f:9,amt:31000,area:84.97,y:2022,m:5,d:25},{f:7,amt:34500,area:84.97,y:2022,m:5,d:26},{f:9,amt:30000,area:84.97,y:2022,m:7,d:4},{f:11,amt:29000,area:84.97,y:2022,m:9,d:5},{f:6,amt:31000,area:84.97,y:2022,m:9,d:24},{f:8,amt:27000,area:84.97,y:2023,m:2,d:2},{f:11,amt:27400,area:84.97,y:2023,m:3,d:1},{f:6,amt:25000,area:60.48,y:2023,m:3,d:20},{f:1,amt:25000,area:84.97,y:2023,m:7,d:26},{f:4,amt:25200,area:84.97,y:2023,m:8,d:8},{f:9,amt:28000,area:84.97,y:2023,m:9,d:5},{f:10,amt:19500,area:60.48,y:2024,m:1,d:23},{f:6,amt:21000,area:60.48,y:2024,m:3,d:4},{f:5,amt:26500,area:84.97,y:2024,m:3,d:5},{f:10,amt:25800,area:84.97,y:2024,m:4,d:2},{f:6,amt:28500,area:84.97,y:2024,m:7,d:13},{f:8,amt:26500,area:84.97,y:2024,m:7,d:17},{f:11,amt:26000,area:84.97,y:2024,m:7,d:17},{f:4,amt:28000,area:84.97,y:2024,m:8,d:6},{f:4,amt:28000,area:84.97,y:2024,m:8,d:27},{f:9,amt:20500,area:60.48,y:2024,m:9,d:27},{f:6,amt:21000,area:60.48,y:2024,m:10,d:2},{f:2,amt:26000,area:84.97,y:2024,m:11,d:8},{f:9,amt:27500,area:84.97,y:2025,m:2,d:19},{f:1,amt:19000,area:60.48,y:2025,m:2,d:20},{f:7,amt:20100,area:60.48,y:2025,m:2,d:26},{f:1,amt:26000,area:84.97,y:2025,m:3,d:21},{f:3,amt:20000,area:60.48,y:2025,m:4,d:6},{f:3,amt:20000,area:60.48,y:2025,m:4,d:6},{f:6,amt:18000,area:60.48,y:2025,m:4,d:12},{f:5,amt:21200,area:60.48,y:2025,m:6,d:16},{f:10,amt:26800,area:84.97,y:2025,m:7,d:2},{f:3,amt:18800,area:60.48,y:2025,m:9,d:1},{f:1,amt:19500,area:60.48,y:2025,m:9,d:3},{f:2,amt:20000,area:60.48,y:2025,m:9,d:3},{f:10,amt:26000,area:84.97,y:2025,m:9,d:7},{f:7,amt:27000,area:84.97,y:2025,m:9,d:16},{f:11,amt:25000,area:84.97,y:2025,m:9,d:29},{f:7,amt:24900,area:84.97,y:2025,m:11,d:11},{f:3,amt:25300,area:84.97,y:2026,m:1,d:11},{f:9,amt:20500,area:60.48,y:2026,m:1,d:24},{f:10,amt:27700,area:84.97,y:2026,m:2,d:14},{f:1,amt:18000,area:60.48,y:2026,m:3,d:17},{f:5,amt:21000,area:60.48,y:2026,m:3,d:20},{f:5,amt:20700,area:60.48,y:2026,m:5,d:6},{f:8,amt:27000,area:84.97,y:2026,m:5,d:15},{f:3,amt:26800,area:84.97,y:2026,m:6,d:5},{f:9,amt:27500,area:84.97,y:2026,m:6,d:23},{f:8,amt:26800,area:84.97,y:2026,m:7,d:27},{f:8,amt:26800,area:84.97,y:2026,m:7,d:27}], earliestProxy:{amt:11000,area:84.97,f:7,y:2006,m:7}},
-  "힐스테이트 자이 계양": {maxFloorObs:34, txHistory:[{f:22,amt:81500,area:84.81,y:2025,m:4,d:15},{f:22,amt:81499,area:84.81,y:2025,m:4,d:15},{f:18,amt:82500,area:84.53,y:2025,m:5,d:14},{f:11,amt:79000,area:84.5,y:2025,m:9,d:9},{f:11,amt:78999,area:84.5,y:2025,m:9,d:9},{f:13,amt:81999,area:84.5,y:2025,m:9,d:13},{f:13,amt:82000,area:84.5,y:2025,m:9,d:13},{f:13,amt:82000,area:84.5,y:2025,m:9,d:13},{f:28,amt:79999,area:84.81,y:2025,m:10,d:13},{f:29,amt:82000,area:84.81,y:2025,m:10,d:17},{f:28,amt:84000,area:84.81,y:2025,m:11,d:15},{f:5,amt:62000,area:84.53,y:2025,m:11,d:20},{f:14,amt:82499,area:84.53,y:2025,m:11,d:28},{f:23,amt:82000,area:84.81,y:2025,m:12,d:12},{f:23,amt:81699,area:84.81,y:2025,m:12,d:15},{f:23,amt:81700,area:84.81,y:2025,m:12,d:15},{f:19,amt:83499,area:84.81,y:2025,m:12,d:20},{f:19,amt:83500,area:84.81,y:2025,m:12,d:20},{f:28,amt:84000,area:84.53,y:2025,m:12,d:24},{f:10,amt:74999,area:84.81,y:2025,m:12,d:26},{f:28,amt:84000,area:84.53,y:2025,m:12,d:31},{f:28,amt:83999,area:84.53,y:2025,m:12,d:31},{f:30,amt:84500,area:84.81,y:2026,m:1,d:10},{f:16,amt:83000,area:84.81,y:2026,m:1,d:20},{f:15,amt:81000,area:84.81,y:2026,m:2,d:7},{f:19,amt:84000,area:84.53,y:2026,m:2,d:21},{f:11,amt:76000,area:84.53,y:2026,m:3,d:3},{f:20,amt:84000,area:84.81,y:2026,m:3,d:14},{f:4,amt:77500,area:84.53,y:2026,m:3,d:14},{f:25,amt:83000,area:84.81,y:2026,m:3,d:23},{f:31,amt:75000,area:84.81,y:2026,m:3,d:28},{f:7,amt:78000,area:84.53,y:2026,m:4,d:4},{f:27,amt:86000,area:84.81,y:2026,m:4,d:7},{f:27,amt:86000,area:84.81,y:2026,m:4,d:7},{f:33,amt:82000,area:84.53,y:2026,m:4,d:19},{f:23,amt:81700,area:84.81,y:2026,m:4,d:21},{f:14,amt:83900,area:84.81,y:2026,m:4,d:23},{f:5,amt:81000,area:84.81,y:2026,m:5,d:6},{f:28,amt:82300,area:84.53,y:2026,m:5,d:21},{f:22,amt:83700,area:84.53,y:2026,m:5,d:21},{f:21,amt:83000,area:84.5,y:2026,m:5,d:25},{f:16,amt:83500,area:84.53,y:2026,m:6,d:4},{f:20,amt:82000,area:84.53,y:2026,m:7,d:21},{f:30,amt:82500,area:84.81,y:2026,m:7,d:25},{f:27,amt:82000,area:84.53,y:2026,m:7,d:29}], earliestProxy:null},
-  "서운동경남아너스빌": {maxFloorObs:15, txHistory:[{f:6,amt:44200,area:101.8427,y:2021,m:1,d:12},{f:4,amt:43000,area:101.8427,y:2021,m:1,d:20},{f:9,amt:48000,area:101.8427,y:2021,m:1,d:22},{f:1,amt:40550,area:101.8427,y:2021,m:1,d:28},{f:6,amt:57000,area:101.8427,y:2021,m:3,d:24},{f:4,amt:50000,area:101.8427,y:2021,m:4,d:16},{f:3,amt:51000,area:101.8427,y:2021,m:5,d:5},{f:8,amt:58000,area:101.8427,y:2021,m:6,d:28},{f:15,amt:76000,area:133.2525,y:2021,m:6,d:29},{f:3,amt:68000,area:133.2525,y:2021,m:9,d:17},{f:11,amt:59900,area:101.8427,y:2021,m:10,d:18},{f:13,amt:72000,area:133.2525,y:2021,m:11,d:15},{f:2,amt:54500,area:101.8427,y:2022,m:4,d:11},{f:2,amt:46500,area:101.8427,y:2024,m:5,d:9},{f:9,amt:57000,area:133.2525,y:2024,m:9,d:24},{f:4,amt:46000,area:101.8427,y:2025,m:1,d:3},{f:1,amt:49500,area:133.2525,y:2025,m:1,d:23},{f:9,amt:49500,area:101.8427,y:2025,m:3,d:25},{f:2,amt:48000,area:101.8427,y:2025,m:4,d:9},{f:7,amt:49700,area:101.8427,y:2025,m:4,d:25},{f:3,amt:43500,area:101.8427,y:2025,m:6,d:3},{f:13,amt:54000,area:133.2525,y:2025,m:6,d:12},{f:5,amt:55000,area:133.2525,y:2025,m:7,d:20},{f:8,amt:53500,area:133.2525,y:2025,m:11,d:14},{f:3,amt:46900,area:101.8427,y:2025,m:11,d:15},{f:10,amt:55000,area:133.2525,y:2026,m:3,d:6},{f:14,amt:56000,area:133.2525,y:2026,m:3,d:18},{f:3,amt:42000,area:101.8427,y:2026,m:4,d:14},{f:14,amt:49300,area:101.8427,y:2026,m:8,d:23},{f:13,amt:55000,area:101.8427,y:2026,m:8,d:28}], earliestProxy:{amt:43000,area:101.8427,f:15,y:2010,m:7}},
-  "계양 효성해링턴 플레이스": {maxFloorObs:29, txHistory:[{f:24,amt:68000,area:84.986,y:2022,m:5,d:26},{f:19,amt:61500,area:84.966,y:2022,m:8,d:26},{f:17,amt:57500,area:84.986,y:2022,m:12,d:22},{f:28,amt:46900,area:72.998,y:2023,m:1,d:12},{f:4,amt:50000,area:84.986,y:2023,m:1,d:29},{f:27,amt:45300,area:72.998,y:2023,m:2,d:7},{f:21,amt:55000,area:84.986,y:2023,m:3,d:2},{f:4,amt:54000,area:84.986,y:2023,m:3,d:21},{f:7,amt:72000,area:99.939,y:2023,m:3,d:29},{f:27,amt:45300,area:72.998,y:2023,m:4,d:3},{f:19,amt:60000,area:84.986,y:2023,m:4,d:8},{f:8,amt:50000,area:72.964,y:2023,m:4,d:22},{f:24,amt:52500,area:72.964,y:2023,m:4,d:29},{f:9,amt:58000,area:84.986,y:2023,m:5,d:2},{f:15,amt:35000,area:72.998,y:2023,m:5,d:4},{f:17,amt:51800,area:84.966,y:2023,m:5,d:16},{f:18,amt:56400,area:84.986,y:2023,m:5,d:17},{f:3,amt:53500,area:84.966,y:2023,m:5,d:22},{f:18,amt:59800,area:84.966,y:2023,m:5,d:31},{f:28,amt:69000,area:99.939,y:2023,m:6,d:2},{f:2,amt:52300,area:72.998,y:2023,m:6,d:3},{f:12,amt:55000,area:84.966,y:2023,m:6,d:7},{f:2,amt:72000,area:99.939,y:2023,m:6,d:13},{f:7,amt:53000,area:72.998,y:2023,m:6,d:28},{f:16,amt:56600,area:84.986,y:2023,m:7,d:1},{f:11,amt:55000,area:84.986,y:2023,m:7,d:3},{f:26,amt:52500,area:72.964,y:2023,m:7,d:17},{f:15,amt:59500,area:84.966,y:2023,m:7,d:18},{f:19,amt:62500,area:84.986,y:2023,m:7,d:22},{f:5,amt:51000,area:72.964,y:2023,m:8,d:7},{f:2,amt:72000,area:99.939,y:2023,m:8,d:9},{f:20,amt:52000,area:72.998,y:2023,m:8,d:17},{f:4,amt:50000,area:72.998,y:2023,m:8,d:24},{f:15,amt:50000,area:72.998,y:2023,m:8,d:28},{f:9,amt:50000,area:72.964,y:2023,m:8,d:30},{f:12,amt:56500,area:72.964,y:2023,m:9,d:7},{f:8,amt:62000,area:84.986,y:2023,m:9,d:16},{f:4,amt:55000,area:72.998,y:2023,m:10,d:24},{f:10,amt:63200,area:84.986,y:2023,m:11,d:4},{f:23,amt:60000,area:84.966,y:2023,m:12,d:23},{f:20,amt:55000,area:72.964,y:2024,m:2,d:21},{f:17,amt:72000,area:99.939,y:2024,m:2,d:21},{f:10,amt:69500,area:99.939,y:2024,m:2,d:25},{f:24,amt:59500,area:84.986,y:2024,m:4,d:8},{f:24,amt:59500,area:84.986,y:2024,m:4,d:12},{f:16,amt:56700,area:72.964,y:2024,m:4,d:17},{f:6,amt:57000,area:72.964,y:2024,m:4,d:21},{f:10,amt:62500,area:84.986,y:2024,m:4,d:30},{f:19,amt:62500,area:84.986,y:2024,m:5,d:13},{f:22,amt:57000,area:72.964,y:2024,m:5,d:24},{f:13,amt:56000,area:72.998,y:2024,m:6,d:7},{f:7,amt:58000,area:84.986,y:2024,m:6,d:7},{f:9,amt:52500,area:72.964,y:2024,m:6,d:7},{f:1,amt:72500,area:84.966,y:2024,m:6,d:7},{f:22,amt:63400,area:84.986,y:2024,m:6,d:14},{f:6,amt:63500,area:84.986,y:2024,m:6,d:15},{f:27,amt:56000,area:72.998,y:2024,m:6,d:17},{f:5,amt:62000,area:84.986,y:2024,m:7,d:1},{f:2,amt:61000,area:84.986,y:2024,m:7,d:6},{f:26,amt:52000,area:84.986,y:2024,m:7,d:10},{f:2,amt:54000,area:72.964,y:2024,m:7,d:20},{f:6,amt:65000,area:84.986,y:2024,m:7,d:28},{f:19,amt:63000,area:84.966,y:2024,m:8,d:7},{f:29,amt:63000,area:84.986,y:2024,m:8,d:12},{f:14,amt:63000,area:84.986,y:2024,m:8,d:17},{f:23,amt:63000,area:84.986,y:2024,m:8,d:19},{f:16,amt:61500,area:84.986,y:2024,m:9,d:5},{f:23,amt:62800,area:84.986,y:2024,m:9,d:12},{f:8,amt:54000,area:72.964,y:2024,m:9,d:20},{f:23,amt:63500,area:84.986,y:2024,m:10,d:4},{f:5,amt:64000,area:84.986,y:2024,m:10,d:8},{f:17,amt:64500,area:84.986,y:2024,m:12,d:9},{f:28,amt:62000,area:84.986,y:2024,m:12,d:10},{f:15,amt:60000,area:84.986,y:2024,m:12,d:14},{f:15,amt:61000,area:84.986,y:2024,m:12,d:14},{f:16,amt:64000,area:84.986,y:2025,m:1,d:14},{f:20,amt:63500,area:84.986,y:2025,m:2,d:7},{f:22,amt:61000,area:84.986,y:2025,m:2,d:8},{f:22,amt:61000,area:84.966,y:2025,m:2,d:10},{f:18,amt:55500,area:72.964,y:2025,m:2,d:16},{f:5,amt:57500,area:72.998,y:2025,m:3,d:24},{f:20,amt:57500,area:72.964,y:2025,m:3,d:29},{f:1,amt:57000,area:72.998,y:2025,m:3,d:29},{f:10,amt:63000,area:84.986,y:2025,m:4,d:18},{f:15,amt:59850,area:84.986,y:2025,m:5,d:6},{f:10,amt:62000,area:84.986,y:2025,m:5,d:6},{f:14,amt:62000,area:84.986,y:2025,m:5,d:12},{f:12,amt:55000,area:72.964,y:2025,m:6,d:1},{f:23,amt:55300,area:72.998,y:2025,m:6,d:2},{f:6,amt:72900,area:99.939,y:2025,m:6,d:3},{f:23,amt:62200,area:84.966,y:2025,m:6,d:4},{f:21,amt:57500,area:72.964,y:2025,m:6,d:6},{f:12,amt:54300,area:72.964,y:2025,m:6,d:25},{f:24,amt:55500,area:72.964,y:2025,m:7,d:4},{f:28,amt:55000,area:72.964,y:2025,m:7,d:12},{f:28,amt:55000,area:72.964,y:2025,m:7,d:12},{f:7,amt:62000,area:84.986,y:2025,m:8,d:28},{f:6,amt:55000,area:72.998,y:2025,m:9,d:1},{f:17,amt:58000,area:72.998,y:2025,m:9,d:20},{f:18,amt:72500,area:99.939,y:2025,m:9,d:23},{f:7,amt:60500,area:84.986,y:2025,m:10,d:14},{f:7,amt:61000,area:84.986,y:2025,m:10,d:14},{f:24,amt:60000,area:84.986,y:2025,m:10,d:14},{f:20,amt:57000,area:72.964,y:2025,m:10,d:23},{f:23,amt:63500,area:84.986,y:2025,m:10,d:27},{f:12,amt:60800,area:84.986,y:2025,m:10,d:29},{f:9,amt:57000,area:72.964,y:2025,m:11,d:8},{f:10,amt:61000,area:84.986,y:2025,m:12,d:9},{f:11,amt:54500,area:72.998,y:2025,m:12,d:16},{f:6,amt:60500,area:84.986,y:2026,m:1,d:2},{f:13,amt:61000,area:84.986,y:2026,m:1,d:28},{f:23,amt:60500,area:84.986,y:2026,m:2,d:6},{f:28,amt:58000,area:84.986,y:2026,m:2,d:25},{f:20,amt:54000,area:72.998,y:2026,m:3,d:2},{f:2,amt:58000,area:84.966,y:2026,m:3,d:11},{f:20,amt:61000,area:84.986,y:2026,m:3,d:31},{f:9,amt:58500,area:84.966,y:2026,m:4,d:5},{f:20,amt:75800,area:99.939,y:2026,m:4,d:25},{f:19,amt:57500,area:84.986,y:2026,m:5,d:19},{f:10,amt:54500,area:72.964,y:2026,m:5,d:20},{f:22,amt:59800,area:84.966,y:2026,m:5,d:21},{f:6,amt:54500,area:72.964,y:2026,m:5,d:27},{f:20,amt:54800,area:72.998,y:2026,m:5,d:29},{f:11,amt:60000,area:84.986,y:2026,m:5,d:31},{f:18,amt:58400,area:84.986,y:2026,m:6,d:24},{f:28,amt:55700,area:72.998,y:2026,m:7,d:3},{f:29,amt:61000,area:84.986,y:2026,m:7,d:30},{f:27,amt:64000,area:84.986,y:2026,m:8,d:22},{f:21,amt:56000,area:72.998,y:2026,m:8,d:28}], earliestProxy:null},
-  "학마을 한진": {maxFloorObs:15, txHistory:[], earliestProxy:{amt:7700,area:49.77,f:15,y:2006,m:7}},
-  "학마을 서해": {maxFloorObs:18, txHistory:[], earliestProxy:{amt:12000,area:59.79,f:6,y:2006,m:7}},
-  "학마을 영남": {maxFloorObs:16, txHistory:[], earliestProxy:{amt:4400,area:26.01,f:7,y:2006,m:7}},
-  "학마을 서원": {maxFloorObs:16, txHistory:[], earliestProxy:{amt:11400,area:59.94,f:14,y:2006,m:7}},
-  "계양하늘채파크포레": {maxFloorObs:15, txHistory:[{f:15,amt:57000,area:84.8757,y:2023,m:7,d:26},{f:15,amt:57000,area:84.8757,y:2023,m:7,d:26},{f:9,amt:60000,area:84.96,y:2023,m:8,d:25},{f:8,amt:56000,area:84.9484,y:2024,m:1,d:20},{f:7,amt:55800,area:84.96,y:2025,m:9,d:28},{f:7,amt:55800,area:84.96,y:2025,m:9,d:28},{f:4,amt:59000,area:84.8757,y:2025,m:12,d:26},{f:4,amt:57000,area:84.96,y:2026,m:5,d:6}], earliestProxy:{amt:29300,area:59.8794,f:1,y:2023,m:6}},
-  "계양한양수자인": {maxFloorObs:15, txHistory:[{f:1,amt:44600,area:84.994,y:2021,m:1,d:23},{f:12,amt:60000,area:84.996,y:2021,m:6,d:28},{f:8,amt:49000,area:84.994,y:2021,m:7,d:21},{f:12,amt:65700,area:84.994,y:2021,m:7,d:22},{f:4,amt:60500,area:84.994,y:2022,m:1,d:7},{f:4,amt:65000,area:84.996,y:2022,m:1,d:24},{f:9,amt:60000,area:84.994,y:2022,m:7,d:13},{f:9,amt:60000,area:84.994,y:2022,m:7,d:13},{f:12,amt:57000,area:84.996,y:2023,m:3,d:1},{f:1,amt:48100,area:84.994,y:2023,m:4,d:10},{f:10,amt:65500,area:120.93,y:2023,m:9,d:11},{f:10,amt:65500,area:120.93,y:2023,m:9,d:11},{f:12,amt:67500,area:84.996,y:2023,m:10,d:14},{f:12,amt:54500,area:84.994,y:2024,m:3,d:14},{f:1,amt:52000,area:84.996,y:2024,m:6,d:3},{f:3,amt:51800,area:84.996,y:2024,m:7,d:3},{f:8,amt:57000,area:84.996,y:2024,m:7,d:27},{f:6,amt:55800,area:84.994,y:2024,m:7,d:27},{f:2,amt:53300,area:84.996,y:2024,m:8,d:15},{f:14,amt:54000,area:84.994,y:2024,m:9,d:28},{f:1,amt:51000,area:84.994,y:2024,m:10,d:6},{f:9,amt:57000,area:84.996,y:2024,m:12,d:12},{f:3,amt:53500,area:120.93,y:2025,m:2,d:21},{f:9,amt:56000,area:84.996,y:2025,m:3,d:8},{f:15,amt:60000,area:84.994,y:2025,m:3,d:16},{f:6,amt:55500,area:84.996,y:2025,m:3,d:17},{f:9,amt:56800,area:84.994,y:2025,m:6,d:16},{f:9,amt:56800,area:84.994,y:2025,m:6,d:16},{f:3,amt:62200,area:120.93,y:2025,m:6,d:20},{f:5,amt:56200,area:84.996,y:2025,m:9,d:8},{f:5,amt:70000,area:120.93,y:2025,m:11,d:2},{f:3,amt:52800,area:84.994,y:2025,m:12,d:6},{f:10,amt:57500,area:84.996,y:2025,m:12,d:16},{f:7,amt:39500,area:84.994,y:2026,m:1,d:23},{f:10,amt:57500,area:84.994,y:2026,m:1,d:27},{f:3,amt:52500,area:84.996,y:2026,m:3,d:28},{f:5,amt:58200,area:84.996,y:2026,m:6,d:15},{f:5,amt:55500,area:84.994,y:2026,m:8,d:25}], earliestProxy:{amt:44600,area:84.994,f:1,y:2021,m:1}},
-  "한화꿈에그린": {maxFloorObs:15, txHistory:[{f:10,amt:41000,area:84.97,y:2021,m:1,d:6},{f:15,amt:41000,area:84.97,y:2021,m:1,d:18},{f:4,amt:41000,area:84.97,y:2021,m:2,d:10},{f:12,amt:42400,area:84.97,y:2021,m:2,d:18},{f:11,amt:46000,area:84.97,y:2021,m:4,d:3},{f:15,amt:44500,area:84.97,y:2021,m:4,d:13},{f:5,amt:45500,area:84.97,y:2021,m:4,d:16},{f:2,amt:42500,area:84.97,y:2021,m:4,d:26},{f:7,amt:50000,area:84.97,y:2021,m:5,d:1},{f:7,amt:49000,area:84.97,y:2021,m:5,d:27},{f:3,amt:47800,area:84.97,y:2021,m:6,d:18},{f:6,amt:54000,area:84.97,y:2021,m:7,d:4},{f:7,amt:53000,area:84.97,y:2021,m:7,d:5},{f:5,amt:57000,area:84.97,y:2021,m:8,d:13},{f:12,amt:57500,area:84.97,y:2021,m:11,d:1},{f:11,amt:57000,area:84.97,y:2021,m:11,d:26},{f:10,amt:60000,area:84.97,y:2021,m:11,d:26},{f:12,amt:57500,area:84.97,y:2022,m:8,d:10},{f:4,amt:40000,area:84.97,y:2022,m:11,d:16},{f:4,amt:40000,area:84.97,y:2022,m:11,d:16},{f:14,amt:44000,area:84.97,y:2022,m:12,d:6},{f:14,amt:44000,area:84.97,y:2022,m:12,d:6},{f:10,amt:35000,area:84.97,y:2023,m:1,d:12},{f:10,amt:45000,area:84.97,y:2023,m:2,d:4},{f:12,amt:45000,area:84.97,y:2023,m:3,d:27},{f:14,amt:45000,area:84.97,y:2023,m:4,d:14},{f:3,amt:41000,area:84.97,y:2023,m:7,d:30},{f:14,amt:45000,area:84.97,y:2023,m:8,d:3},{f:13,amt:44800,area:84.97,y:2023,m:8,d:17},{f:4,amt:39000,area:84.97,y:2023,m:8,d:25},{f:1,amt:36000,area:84.97,y:2023,m:8,d:30},{f:2,amt:38000,area:84.97,y:2023,m:9,d:17},{f:2,amt:38000,area:84.97,y:2023,m:10,d:17},{f:4,amt:38000,area:84.97,y:2023,m:12,d:16},{f:4,amt:41300,area:84.97,y:2024,m:3,d:3},{f:3,amt:40000,area:84.97,y:2024,m:3,d:20},{f:1,amt:37000,area:84.97,y:2024,m:3,d:27},{f:12,amt:45000,area:84.97,y:2024,m:4,d:2},{f:12,amt:45000,area:84.97,y:2024,m:4,d:2},{f:11,amt:44800,area:84.97,y:2024,m:4,d:3},{f:2,amt:37000,area:84.97,y:2024,m:4,d:6},{f:13,amt:46500,area:84.97,y:2024,m:5,d:3},{f:10,amt:44800,area:84.97,y:2024,m:5,d:7},{f:1,amt:35500,area:84.97,y:2024,m:5,d:30},{f:2,amt:37900,area:84.97,y:2024,m:7,d:20},{f:14,amt:44300,area:84.97,y:2024,m:9,d:3},{f:7,amt:44700,area:84.97,y:2024,m:9,d:7},{f:14,amt:48800,area:84.97,y:2024,m:9,d:13},{f:14,amt:47000,area:84.97,y:2024,m:10,d:1},{f:11,amt:43800,area:84.97,y:2024,m:10,d:2},{f:3,amt:43000,area:84.97,y:2024,m:10,d:3},{f:7,amt:45000,area:84.97,y:2024,m:10,d:9},{f:10,amt:44000,area:84.97,y:2024,m:10,d:9},{f:2,amt:35500,area:84.97,y:2024,m:11,d:6},{f:9,amt:49800,area:84.97,y:2025,m:1,d:8},{f:1,amt:36500,area:84.97,y:2025,m:1,d:21},{f:8,amt:42000,area:84.97,y:2025,m:2,d:19},{f:3,amt:36000,area:84.97,y:2025,m:3,d:14},{f:9,amt:45000,area:84.97,y:2025,m:3,d:20},{f:4,amt:49000,area:84.97,y:2025,m:3,d:24},{f:4,amt:43000,area:84.97,y:2025,m:5,d:22},{f:10,amt:43000,area:84.97,y:2025,m:6,d:27},{f:1,amt:38000,area:84.97,y:2025,m:7,d:4},{f:6,amt:41500,area:84.97,y:2025,m:8,d:7},{f:7,amt:49000,area:84.97,y:2025,m:9,d:3},{f:2,amt:41750,area:84.97,y:2025,m:10,d:17},{f:1,amt:37500,area:84.97,y:2025,m:11,d:10},{f:15,amt:29000,area:84.97,y:2025,m:12,d:16},{f:15,amt:39500,area:84.97,y:2025,m:12,d:19},{f:15,amt:39500,area:84.97,y:2025,m:12,d:19},{f:12,amt:43200,area:84.97,y:2025,m:12,d:22},{f:2,amt:39500,area:84.97,y:2025,m:12,d:22},{f:1,amt:38000,area:84.97,y:2025,m:12,d:28},{f:15,amt:29000,area:84.97,y:2025,m:12,d:29},{f:2,amt:40350,area:84.97,y:2026,m:1,d:31},{f:3,amt:38500,area:84.97,y:2026,m:3,d:26},{f:9,amt:42800,area:84.97,y:2026,m:3,d:27},{f:10,amt:44600,area:84.97,y:2026,m:4,d:9},{f:2,amt:38000,area:84.97,y:2026,m:4,d:14},{f:2,amt:38000,area:84.97,y:2026,m:4,d:14},{f:12,amt:42000,area:84.97,y:2026,m:4,d:29},{f:7,amt:42000,area:84.97,y:2026,m:5,d:5},{f:15,amt:41250,area:84.97,y:2026,m:8,d:4}], earliestProxy:{amt:41000,area:84.97,f:10,y:2021,m:1}},
-  "e편한세상 계양더프리미어": {maxFloorObs:33, txHistory:[{f:14,amt:67000,area:84.9299,y:2022,m:9,d:13},{f:14,amt:67000,area:84.9299,y:2022,m:9,d:13},{f:1,amt:55000,area:84.9299,y:2022,m:10,d:15},{f:30,amt:64700,area:84.9299,y:2023,m:3,d:16},{f:1,amt:48000,area:74.9322,y:2023,m:3,d:25},{f:1,amt:47000,area:74.9322,y:2023,m:4,d:4},{f:19,amt:62700,area:84.9299,y:2023,m:8,d:8},{f:13,amt:64000,area:84.9299,y:2023,m:8,d:17},{f:10,amt:59000,area:84.9299,y:2023,m:8,d:17},{f:10,amt:44000,area:74.9322,y:2023,m:8,d:19},{f:20,amt:56200,area:74.9322,y:2023,m:9,d:1},{f:8,amt:55800,area:74.9322,y:2023,m:9,d:9},{f:8,amt:55800,area:74.9322,y:2023,m:9,d:9},{f:26,amt:60000,area:84.9299,y:2023,m:9,d:12},{f:17,amt:57500,area:84.9299,y:2023,m:10,d:9},{f:28,amt:57000,area:74.9322,y:2023,m:10,d:27},{f:33,amt:54000,area:74.9322,y:2023,m:10,d:31},{f:17,amt:60500,area:84.9299,y:2023,m:11,d:3},{f:12,amt:52000,area:74.9322,y:2023,m:11,d:21},{f:8,amt:55800,area:84.9299,y:2023,m:12,d:9},{f:5,amt:54000,area:74.9322,y:2023,m:12,d:22},{f:9,amt:56000,area:84.9299,y:2023,m:12,d:22},{f:5,amt:54000,area:74.9322,y:2023,m:12,d:22},{f:9,amt:57500,area:84.9299,y:2023,m:12,d:28},{f:19,amt:53000,area:74.9322,y:2024,m:1,d:3},{f:8,amt:57000,area:84.9299,y:2024,m:1,d:12},{f:17,amt:55000,area:74.9322,y:2024,m:1,d:17},{f:17,amt:54500,area:74.9322,y:2024,m:1,d:24},{f:16,amt:55500,area:74.9322,y:2024,m:1,d:27},{f:21,amt:54000,area:74.9322,y:2024,m:1,d:27},{f:10,amt:57000,area:84.9299,y:2024,m:1,d:29},{f:23,amt:58800,area:84.9299,y:2024,m:1,d:31},{f:22,amt:55000,area:74.9322,y:2024,m:2,d:4},{f:17,amt:60700,area:84.9299,y:2024,m:2,d:15},{f:14,amt:58300,area:84.9299,y:2024,m:2,d:16},{f:26,amt:55000,area:74.9322,y:2024,m:2,d:24},{f:4,amt:61200,area:84.9299,y:2024,m:3,d:12},{f:17,amt:60700,area:84.9299,y:2024,m:3,d:14},{f:11,amt:64300,area:84.9299,y:2024,m:4,d:1},{f:31,amt:56800,area:74.9322,y:2024,m:4,d:4},{f:17,amt:65000,area:84.9299,y:2024,m:4,d:5},{f:27,amt:62000,area:84.9299,y:2024,m:4,d:6},{f:6,amt:56700,area:74.9322,y:2024,m:4,d:10},{f:14,amt:56900,area:74.9322,y:2024,m:4,d:29},{f:4,amt:54500,area:74.9322,y:2024,m:5,d:1},{f:29,amt:66500,area:84.9299,y:2024,m:5,d:2},{f:9,amt:56000,area:74.9322,y:2024,m:5,d:4},{f:29,amt:54500,area:74.9322,y:2024,m:5,d:12},{f:18,amt:64500,area:84.9299,y:2024,m:5,d:25},{f:27,amt:57700,area:74.9322,y:2024,m:6,d:10},{f:2,amt:61800,area:84.9299,y:2024,m:6,d:12},{f:20,amt:53500,area:74.9322,y:2024,m:6,d:19},{f:28,amt:67500,area:84.9299,y:2024,m:7,d:1},{f:24,amt:66500,area:84.9299,y:2024,m:7,d:3},{f:24,amt:66900,area:84.9299,y:2024,m:7,d:6},{f:13,amt:66700,area:84.9299,y:2024,m:7,d:9},{f:4,amt:64000,area:84.9299,y:2024,m:7,d:22},{f:25,amt:57900,area:74.9322,y:2024,m:8,d:5},{f:4,amt:63500,area:84.9299,y:2024,m:8,d:11},{f:14,amt:68900,area:84.9299,y:2024,m:8,d:14},{f:22,amt:64000,area:84.9299,y:2024,m:8,d:22},{f:16,amt:58600,area:74.9322,y:2024,m:8,d:23},{f:27,amt:57800,area:74.9322,y:2024,m:8,d:23},{f:29,amt:62000,area:74.9322,y:2024,m:8,d:27},{f:7,amt:64800,area:84.9299,y:2024,m:8,d:31},{f:1,amt:54500,area:74.9322,y:2024,m:9,d:7},{f:2,amt:57500,area:74.9322,y:2024,m:9,d:19},{f:26,amt:57000,area:74.9322,y:2024,m:10,d:3},{f:4,amt:64900,area:84.9299,y:2024,m:10,d:18},{f:5,amt:68000,area:84.9299,y:2024,m:11,d:9},{f:8,amt:58000,area:74.9322,y:2025,m:1,d:9},{f:24,amt:60900,area:74.9322,y:2025,m:2,d:27},{f:23,amt:55000,area:74.9322,y:2025,m:3,d:5},{f:11,amt:63500,area:84.9299,y:2025,m:4,d:19},{f:26,amt:65900,area:84.9299,y:2025,m:4,d:24},{f:19,amt:59400,area:74.9322,y:2025,m:5,d:11},{f:5,amt:45000,area:74.9322,y:2025,m:5,d:16},{f:28,amt:65800,area:84.9299,y:2025,m:6,d:13},{f:29,amt:64900,area:84.9299,y:2025,m:6,d:18},{f:23,amt:56000,area:74.9322,y:2025,m:6,d:30},{f:22,amt:63500,area:84.9299,y:2025,m:7,d:12},{f:2,amt:59800,area:84.9299,y:2025,m:8,d:2},{f:18,amt:64600,area:84.9299,y:2025,m:8,d:26},{f:19,amt:62500,area:84.9299,y:2025,m:9,d:6},{f:28,amt:45000,area:84.9299,y:2025,m:9,d:22},{f:17,amt:58000,area:74.9322,y:2025,m:9,d:27},{f:24,amt:62500,area:84.9299,y:2025,m:10,d:7},{f:24,amt:62500,area:84.9299,y:2025,m:10,d:7},{f:24,amt:58200,area:74.9322,y:2025,m:10,d:13},{f:18,amt:63500,area:84.9299,y:2025,m:10,d:15},{f:6,amt:57500,area:74.9322,y:2025,m:11,d:4},{f:20,amt:63000,area:84.9299,y:2025,m:11,d:20},{f:8,amt:60000,area:84.9299,y:2025,m:12,d:4},{f:32,amt:62900,area:84.9299,y:2025,m:12,d:9},{f:10,amt:63800,area:84.9299,y:2025,m:12,d:23},{f:25,amt:64700,area:84.9299,y:2026,m:1,d:2},{f:7,amt:62800,area:84.9299,y:2026,m:1,d:4},{f:3,amt:60000,area:84.9299,y:2026,m:1,d:20},{f:33,amt:62900,area:84.9299,y:2026,m:1,d:25},{f:33,amt:62900,area:84.9299,y:2026,m:1,d:25},{f:29,amt:64000,area:84.9299,y:2026,m:2,d:8},{f:4,amt:59000,area:84.9299,y:2026,m:2,d:12},{f:29,amt:63500,area:84.9299,y:2026,m:3,d:6},{f:10,amt:56300,area:74.9322,y:2026,m:3,d:7},{f:13,amt:62500,area:84.9299,y:2026,m:4,d:25},{f:14,amt:57200,area:74.9322,y:2026,m:5,d:11},{f:15,amt:56800,area:74.9322,y:2026,m:6,d:13},{f:15,amt:63500,area:84.9299,y:2026,m:6,d:19},{f:11,amt:57000,area:74.9322,y:2026,m:6,d:30},{f:13,amt:58300,area:74.9322,y:2026,m:7,d:20},{f:21,amt:56900,area:74.9322,y:2026,m:7,d:30},{f:19,amt:57300,area:74.9322,y:2026,m:8,d:5},{f:33,amt:58900,area:74.9322,y:2026,m:8,d:8},{f:28,amt:57900,area:74.9322,y:2026,m:8,d:26}], earliestProxy:{amt:54500,area:59.8883,f:6,y:2022,m:8}},
-  "브라운스톤계양스카이": {maxFloorObs:33, txHistory:[{f:23,amt:46700,area:75.451,y:2023,m:2,d:27},{f:20,amt:52000,area:84.976,y:2023,m:5,d:15},{f:2,amt:43000,area:75.688,y:2023,m:6,d:17},{f:30,amt:42500,area:75.688,y:2023,m:8,d:2},{f:10,amt:48500,area:75.688,y:2023,m:8,d:20},{f:14,amt:52300,area:84.976,y:2023,m:12,d:28},{f:31,amt:52000,area:75.451,y:2024,m:2,d:24},{f:28,amt:51800,area:84.976,y:2024,m:3,d:21},{f:8,amt:55000,area:75.688,y:2024,m:3,d:21},{f:22,amt:49900,area:75.688,y:2024,m:3,d:27},{f:16,amt:40000,area:75.451,y:2024,m:4,d:5},{f:26,amt:55000,area:84.976,y:2024,m:6,d:3},{f:13,amt:52800,area:75.688,y:2024,m:6,d:5},{f:11,amt:52000,area:75.451,y:2024,m:7,d:10},{f:23,amt:49000,area:75.688,y:2024,m:7,d:21},{f:32,amt:57500,area:84.976,y:2024,m:8,d:30},{f:13,amt:50000,area:75.451,y:2024,m:11,d:5},{f:8,amt:54000,area:84.976,y:2025,m:4,d:26},{f:11,amt:52000,area:75.451,y:2025,m:6,d:20},{f:3,amt:43000,area:75.451,y:2025,m:6,d:24},{f:30,amt:49900,area:75.688,y:2025,m:7,d:15},{f:33,amt:52000,area:84.976,y:2025,m:7,d:30},{f:7,amt:53500,area:84.976,y:2026,m:1,d:28},{f:21,amt:48500,area:75.688,y:2026,m:3,d:14},{f:27,amt:49500,area:75.451,y:2026,m:5,d:27}], earliestProxy:{amt:45000,area:59.93,f:24,y:2022,m:9}}
-  };
+  // (기존 TX_HISTORY_DATA 하드코딩 제거됨 — 실거래 내역은 이제 Supabase transactions 테이블에서 불러옵니다)
 
-  var COMPARISON_COMPLEXES = [
-    // 계산동 (계양구청·계산역·경인교대입구역)
-    // 계산주공·계산 하나·계산 영남은 전용 60㎡ 이하 소형 위주 단지라 84㎡ 초과 비교 실거래가 0건이라 지도에서 제외함(2026.09).
-    {name:"계산 현대", address:"인천광역시 계양구 계산동 62-1", buildYear:1992, units:1248, landmark:"계양구청·계산역",
-      currentPrice:"3억 4,000만원 (85㎡·2층·26.08)"},
-    // 임학동·용종동 (임학역·계양IC)
-    {name:"유호", address:"인천광역시 계양구 임학동 임학안로 34-10", buildYear:1990, units:156, landmark:"임학역",
-      currentPrice:"1억 7,800만원 (60㎡·5층·26.03, 84㎡ 표본 없음)"},
-    {name:"인천계양 코아루 센트럴파크", address:"인천광역시 계양구 용종동 계양문화로 119", buildYear:2017, units:724, landmark:"임학역·계양IC",
-      currentPrice:"5억 6,500만원 (84㎡·20층·26.08)"},
-    {name:"용종마을 신대진", address:"인천광역시 계양구 용종동 용종로 97", buildYear:1997, units:562, landmark:"임학역·계양IC",
-      currentPrice:"3억 7,500만원 (85㎡·5층·26.08)"},
-    {name:"초정마을 하나", address:"인천광역시 계양구 용종동 228-1", buildYear:1997, units:972, landmark:"계양IC",
-      currentPrice:"4억 2,800만원 (85㎡·7층·26.08)"},
-    {name:"초정마을 두산·쌍용", address:"인천광역시 계양구 용종동 213-2", buildYear:1997, units:798, landmark:"계양IC",
-      currentPrice:"5억 5,000만원 (122㎡·18층·25.12, 84㎡보다 큰 타입)"},
-    {name:"용종마을 중앙", address:"인천광역시 계양구 용종동 계양문화로 141", buildYear:1997, units:428, landmark:"계양IC",
-      currentPrice:"4억 2,000만원 (85㎡·14층·26.08)"},
-    // 작전동 (작전역)
-    // 작전신진은 전용 60㎡ 이하 소형 위주 단지라 84㎡ 초과 비교 실거래가 0건이라 지도에서 제외함(2026.09).
-    {name:"동보1차", address:"인천광역시 계양구 작전동 주부토로363번길 27", buildYear:1995, units:1187, landmark:"작전역",
-      currentPrice:"1억 9,000만원 (60㎡·18층·26.08, 84㎡ 표본 없음)"},
-    {name:"작전 한신", address:"인천광역시 계양구 작전동 382-1", buildYear:1991, units:259, landmark:"작전역",
-      currentPrice:null},
-    {name:"힐스테이트 자이 계양", address:"인천광역시 계양구 작전동 봉오대로651번길 9", buildYear:2024, units:2371, landmark:"작전역",
-      presalePrice:"84㎡ 최고가 기준 5억 6,400만원 (2021년 분양, 3.3㎡당 약 1,659만원)",
-      baselineAmt:56400, baselineArea:84,
-      currentPrice:"8억 3,000만원 (85㎡·25층·26.03)"},
-    // 서운동 (서운JC)
-    {name:"서운동경남아너스빌", address:"인천광역시 계양구 서운동 178", buildYear:2007, units:255, landmark:"서운JC",
-      currentPrice:"4억 9,300만원 (102㎡·14층·26.08, 84㎡ 표본 없음)"},
-    {name:"계양 효성해링턴 플레이스", address:"인천광역시 계양구 서운동 서운로 34", buildYear:2021, units:1669, landmark:"서운JC",
-      presalePrice:"84㎡ 3억 7,326만~4억 2,388만원 (2018년 분양, 기준층 3.3㎡당 약 1,152만원)",
-      baselineAmt:39857, baselineArea:84,
-      currentPrice:"6억 4,000만원 (85㎡·27층·26.08)"},
-    // 박촌역·방축역 인근 (2026.09 Round F 추가)
-    {name:"계양하늘채파크포레", address:"인천광역시 계양구 방축동 박촌로 19", buildYear:2023, units:546, landmark:"박촌역·방축역",
-      presalePrice:"84A형 4억 8,700만~5억 2,300만원 (2021.05 분양)",
-      baselineAmt:50500, baselineArea:84,
-      currentPrice:"5억 5,800만원 (85㎡·7층·25.09)"},
-    {name:"계양한양수자인", address:"인천광역시 계양구 박촌동 319", buildYear:2011, units:376, landmark:"박촌역"},
-    {name:"한화꿈에그린", address:"인천광역시 계양구 박촌동 310", buildYear:2005, units:683, landmark:"박촌역"},
-    // 작전역·효성동 인근 (2026.09 Round F 추가)
-    {name:"e편한세상 계양더프리미어", address:"인천광역시 계양구 효성동 효서로 145", buildYear:2021, units:1646, landmark:"작전역(도보 약 700m)",
-      presalePrice:"84㎡ 3억 8,820만~4억 3,140만원 (2019년 분양)",
-      baselineAmt:40980, baselineArea:84,
-      currentPrice:"5억 4,500만원 (60㎡·6층·22.08, 84㎡ 표본은 아래 실거래 참고)"},
-    {name:"브라운스톤계양스카이", address:"인천광역시 계양구 작전동 425-6", buildYear:2020, units:282, landmark:"작전역"}
-    // 병방동(학마을 한진·서해·영남·서원)은 모두 전용 60㎡ 이하 소형 위주 단지라 84㎡ 초과 비교 실거래가
-    // 0건이라 지도에서 전부 제외함(2026.09).
-  ].map(function(c, i){
-    c.id = "cmp-" + i;
-    if (c.presalePrice === undefined) c.presalePrice = null;
-    if (c.currentPrice === undefined) c.currentPrice = null;
-    c.age = ageBucket(c.buildYear);
-    var hist = TX_HISTORY_DATA[c.name];
-    if (hist) {
-      c.maxFloorObs = hist.maxFloorObs;
-      // txHistory는 이미 2021.01~2026.08 전수조사 + 60㎡ 초과 필터가 적용된 데이터이므로
-      // 안전장치 차원에서 동일 조건으로 한 번 더 필터링(값 자체는 변하지 않음)
-      c.txHistory = hist.txHistory.filter(function(t){ return t.area > 60 && t.y >= 2021; });
-      if (!c.presalePrice && hist.earliestProxy) {
-        var e = hist.earliestProxy;
-        c.presalePrice = formatAmt(e.amt) + " (" + e.area + "㎡·" + e.f + "층·" + e.y + "." + String(e.m).padStart(2,"0") + ", 준공 후 실거래가)";
-        c.presaleIsProxy = true;
-        c.baselineAmt = e.amt;
-        c.baselineArea = e.area;
-      }
-    } else {
-      c.maxFloorObs = null;
-      c.txHistory = [];
-    }
-    return c;
-  });
+  var COMPARISON_COMPLEXES = []; // Supabase complexes(role=comparison) + transactions에서 런타임에 채워짐 (loadDataFromSupabase 참고)
 
   var map, geocoder, markers = [], activeFilter = "all";
   var currentComplex = null, txFloorFilter = "all", txAreaFilter = "all";
+
+  // ============================================================
+  // Supabase 연동: 하드코딩 배열 대신 실제 DB(complexes/transactions)에서
+  // 데이터를 불러와 COMPARISON_COMPLEXES / PROJECTS를 채운다. (2026.09 1단계)
+  // ============================================================
+  var SUPABASE_URL = "https://ckczwpyopiihyumjgwjl.supabase.co";
+  var SUPABASE_ANON_KEY = "sb_publishable_qw-URFALkEDIOrYhzZ4aSg_igF6nK_e";
+
+  function supabaseFetchAll(table, selectCols, orderCol){
+    var pageSize = 1000;
+    function fetchPage(from){
+      var to = from + pageSize - 1;
+      return fetch(SUPABASE_URL + "/rest/v1/" + table + "?select=" + selectCols + "&order=" + (orderCol || "id"), {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: "Bearer " + SUPABASE_ANON_KEY,
+          Range: from + "-" + to
+        }
+      }).then(function(res){
+        if (!res.ok) { throw new Error(table + " 조회 실패 (HTTP " + res.status + ")"); }
+        return res.json().then(function(rows){
+          if (!rows || rows.length < pageSize) return rows || [];
+          return fetchPage(from + pageSize).then(function(more){ return rows.concat(more); });
+        });
+      });
+    }
+    return fetchPage(0);
+  }
+
+  function loadDataFromSupabase(){
+    var complexCols = ["id","role","name","short_label","address","lat","lng","build_year","units",
+      "type_info","presale_price_note","current_price_note","competition_rate_note","unsold_status_note",
+      "status_label","panel_note","block","date_label","max_floor_obs","map_status","landmark",
+      "baseline_amt","baseline_area","presale_is_proxy"].join(",");
+    var txCols = "id,complex_id,transaction_type,area_sqm,floor,price_man,contract_date";
+
+    return Promise.all([
+      supabaseFetchAll("complexes", complexCols, "name"),
+      supabaseFetchAll("transactions", txCols, "id")
+    ]).then(function(results){
+      var complexRows = results[0];
+      var txRows = results[1];
+
+      var txByComplex = {};
+      txRows.forEach(function(t){
+        (txByComplex[t.complex_id] = txByComplex[t.complex_id] || []).push(t);
+      });
+
+      COMPARISON_COMPLEXES.length = 0;
+      PROJECTS.length = 0;
+
+      complexRows.forEach(function(row){
+        var rawTx = txByComplex[row.id] || [];
+        var txs = rawTx.map(function(t){
+          var parts = (t.contract_date || "").split("-");
+          return {
+            f: t.floor,
+            amt: (t.price_man === null || t.price_man === undefined) ? null : Number(t.price_man),
+            area: (t.area_sqm === null || t.area_sqm === undefined) ? null : Number(t.area_sqm),
+            y: parts[0] ? parseInt(parts[0], 10) : null,
+            m: parts[1] ? parseInt(parts[1], 10) : null,
+            d: parts[2] ? parseInt(parts[2], 10) : null,
+            type: t.transaction_type
+          };
+        });
+
+        if (row.role === "comparison") {
+          var c = {
+            id: row.id,
+            name: row.name,
+            address: row.address,
+            buildYear: row.build_year,
+            units: row.units,
+            landmark: row.landmark || "",
+            presalePrice: row.presale_price_note || null,
+            currentPrice: row.current_price_note || null,
+            maxFloorObs: row.max_floor_obs || null,
+            baselineAmt: (row.baseline_amt === null || row.baseline_amt === undefined) ? null : Number(row.baseline_amt),
+            baselineArea: (row.baseline_area === null || row.baseline_area === undefined) ? null : Number(row.baseline_area),
+            presaleIsProxy: !!row.presale_is_proxy,
+            txHistory: txs
+          };
+          c.age = ageBucket(c.buildYear);
+          COMPARISON_COMPLEXES.push(c);
+        } else {
+          var p = {
+            id: row.id,
+            name: row.name,
+            shortLabel: row.short_label,
+            block: row.block,
+            address: row.address,
+            fallbackLatLng: (row.lat !== null && row.lat !== undefined && row.lng !== null && row.lng !== undefined)
+              ? [Number(row.lat), Number(row.lng)] : null,
+            status: row.map_status || (row.role === "own_upcoming" ? "upcoming" : "competitor"),
+            statusLabel: row.status_label,
+            units: row.units,
+            dateLabel: row.date_label,
+            typeInfo: row.type_info,
+            presalePrice: row.presale_price_note || null,
+            competitionRate: row.competition_rate_note || null,
+            unsoldStatus: row.unsold_status_note || null,
+            panelNote: row.panel_note || null,
+            txHistory: txs
+          };
+          PROJECTS.push(p);
+        }
+      });
+    });
+  }
+
+  // ------------------------------------------------------------
+  // 층별 실거래 산점도 + 추세선 (comparison / project 공통 사용)
+  // ------------------------------------------------------------
+  var FLOOR_TIER_COLOR = { "저층":"#2f6fd6", "중층":"#12a39c", "고층":"#c1786d", "미상":"#8891b5" };
+
+  function computeMaxFloor(entity){
+    if (entity.maxFloorObs) return entity.maxFloorObs;
+    var mx = 0;
+    (entity.txHistory || []).forEach(function(t){ if (t.f && t.f > mx) mx = t.f; });
+    return mx || null;
+  }
+
+  function linearRegression(points){
+    var n = points.length;
+    if (n < 2) return null;
+    var sumX=0, sumY=0, sumXY=0, sumXX=0;
+    points.forEach(function(p){ sumX+=p.x; sumY+=p.y; sumXY+=p.x*p.y; sumXX+=p.x*p.x; });
+    var denom = (n*sumXX - sumX*sumX);
+    if (denom === 0) return null;
+    var slope = (n*sumXY - sumX*sumY) / denom;
+    var intercept = (sumY - slope*sumX) / n;
+    return { slope: slope, intercept: intercept };
+  }
+
+  function renderFloorPriceChart(containerId, entity){
+    var root = document.getElementById(containerId);
+    if (!root) return;
+    var txs = (entity.txHistory || []).filter(function(t){ return t.area && t.amt && t.y; });
+    if (txs.length < 2) { root.innerHTML = ""; return; }
+
+    var maxFloor = computeMaxFloor(entity);
+    var pts = txs.map(function(t){
+      var date = new Date(t.y, (t.m||1)-1, t.d||1);
+      var unitPrice = t.amt / t.area; // 만원/㎡
+      var tier = floorBucketLabel(t.f, maxFloor) || "미상";
+      return { x: date.getTime(), y: unitPrice, tier: tier, raw: t };
+    });
+
+    var xs = pts.map(function(p){ return p.x; });
+    var ys = pts.map(function(p){ return p.y; });
+    var xMin = Math.min.apply(null, xs), xMax = Math.max.apply(null, xs);
+    var yMin = Math.min.apply(null, ys), yMax = Math.max.apply(null, ys);
+    if (xMin === xMax) { xMin -= 1; xMax += 1; }
+    if (yMin === yMax) { yMin -= 1; yMax += 1; }
+    var padX = (xMax-xMin)*0.05, padY = (yMax-yMin)*0.12;
+    xMin -= padX; xMax += padX; yMin -= padY; yMax += padY;
+
+    function sx(x){ return 6 + (x-xMin)/(xMax-xMin) * 88; }
+    function sy(y){ return 92 - (y-yMin)/(yMax-yMin) * 84; }
+
+    var groups = {};
+    pts.forEach(function(p){ (groups[p.tier] = groups[p.tier] || []).push(p); });
+
+    var circles = pts.map(function(p){
+      return '<circle cx="' + sx(p.x).toFixed(2) + '" cy="' + sy(p.y).toFixed(2) + '" r="1.6" ' +
+        'fill="' + (FLOOR_TIER_COLOR[p.tier] || "#888") + '" fill-opacity="0.75">' +
+        '<title>' + p.raw.y + '.' + String(p.raw.m).padStart(2,"0") + ' · ' + p.raw.f + '층 · ' + formatAmt(p.raw.amt) + '</title>' +
+        '</circle>';
+    }).join('');
+
+    var lines = Object.keys(groups).map(function(tier){
+      var g = groups[tier];
+      if (g.length < 2) return '';
+      var reg = linearRegression(g.map(function(p){ return {x:p.x, y:p.y}; }));
+      if (!reg) return '';
+      var y1 = reg.slope*xMin + reg.intercept;
+      var y2 = reg.slope*xMax + reg.intercept;
+      return '<line x1="' + sx(xMin).toFixed(2) + '" y1="' + sy(y1).toFixed(2) + '" x2="' + sx(xMax).toFixed(2) + '" y2="' + sy(y2).toFixed(2) + '" ' +
+        'stroke="' + (FLOOR_TIER_COLOR[tier] || "#888") + '" stroke-width="1" stroke-dasharray="3,2" />';
+    }).join('');
+
+    var legend = Object.keys(FLOOR_TIER_COLOR).filter(function(t){ return groups[t] && groups[t].length; }).map(function(t){
+      return '<span class="chart-legend-item"><span class="chart-dot" style="background:' + FLOOR_TIER_COLOR[t] + '"></span>' + t + '</span>';
+    }).join('');
+
+    root.innerHTML =
+      '<div class="tx-section">' +
+        '<div class="section-label tx-title">층별 실거래 추이 (산점도 · 만원/㎡)</div>' +
+        '<div class="chart-legend">' + legend + '</div>' +
+        '<svg viewBox="0 0 100 100" preserveAspectRatio="none" class="floor-chart">' + lines + circles + '</svg>' +
+        '<div class="note">가로축: 거래일자 · 세로축: 전용면적당 거래가격(만원/㎡). 점은 개별 실거래, 점선은 층구간(저/중/고층)별 추세선입니다.</div>' +
+      '</div>';
+  }
 
   function initMap(){
     var container = document.getElementById("map");
@@ -908,8 +796,10 @@
       '</div>' +
       '<div class="addr-box"><div class="k">주소</div>' + p.address + '</div>' +
       premiumHtml +
+      '<div id="floorChartRoot"></div>' +
       '<div class="note">' + noteText + '</div>';
     document.getElementById("panel").classList.add("open");
+    renderFloorPriceChart("floorChartRoot", p);
   }
 
   function openComparisonPanel(c){
@@ -934,9 +824,11 @@
       '</div>' +
       '<div class="addr-box"><div class="k">주소</div>' + c.address + '</div>' +
       '<div class="addr-box"><div class="k">' + presaleLabel + '</div>' + presale + '</div>' +
+      '<div id="floorChartRoot"></div>' +
       '<div id="txSectionRoot"></div>' +
       '<div class="note">분양가는 뉴스·분양공고 등 온라인에서 확인 가능한 자료만 반영했고, 확인이 안 되는 단지는 국토부 실거래가 중 가장 이른 거래를 "준공 후 실거래가"로 표시했습니다(추정 아님, 실제 거래가). 실거래 내역은 2021.01~2026.08 국토부 실거래가(매매)를 월 단위로 빠짐없이 전수조사한 결과입니다(60㎡ 이하 제외). 최고층수는 조사된 거래에서 관찰된 값으로 실제 설계 층수와 다를 수 있고, 향(방향)별 데이터는 국토부 자료에 없어 이번엔 제외했습니다.</div>';
     document.getElementById("panel").classList.add("open");
+    renderFloorPriceChart("floorChartRoot", c);
     renderTxSection();
   }
 
@@ -1015,7 +907,28 @@
   }
 
   // Kakao SDK 로드 + 실패 시 안내 배너 표시 (인증 통과 후에만 호출됨)
+  // 인증 통과 직후 호출됨: 먼저 Supabase에서 실데이터를 불러온 뒤,
+  // 성공하면 기존 카카오 지도 초기화 절차(startAppAfterData)를 이어서 진행한다.
   function startApp(){
+    var mapEl = document.getElementById("map");
+    mapEl.style.display = "flex";
+    mapEl.style.alignItems = "center";
+    mapEl.style.justifyContent = "center";
+    mapEl.style.color = "#9a8f78";
+    mapEl.style.fontSize = "14px";
+    mapEl.textContent = "데이터를 불러오는 중입니다...";
+
+    loadDataFromSupabase().then(function(){
+      startAppAfterData();
+    }).catch(function(err){
+      mapEl.textContent = "데이터를 불러오지 못했습니다. 잠시 후 새로고침해주세요. (" + err.message + ")";
+      document.getElementById("setupBanner").textContent =
+        "Supabase 데이터 로딩 실패: " + err.message + " — 네트워크 상태를 확인하거나 새로고침해주세요.";
+      document.getElementById("setupBanner").style.display = "block";
+    });
+  }
+
+  function startAppAfterData(){
     if (KAKAO_APP_KEY.indexOf("YOUR_KAKAO") === 0) {
       document.getElementById("setupBanner").style.display = "block";
       document.getElementById("map").style.display = "flex";

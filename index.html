@@ -155,6 +155,10 @@
     display:inline-block;font-size:.68rem;font-weight:700;padding:3px 9px;
     border-radius:999px;color:#fff;margin-bottom:8px;letter-spacing:.01em;
   }
+  .classification-badge{
+    display:inline-block;font-size:.68rem;font-weight:700;padding:3px 9px;
+    border-radius:999px;color:#fff;margin-bottom:8px;margin-left:6px;letter-spacing:.01em;
+  }
   .panel h2{font-size:1.05rem;margin:0 0 3px;line-height:1.35;font-weight:800;}
   .panel .sub{color:var(--ink-soft);font-size:.76rem;margin-bottom:14px;}
   .section-label{
@@ -343,6 +347,9 @@
   var KAKAO_APP_KEY = "f6ade909379e30f39034a28f8302e8da";
 
   var STATUS_COLOR = { upcoming:"#202a5d", competitor:"#7d5ba6", under1:"#e0a728", "1to5":"#2f6fd6", "5to10":"#12a39c", over10:"#c1443c" };
+  // 2단계(2026.09): 성공/보통/실패 분류 배지 색상. 저층/중층/고층 차트 색과는 다른 팔레트를 써서
+  // "차트 색"과 "판정 색"이 헷갈리지 않도록 분리했다. 미분류는 배지를 아예 표시하지 않는다.
+  var CLASSIFICATION_COLOR = { "성공":"#1a8754", "보통":"#c98a1f", "실패":"#c0392b" };
   var BRAND_ICON_DATA = "data:image/png;base64,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";
 
 
@@ -463,19 +470,50 @@
     return fetchPage(0);
   }
 
+  // 2단계(2026.09): 성공/보통/실패 판정 기준값. classification_rules 테이블에서 불러오되,
+  // 조회 실패 시에도 화면이 죽지 않도록 기본값(성공=3대1 이상, 보통=1대1 이상)을 준비해둔다.
+  var CLASSIFICATION_RULES = { success_min_rate: 3, normal_min_rate: 1 };
+
+  // 성공/보통/실패 자동 분류 — Supabase의 v_complex_classification 뷰와 동일한 규칙을
+  // 프론트엔드에서도 그대로 적용(별도 조회 없이 이미 불러온 complexes 값으로 즉시 계산).
+  // 타사 현장(competitor)에만 적용되고, 비교단지·당사 현장은 판정 대상이 아니라 null을 반환.
+  function computeSuccessClassification(row){
+    if (row.role !== "competitor") return null;
+    if (row.sale_stage !== "completed") return "미분류";
+    var rate = (row.avg_competition_rate === null || row.avg_competition_rate === undefined) ? null : Number(row.avg_competition_rate);
+    var hadUnsold = row.had_unsold_history; // true / false / null
+    var unsoldResolved = row.unsold_resolved; // true / false / null
+    if (rate === null && (hadUnsold === null || hadUnsold === undefined)) return "미분류";
+    if (hadUnsold === true && unsoldResolved === false) return "실패";
+    if (hadUnsold !== true && rate !== null && rate >= CLASSIFICATION_RULES.success_min_rate) return "성공";
+    if ((hadUnsold === true && unsoldResolved === true) ||
+        (rate !== null && rate >= CLASSIFICATION_RULES.normal_min_rate && rate < CLASSIFICATION_RULES.success_min_rate)) {
+      return "보통";
+    }
+    return "미분류";
+  }
+
   function loadDataFromSupabase(){
     var complexCols = ["id","role","name","short_label","address","lat","lng","build_year","units",
       "type_info","presale_price_note","current_price_note","competition_rate_note","unsold_status_note",
       "status_label","panel_note","block","date_label","max_floor_obs","map_status","landmark",
-      "baseline_amt","baseline_area","presale_is_proxy","floor_gap_note"].join(",");
+      "baseline_amt","baseline_area","presale_is_proxy","floor_gap_note",
+      "avg_competition_rate","had_unsold_history","unsold_resolved","sale_stage"].join(",");
     var txCols = "id,complex_id,transaction_type,area_sqm,floor,price_man,contract_date";
+    var ruleCols = "rule_key,rule_value";
 
     return Promise.all([
       supabaseFetchAll("complexes", complexCols, "name"),
-      supabaseFetchAll("transactions", txCols, "id")
+      supabaseFetchAll("transactions", txCols, "id"),
+      supabaseFetchAll("classification_rules", ruleCols, "rule_key").catch(function(){ return []; })
     ]).then(function(results){
       var complexRows = results[0];
       var txRows = results[1];
+      var ruleRows = results[2] || [];
+      ruleRows.forEach(function(r){
+        if (r.rule_key === "success_min_rate" && r.rule_value !== null) CLASSIFICATION_RULES.success_min_rate = Number(r.rule_value);
+        if (r.rule_key === "normal_min_rate" && r.rule_value !== null) CLASSIFICATION_RULES.normal_min_rate = Number(r.rule_value);
+      });
 
       var txByComplex = {};
       txRows.forEach(function(t){
@@ -538,6 +576,7 @@
             unsoldStatus: row.unsold_status_note || null,
             panelNote: row.panel_note || null,
             floorGapNote: row.floor_gap_note || null,
+            successClassification: computeSuccessClassification(row),
             txHistory: txs
           };
           PROJECTS.push(p);
@@ -849,6 +888,9 @@
 
   function openPanel(p, approximate){
     var badge = '<span class="status-badge" style="background:' + STATUS_COLOR[p.status] + '">' + p.statusLabel + '</span>';
+    if (p.successClassification && CLASSIFICATION_COLOR[p.successClassification]) {
+      badge += '<span class="classification-badge" style="background:' + CLASSIFICATION_COLOR[p.successClassification] + '">분양성과 · ' + p.successClassification + '</span>';
+    }
     var approxNote = approximate
       ? '<div class="note" style="margin-bottom:10px;color:#a15a1f;">⚠ 주소 지오코딩에 실패해 근사 좌표로 표시 중입니다. 카카오 키/도메인 등록을 확인해주세요.</div>'
       : '';

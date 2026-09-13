@@ -376,13 +376,18 @@
     return sign + Math.round(Math.abs(man)).toLocaleString() + "만원";
   }
 
-  // 저층/중층/고층: 표본 거래에서 관찰된 최고층(maxFloorObs)을 3등분한 상대적 구간.
-  // 실제 설계 총 층수와 다를 수 있음(비교단지는 등기부·설계도 확인이 어려워 관찰값으로 근사).
+  // 저층/중층/고층: 건물 전체 층수의 1/3씩이 아니라, "저층(기피층)은 절대 층수 기준 1~5층 고정
+  // + 나머지(6층~최고층)를 중층/고층으로 절반씩" 나누는 방식. 실제 분양·거래 관행상 기피층 프리미엄은
+  // 건물이 높다고 비례해서 넓어지지 않고 대략 5층 안팎에서 대부분 해소된다는 점을 반영(2026.09 조정).
+  // 예: 29층 건물 → 저층 1~5, 중층 6~17, 고층 18~29. 39층 건물 → 저층 1~5, 중층 6~22, 고층 23~39.
+  // 실제 설계 총 층수와 다를 수 있음(비교단지는 등기부·설계도 확인이 어려워 관찰값(maxFloorObs)으로 근사).
   function floorBucketLabel(floor, maxFloor){
     if (!maxFloor || maxFloor <= 0) return "";
-    var ratio = floor / maxFloor;
-    if (ratio <= 1/3) return "저층";
-    if (ratio <= 2/3) return "중층";
+    if (floor <= 5) return "저층";
+    if (maxFloor <= 5) return "저층"; // 저층 상한보다 낮은 건물은 전부 저층 취급
+    var remaining = maxFloor - 5;
+    var midCutoff = 5 + Math.ceil(remaining / 2);
+    if (floor <= midCutoff) return "중층";
     return "고층";
   }
 

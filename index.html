@@ -222,7 +222,7 @@
   .premium-row-head{font-size:.64rem;font-weight:700;color:var(--ink-soft);background:var(--paper)!important;}
   .premium-row-head span:last-child{text-align:right;}
   .premium-amt{font-weight:700;text-align:right;}
-  .floor-chart{width:100%;height:180px;display:block;background:var(--paper);border:1px solid var(--line);border-radius:8px;}
+  .floor-chart{width:100%;height:auto;display:block;background:var(--paper-raised);border:1px solid var(--line);border-radius:8px;}
   .chart-legend{display:flex;gap:12px;flex-wrap:wrap;font-size:.68rem;color:var(--ink-soft);margin-bottom:6px;}
   .chart-legend-item{display:flex;align-items:center;gap:4px;}
   .chart-dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
@@ -537,8 +537,11 @@
 
   // ------------------------------------------------------------
   // 층별 실거래 산점도 + 추세선 (comparison / project 공통 사용)
+  // 색상은 데이터비주얼라이제이션 가이드의 검증된 categorical 팔레트(3슬롯, 전체 쌍 CVD 검증 통과) 사용.
   // ------------------------------------------------------------
-  var FLOOR_TIER_COLOR = { "저층":"#2f6fd6", "중층":"#12a39c", "고층":"#c1786d", "미상":"#8891b5" };
+  var FLOOR_TIER_COLOR = { "저층":"#2a78d6", "중층":"#eb6834", "고층":"#1baf7a", "미상":"#898781" };
+  var FLOOR_TIER_ORDER = ["저층","중층","고층","미상"];
+  var PYEONG_SQM = 3.305785; // 1평 = 3.305785㎡
 
   function computeMaxFloor(entity){
     if (entity.maxFloorObs) return entity.maxFloorObs;
@@ -559,6 +562,48 @@
     return { slope: slope, intercept: intercept };
   }
 
+  // "보기 좋은" 눈금 간격(1/2/5의 배수)을 골라 대략 targetCount개의 눈금을 만든다.
+  function niceTicks(min, max, targetCount){
+    var range = max - min;
+    if (!isFinite(range) || range <= 0) return [min];
+    var rawStep = range / targetCount;
+    var mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
+    var norm = rawStep / mag;
+    var step = (norm < 1.5) ? mag : (norm < 3 ? 2*mag : (norm < 7 ? 5*mag : 10*mag));
+    var start = Math.ceil(min / step) * step;
+    var ticks = [];
+    for (var v = start; v <= max + step*0.001; v += step) ticks.push(Math.round(v*1000)/1000);
+    return ticks;
+  }
+
+  // 시간축 눈금: 데이터 기간에 따라 분기(3개월)/반기(6개월)/연(12개월) 단위로 자동 조정.
+  function buildTimeTicks(minMs, maxMs){
+    var minD = new Date(minMs), maxD = new Date(maxMs);
+    var spanMonths = (maxD.getFullYear()-minD.getFullYear())*12 + (maxD.getMonth()-minD.getMonth());
+    var stepMonths = spanMonths <= 14 ? 3 : (spanMonths <= 30 ? 6 : 12);
+    var ticks = [];
+    var d = new Date(minD.getFullYear(), Math.floor(minD.getMonth()/stepMonths)*stepMonths, 1);
+    var guard = 0;
+    while (d.getTime() <= maxMs && guard < 60) {
+      if (d.getTime() >= minMs) ticks.push(d.getTime());
+      d = new Date(d.getFullYear(), d.getMonth()+stepMonths, 1);
+      guard++;
+    }
+    return { ticks: ticks, stepMonths: stepMonths };
+  }
+
+  function formatTickDate(ms, stepMonths){
+    var d = new Date(ms);
+    if (stepMonths >= 12) return String(d.getFullYear());
+    return d.getFullYear() + "." + String(d.getMonth()+1).padStart(2,"0");
+  }
+
+  function formatAxisPrice(v){
+    v = Math.round(v);
+    if (Math.abs(v) >= 10000) return (v/10000).toFixed(v % 10000 === 0 ? 0 : 1) + "억";
+    return v.toLocaleString();
+  }
+
   function renderFloorPriceChart(containerId, entity){
     var root = document.getElementById(containerId);
     if (!root) return;
@@ -568,54 +613,83 @@
     var maxFloor = computeMaxFloor(entity);
     var pts = txs.map(function(t){
       var date = new Date(t.y, (t.m||1)-1, t.d||1);
-      var unitPrice = t.amt / t.area; // 만원/㎡
+      var pricePerPyeong = (t.amt / t.area) * PYEONG_SQM; // 만원/평 (전용면적 기준, 3.3㎡=1평)
       var tier = floorBucketLabel(t.f, maxFloor) || "미상";
-      return { x: date.getTime(), y: unitPrice, tier: tier, raw: t };
+      return { x: date.getTime(), y: pricePerPyeong, tier: tier, raw: t };
     });
-
-    var xs = pts.map(function(p){ return p.x; });
-    var ys = pts.map(function(p){ return p.y; });
-    var xMin = Math.min.apply(null, xs), xMax = Math.max.apply(null, xs);
-    var yMin = Math.min.apply(null, ys), yMax = Math.max.apply(null, ys);
-    if (xMin === xMax) { xMin -= 1; xMax += 1; }
-    if (yMin === yMax) { yMin -= 1; yMax += 1; }
-    var padX = (xMax-xMin)*0.05, padY = (yMax-yMin)*0.12;
-    xMin -= padX; xMax += padX; yMin -= padY; yMax += padY;
-
-    function sx(x){ return 6 + (x-xMin)/(xMax-xMin) * 88; }
-    function sy(y){ return 92 - (y-yMin)/(yMax-yMin) * 84; }
 
     var groups = {};
     pts.forEach(function(p){ (groups[p.tier] = groups[p.tier] || []).push(p); });
 
-    var circles = pts.map(function(p){
-      return '<circle cx="' + sx(p.x).toFixed(2) + '" cy="' + sy(p.y).toFixed(2) + '" r="1.6" ' +
-        'fill="' + (FLOOR_TIER_COLOR[p.tier] || "#888") + '" fill-opacity="0.75">' +
-        '<title>' + p.raw.y + '.' + String(p.raw.m).padStart(2,"0") + ' · ' + p.raw.f + '층 · ' + formatAmt(p.raw.amt) + '</title>' +
-        '</circle>';
+    var W = Math.max(280, root.clientWidth || (root.parentElement ? root.parentElement.clientWidth : 0) || 320);
+    var H = 220;
+    var M = { left:52, right:12, top:12, bottom:28 };
+    var plotW = W - M.left - M.right, plotH = H - M.top - M.bottom;
+
+    var xs = pts.map(function(p){ return p.x; });
+    var ys = pts.map(function(p){ return p.y; });
+    var xMinRaw = Math.min.apply(null, xs), xMaxRaw = Math.max.apply(null, xs);
+    var yMinRaw = Math.min.apply(null, ys), yMaxRaw = Math.max.apply(null, ys);
+    var xPad = Math.max((xMaxRaw-xMinRaw)*0.06, 15*86400000);
+    var yPad = Math.max((yMaxRaw-yMinRaw)*0.14, Math.max(1, yMaxRaw*0.05));
+    var xMin = xMinRaw - xPad, xMax = xMaxRaw + xPad;
+    var yMin = Math.max(0, yMinRaw - yPad), yMax = yMaxRaw + yPad;
+    if (xMin === xMax) { xMin -= 86400000; xMax += 86400000; }
+    if (yMin === yMax) { yMin -= 1; yMax += 1; }
+
+    function sx(x){ return M.left + (x-xMin)/(xMax-xMin) * plotW; }
+    function sy(y){ return H-M.bottom - (y-yMin)/(yMax-yMin) * plotH; }
+
+    var timeTicks = buildTimeTicks(xMin, xMax);
+    var yTicks = niceTicks(yMin, yMax, 4);
+
+    var gridAndYAxis = yTicks.map(function(v){
+      var yy = sy(v);
+      return '<line x1="' + M.left + '" y1="' + yy.toFixed(1) + '" x2="' + (W-M.right) + '" y2="' + yy.toFixed(1) + '" stroke="#e1e0d9" stroke-width="1"/>' +
+        '<text x="' + (M.left-8) + '" y="' + (yy+3).toFixed(1) + '" font-size="10" fill="#898781" text-anchor="end">' + formatAxisPrice(v) + '</text>';
     }).join('');
 
-    var lines = Object.keys(groups).map(function(tier){
-      var g = groups[tier];
-      if (g.length < 2) return '';
-      var reg = linearRegression(g.map(function(p){ return {x:p.x, y:p.y}; }));
+    var xAxisTicks = timeTicks.ticks.map(function(t){
+      var xx = sx(t);
+      return '<line x1="' + xx.toFixed(1) + '" y1="' + M.top + '" x2="' + xx.toFixed(1) + '" y2="' + (H-M.bottom) + '" stroke="#e1e0d9" stroke-width="1"/>' +
+        '<text x="' + xx.toFixed(1) + '" y="' + (H-M.bottom+16) + '" font-size="10" fill="#898781" text-anchor="middle">' + formatTickDate(t, timeTicks.stepMonths) + '</text>';
+    }).join('');
+
+    var axisBaseline =
+      '<line x1="' + M.left + '" y1="' + (H-M.bottom) + '" x2="' + (W-M.right) + '" y2="' + (H-M.bottom) + '" stroke="#c3c2b7" stroke-width="1"/>' +
+      '<line x1="' + M.left + '" y1="' + M.top + '" x2="' + M.left + '" y2="' + (H-M.bottom) + '" stroke="#c3c2b7" stroke-width="1"/>';
+
+    var circles = FLOOR_TIER_ORDER.filter(function(t){ return groups[t]; }).map(function(tier){
+      return groups[tier].map(function(p){
+        var cx = sx(p.x), cy = sy(p.y);
+        return '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="3" ' +
+          'fill="' + FLOOR_TIER_COLOR[tier] + '" fill-opacity="0.5" stroke="' + FLOOR_TIER_COLOR[tier] + '" stroke-opacity="0.85" stroke-width="0.6">' +
+          '<title>' + p.raw.y + '.' + String(p.raw.m).padStart(2,"0") + ' · ' + p.raw.f + '층 · ' + formatAmt(p.raw.amt) + ' (' + Math.round(p.raw.area) + '㎡)</title>' +
+          '</circle>';
+      }).join('');
+    }).join('');
+
+    var trendLines = FLOOR_TIER_ORDER.filter(function(t){ return groups[t] && groups[t].length >= 2; }).map(function(tier){
+      var reg = linearRegression(groups[tier].map(function(p){ return {x:p.x, y:p.y}; }));
       if (!reg) return '';
       var y1 = reg.slope*xMin + reg.intercept;
       var y2 = reg.slope*xMax + reg.intercept;
-      return '<line x1="' + sx(xMin).toFixed(2) + '" y1="' + sy(y1).toFixed(2) + '" x2="' + sx(xMax).toFixed(2) + '" y2="' + sy(y2).toFixed(2) + '" ' +
-        'stroke="' + (FLOOR_TIER_COLOR[tier] || "#888") + '" stroke-width="1" stroke-dasharray="3,2" />';
+      return '<line x1="' + sx(xMin).toFixed(1) + '" y1="' + sy(y1).toFixed(1) + '" x2="' + sx(xMax).toFixed(1) + '" y2="' + sy(y2).toFixed(1) + '" ' +
+        'stroke="' + FLOOR_TIER_COLOR[tier] + '" stroke-width="2.5" stroke-linecap="round"/>';
     }).join('');
 
-    var legend = Object.keys(FLOOR_TIER_COLOR).filter(function(t){ return groups[t] && groups[t].length; }).map(function(t){
-      return '<span class="chart-legend-item"><span class="chart-dot" style="background:' + FLOOR_TIER_COLOR[t] + '"></span>' + t + '</span>';
+    var legend = FLOOR_TIER_ORDER.filter(function(t){ return groups[t] && groups[t].length; }).map(function(t){
+      return '<span class="chart-legend-item"><span class="chart-dot" style="background:' + FLOOR_TIER_COLOR[t] + '"></span>' + t + ' (' + groups[t].length + '건)</span>';
     }).join('');
 
     root.innerHTML =
       '<div class="tx-section">' +
-        '<div class="section-label tx-title">층별 실거래 추이 (산점도 · 만원/㎡)</div>' +
+        '<div class="section-label tx-title">층별 실거래 추이 <span class="tx-count">평당가 · 만원/평</span></div>' +
         '<div class="chart-legend">' + legend + '</div>' +
-        '<svg viewBox="0 0 100 100" preserveAspectRatio="none" class="floor-chart">' + lines + circles + '</svg>' +
-        '<div class="note">가로축: 거래일자 · 세로축: 전용면적당 거래가격(만원/㎡). 점은 개별 실거래, 점선은 층구간(저/중/고층)별 추세선입니다.</div>' +
+        '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" height="' + H + '" class="floor-chart" preserveAspectRatio="xMidYMid meet">' +
+          gridAndYAxis + axisBaseline + xAxisTicks + circles + trendLines +
+        '</svg>' +
+        '<div class="note">가로축: 계약일자 · 세로축: 전용면적 기준 평당 거래가격(만원). 굵은 선은 층구간(저/중/고층)별 추세선, 점은 개별 실거래입니다(마우스를 올리면 상세 정보가 표시됩니다).</div>' +
       '</div>';
   }
 
@@ -939,6 +1013,10 @@
       document.getElementById("map").textContent = "카카오 키를 설정하면 이 자리에 실제 지도가 표시됩니다.";
       return;
     }
+    var mapEl = document.getElementById("map");
+    mapEl.textContent = "";
+    mapEl.removeAttribute("style"); // startApp()에서 "데이터를 불러오는 중입니다" 표시용으로 걸어둔 인라인 스타일 제거
+
     var script = document.createElement("script");
     script.src = "https://dapi.kakao.com/v2/maps/sdk.js?appkey=" + KAKAO_APP_KEY + "&autoload=false&libraries=services";
     script.onload = function(){ kakao.maps.load(initMap); };

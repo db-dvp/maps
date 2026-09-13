@@ -226,6 +226,8 @@
   .chart-legend{display:flex;gap:12px;flex-wrap:wrap;font-size:.68rem;color:var(--ink-soft);margin-bottom:6px;}
   .chart-legend-item{display:flex;align-items:center;gap:4px;}
   .chart-dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
+  .floor-premium-callout{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:.76rem;line-height:1.4;color:var(--ink);margin-bottom:8px;}
+  .floor-premium-callout b{color:var(--ink);}
   .data-loading-note{padding:40px 16px;text-align:center;color:var(--ink-soft);font-size:.82rem;}
   @media (max-width:640px){
     .topbar{gap:8px;padding:10px 12px;}
@@ -604,44 +606,72 @@
     return v.toLocaleString();
   }
 
+  // 층구간(저/중/고층)별 평균 평당가 + 표본 수 계산
+  function computeTierStats(entity){
+    var maxFloor = computeMaxFloor(entity);
+    var txs = (entity.txHistory || []).filter(function(t){ return t.area && t.amt && t.y && t.f; });
+    var groups = {};
+    txs.forEach(function(t){
+      var pricePerPyeong = (t.amt / t.area) * PYEONG_SQM; // 만원/평 (전용면적 기준, 3.3㎡=1평)
+      var tier = floorBucketLabel(t.f, maxFloor) || "미상";
+      (groups[tier] = groups[tier] || []).push(pricePerPyeong);
+    });
+    var stats = {};
+    Object.keys(groups).forEach(function(tier){
+      var arr = groups[tier];
+      var avg = arr.reduce(function(s,v){ return s+v; }, 0) / arr.length;
+      stats[tier] = { avg: avg, n: arr.length };
+    });
+    return stats;
+  }
+
+  // 층구간 간 가격차(프리미엄)를 한 줄 문장으로 — 표본이 3건 이상인 층구간끼리만 비교(너무 적은 표본으로 단정하지 않도록)
+  function buildFloorPremiumSummary(stats){
+    var eligible = FLOOR_TIER_ORDER.filter(function(t){ return t !== "미상" && stats[t] && stats[t].n >= 3; });
+    if (eligible.length < 2) return null;
+    eligible.sort(function(a,b){ return stats[a].avg - stats[b].avg; });
+    var loT = eligible[0], hiT = eligible[eligible.length-1];
+    var diff = stats[hiT].avg - stats[loT].avg;
+    var pct = (diff / stats[loT].avg) * 100;
+    return {
+      html: '<b>' + hiT + '</b>이 <b>' + loT + '</b>보다 평당 약 <b>' + Math.round(diff).toLocaleString() + '만원(' + (pct>=0?'+':'') + pct.toFixed(1) + '%)</b> 높게 거래됨',
+      loT: loT, hiT: hiT
+    };
+  }
+
+  // 상단 4px 라운드, 하단(기준선)은 각진 막대 path
+  function topRoundedBarPath(x, yTop, w, yBottom, r){
+    r = Math.min(r, w/2, Math.max(0, yBottom - yTop));
+    return 'M' + x + ',' + yBottom +
+      ' L' + x + ',' + (yTop+r) +
+      ' Q' + x + ',' + yTop + ' ' + (x+r) + ',' + yTop +
+      ' L' + (x+w-r) + ',' + yTop +
+      ' Q' + (x+w) + ',' + yTop + ' ' + (x+w) + ',' + (yTop+r) +
+      ' L' + (x+w) + ',' + yBottom + ' Z';
+  }
+
   function renderFloorPriceChart(containerId, entity){
     var root = document.getElementById(containerId);
     if (!root) return;
-    var txs = (entity.txHistory || []).filter(function(t){ return t.area && t.amt && t.y; });
-    if (txs.length < 2) { root.innerHTML = ""; return; }
+    var stats = computeTierStats(entity);
+    var tiers = FLOOR_TIER_ORDER.filter(function(t){ return stats[t] && stats[t].n >= 1; });
+    if (tiers.length === 0) { root.innerHTML = ""; return; }
 
-    var maxFloor = computeMaxFloor(entity);
-    var pts = txs.map(function(t){
-      var date = new Date(t.y, (t.m||1)-1, t.d||1);
-      var pricePerPyeong = (t.amt / t.area) * PYEONG_SQM; // 만원/평 (전용면적 기준, 3.3㎡=1평)
-      var tier = floorBucketLabel(t.f, maxFloor) || "미상";
-      return { x: date.getTime(), y: pricePerPyeong, tier: tier, raw: t };
-    });
+    var summary = buildFloorPremiumSummary(stats);
 
-    var groups = {};
-    pts.forEach(function(p){ (groups[p.tier] = groups[p.tier] || []).push(p); });
-
-    var W = Math.max(280, root.clientWidth || (root.parentElement ? root.parentElement.clientWidth : 0) || 320);
-    var H = 220;
-    var M = { left:52, right:12, top:12, bottom:28 };
+    var W = Math.max(240, root.clientWidth || (root.parentElement ? root.parentElement.clientWidth : 0) || 320);
+    var H = 150;
+    var M = { left:50, right:16, top:22, bottom:34 };
     var plotW = W - M.left - M.right, plotH = H - M.top - M.bottom;
 
-    var xs = pts.map(function(p){ return p.x; });
-    var ys = pts.map(function(p){ return p.y; });
-    var xMinRaw = Math.min.apply(null, xs), xMaxRaw = Math.max.apply(null, xs);
-    var yMinRaw = Math.min.apply(null, ys), yMaxRaw = Math.max.apply(null, ys);
-    var xPad = Math.max((xMaxRaw-xMinRaw)*0.06, 15*86400000);
-    var yPad = Math.max((yMaxRaw-yMinRaw)*0.14, Math.max(1, yMaxRaw*0.05));
-    var xMin = xMinRaw - xPad, xMax = xMaxRaw + xPad;
-    var yMin = Math.max(0, yMinRaw - yPad), yMax = yMaxRaw + yPad;
-    if (xMin === xMax) { xMin -= 86400000; xMax += 86400000; }
-    if (yMin === yMax) { yMin -= 1; yMax += 1; }
+    var maxAvg = Math.max.apply(null, tiers.map(function(t){ return stats[t].avg; }));
+    var yMax = Math.max.apply(null, niceTicks(0, maxAvg*1.15, 3).concat([maxAvg*1.05]));
+    var yTicks = niceTicks(0, yMax, 3);
 
-    function sx(x){ return M.left + (x-xMin)/(xMax-xMin) * plotW; }
-    function sy(y){ return H-M.bottom - (y-yMin)/(yMax-yMin) * plotH; }
+    function sy(v){ return H-M.bottom - (v/yMax) * plotH; }
 
-    var timeTicks = buildTimeTicks(xMin, xMax);
-    var yTicks = niceTicks(yMin, yMax, 4);
+    var slotW = plotW / tiers.length;
+    var barW = Math.min(44, slotW*0.5);
 
     var gridAndYAxis = yTicks.map(function(v){
       var yy = sy(v);
@@ -649,47 +679,29 @@
         '<text x="' + (M.left-8) + '" y="' + (yy+3).toFixed(1) + '" font-size="10" fill="#898781" text-anchor="end">' + formatAxisPrice(v) + '</text>';
     }).join('');
 
-    var xAxisTicks = timeTicks.ticks.map(function(t){
-      var xx = sx(t);
-      return '<line x1="' + xx.toFixed(1) + '" y1="' + M.top + '" x2="' + xx.toFixed(1) + '" y2="' + (H-M.bottom) + '" stroke="#e1e0d9" stroke-width="1"/>' +
-        '<text x="' + xx.toFixed(1) + '" y="' + (H-M.bottom+16) + '" font-size="10" fill="#898781" text-anchor="middle">' + formatTickDate(t, timeTicks.stepMonths) + '</text>';
-    }).join('');
+    var axisBaseline = '<line x1="' + M.left + '" y1="' + (H-M.bottom) + '" x2="' + (W-M.right) + '" y2="' + (H-M.bottom) + '" stroke="#c3c2b7" stroke-width="1"/>';
 
-    var axisBaseline =
-      '<line x1="' + M.left + '" y1="' + (H-M.bottom) + '" x2="' + (W-M.right) + '" y2="' + (H-M.bottom) + '" stroke="#c3c2b7" stroke-width="1"/>' +
-      '<line x1="' + M.left + '" y1="' + M.top + '" x2="' + M.left + '" y2="' + (H-M.bottom) + '" stroke="#c3c2b7" stroke-width="1"/>';
-
-    var circles = FLOOR_TIER_ORDER.filter(function(t){ return groups[t]; }).map(function(tier){
-      return groups[tier].map(function(p){
-        var cx = sx(p.x), cy = sy(p.y);
-        return '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="3" ' +
-          'fill="' + FLOOR_TIER_COLOR[tier] + '" fill-opacity="0.5" stroke="' + FLOOR_TIER_COLOR[tier] + '" stroke-opacity="0.85" stroke-width="0.6">' +
-          '<title>' + p.raw.y + '.' + String(p.raw.m).padStart(2,"0") + ' · ' + p.raw.f + '층 · ' + formatAmt(p.raw.amt) + ' (' + Math.round(p.raw.area) + '㎡)</title>' +
-          '</circle>';
-      }).join('');
-    }).join('');
-
-    var trendLines = FLOOR_TIER_ORDER.filter(function(t){ return groups[t] && groups[t].length >= 2; }).map(function(tier){
-      var reg = linearRegression(groups[tier].map(function(p){ return {x:p.x, y:p.y}; }));
-      if (!reg) return '';
-      var y1 = reg.slope*xMin + reg.intercept;
-      var y2 = reg.slope*xMax + reg.intercept;
-      return '<line x1="' + sx(xMin).toFixed(1) + '" y1="' + sy(y1).toFixed(1) + '" x2="' + sx(xMax).toFixed(1) + '" y2="' + sy(y2).toFixed(1) + '" ' +
-        'stroke="' + FLOOR_TIER_COLOR[tier] + '" stroke-width="2.5" stroke-linecap="round"/>';
-    }).join('');
-
-    var legend = FLOOR_TIER_ORDER.filter(function(t){ return groups[t] && groups[t].length; }).map(function(t){
-      return '<span class="chart-legend-item"><span class="chart-dot" style="background:' + FLOOR_TIER_COLOR[t] + '"></span>' + t + ' (' + groups[t].length + '건)</span>';
+    var bars = tiers.map(function(tier, i){
+      var slotCenter = M.left + slotW*i + slotW/2;
+      var barX = slotCenter - barW/2;
+      var barTop = sy(stats[tier].avg);
+      var barBottom = H - M.bottom;
+      var path = topRoundedBarPath(barX, barTop, barW, barBottom, 4);
+      var valueLabel = Math.round(stats[tier].avg).toLocaleString();
+      return '<path d="' + path + '" fill="' + FLOOR_TIER_COLOR[tier] + '"/>' +
+        '<text x="' + slotCenter + '" y="' + (barTop-6) + '" font-size="11" font-weight="700" fill="#0b0b0b" text-anchor="middle">' + valueLabel + '</text>' +
+        '<text x="' + slotCenter + '" y="' + (H-M.bottom+16) + '" font-size="11" font-weight="700" fill="#0b0b0b" text-anchor="middle">' + tier + '</text>' +
+        '<text x="' + slotCenter + '" y="' + (H-M.bottom+28) + '" font-size="9.5" fill="#898781" text-anchor="middle">(' + stats[tier].n + '건)</text>';
     }).join('');
 
     root.innerHTML =
       '<div class="tx-section">' +
-        '<div class="section-label tx-title">층별 실거래 추이 <span class="tx-count">평당가 · 만원/평</span></div>' +
-        '<div class="chart-legend">' + legend + '</div>' +
+        '<div class="section-label tx-title">층별 평당가 비교 <span class="tx-count">평균 · 만원/평</span></div>' +
+        (summary ? '<div class="floor-premium-callout">' + summary.html + '</div>' : '') +
         '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" height="' + H + '" class="floor-chart" preserveAspectRatio="xMidYMid meet">' +
-          gridAndYAxis + axisBaseline + xAxisTicks + circles + trendLines +
+          gridAndYAxis + axisBaseline + bars +
         '</svg>' +
-        '<div class="note">가로축: 계약일자 · 세로축: 전용면적 기준 평당 거래가격(만원). 굵은 선은 층구간(저/중/고층)별 추세선, 점은 개별 실거래입니다(마우스를 올리면 상세 정보가 표시됩니다).</div>' +
+        '<div class="note">저층/중층/고층 각각의 전용면적 기준 평당 거래가격 평균입니다(개별 실거래 ' + FLOOR_TIER_ORDER.filter(function(t){return stats[t];}).reduce(function(s,t){return s+stats[t].n;},0) + '건 기준). 표본이 3건 미만인 층구간은 위 비교 문구에서 제외했습니다.</div>' +
       '</div>';
   }
 

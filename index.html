@@ -228,6 +228,8 @@
   .chart-dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
   .floor-premium-callout{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:.76rem;line-height:1.4;color:var(--ink);margin-bottom:8px;}
   .floor-premium-callout b{color:var(--ink);}
+  .floor-gap-note{display:flex;gap:6px;align-items:flex-start;font-size:.72rem;line-height:1.5;color:var(--ink-soft);margin-top:6px;padding:2px 2px 0;}
+  .floor-gap-note .icon{flex:0 0 auto;}
   .data-loading-note{padding:40px 16px;text-align:center;color:var(--ink-soft);font-size:.82rem;}
   @media (max-width:640px){
     .topbar{gap:8px;padding:10px 12px;}
@@ -465,7 +467,7 @@
     var complexCols = ["id","role","name","short_label","address","lat","lng","build_year","units",
       "type_info","presale_price_note","current_price_note","competition_rate_note","unsold_status_note",
       "status_label","panel_note","block","date_label","max_floor_obs","map_status","landmark",
-      "baseline_amt","baseline_area","presale_is_proxy"].join(",");
+      "baseline_amt","baseline_area","presale_is_proxy","floor_gap_note"].join(",");
     var txCols = "id,complex_id,transaction_type,area_sqm,floor,price_man,contract_date";
 
     return Promise.all([
@@ -512,6 +514,7 @@
             baselineAmt: (row.baseline_amt === null || row.baseline_amt === undefined) ? null : Number(row.baseline_amt),
             baselineArea: (row.baseline_area === null || row.baseline_area === undefined) ? null : Number(row.baseline_area),
             presaleIsProxy: !!row.presale_is_proxy,
+            floorGapNote: row.floor_gap_note || null,
             txHistory: txs
           };
           c.age = ageBucket(c.buildYear);
@@ -534,6 +537,7 @@
             competitionRate: row.competition_rate_note || null,
             unsoldStatus: row.unsold_status_note || null,
             panelNote: row.panel_note || null,
+            floorGapNote: row.floor_gap_note || null,
             txHistory: txs
           };
           PROJECTS.push(p);
@@ -707,6 +711,7 @@
           gridAndYAxis + axisBaseline + bars +
         '</svg>' +
         '<div class="note">저층/중층/고층 각각의 전용면적 기준 평당 거래가격 평균입니다(개별 실거래 ' + FLOOR_TIER_ORDER.filter(function(t){return stats[t];}).reduce(function(s,t){return s+stats[t].n;},0) + '건 기준). 표본이 3건 미만인 층구간은 위 비교 문구에서 제외했습니다.</div>' +
+        (entity.floorGapNote ? '<div class="floor-gap-note"><span class="icon">참고</span><span>' + entity.floorGapNote + '</span></div>' : '') +
       '</div>';
   }
 

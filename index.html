@@ -227,6 +227,32 @@
   .premium-row-head span:last-child{text-align:right;}
   .premium-amt{font-weight:700;text-align:right;}
   .floor-chart{width:100%;height:auto;display:block;background:var(--paper-raised);border:1px solid var(--line);border-radius:8px;}
+  .sim-section{margin-bottom:16px;}
+  .sim-box{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:10px;background:var(--paper);}
+  .sim-box:last-child{margin-bottom:0;}
+  .sim-box-title{font-size:.74rem;font-weight:700;margin-bottom:8px;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;}
+  .sim-baseline{font-size:.68rem;color:var(--ink-soft);margin-bottom:8px;line-height:1.6;}
+  .sim-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;}
+  .sim-row label{font-size:.7rem;color:var(--ink-soft);flex:0 0 auto;}
+  .sim-input{
+    flex:1 1 auto;min-width:90px;font-size:.78rem;font-weight:700;padding:5px 8px;
+    border:1px solid var(--line-strong);border-radius:6px;color:var(--ink);background:#fff;
+  }
+  .sim-input:focus{outline:2px solid var(--gold);outline-offset:0;}
+  .sim-unit{font-size:.68rem;color:var(--ink-soft);flex:0 0 auto;}
+  .sim-result{font-size:.72rem;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);}
+  .sim-result-row{display:flex;justify-content:space-between;align-items:baseline;padding:2px 0;}
+  .sim-result-row .k{color:var(--ink-soft);}
+  .sim-result-row .v{font-weight:700;}
+  .sim-gap-badge{
+    display:inline-block;font-size:.66rem;font-weight:700;padding:2px 8px;
+    border-radius:999px;color:#fff;margin-left:6px;
+  }
+  .sim-est-tag{
+    display:inline-block;font-size:.6rem;font-weight:700;color:#a15a1f;
+    background:rgba(213,166,125,.18);border-radius:6px;padding:1px 6px;margin-left:4px;
+    vertical-align:middle;
+  }
   .chart-legend{display:flex;gap:12px;flex-wrap:wrap;font-size:.68rem;color:var(--ink-soft);margin-bottom:6px;}
   .chart-legend-item{display:flex;align-items:center;gap:4px;}
   .chart-dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
@@ -350,6 +376,8 @@
   // 2단계(2026.09): 성공/보통/실패 분류 배지 색상. 저층/중층/고층 차트 색과는 다른 팔레트를 써서
   // "차트 색"과 "판정 색"이 헷갈리지 않도록 분리했다. 미분류는 배지를 아예 표시하지 않는다.
   var CLASSIFICATION_COLOR = { "성공":"#1a8754", "보통":"#c98a1f", "실패":"#c0392b" };
+  // 3단계 분양가 시뮬레이터의 가격경쟁력 라벨도 같은 상태색 팔레트를 그대로 재사용(상=녹/중=주황/하=적).
+  var COMPETITIVENESS_COLOR = { "상":"#1a8754", "중":"#c98a1f", "하":"#c0392b" };
   var BRAND_ICON_DATA = "data:image/png;base64,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";
 
 
@@ -471,8 +499,13 @@
   }
 
   // 2단계(2026.09): 성공/보통/실패 판정 기준값. classification_rules 테이블에서 불러오되,
-  // 조회 실패 시에도 화면이 죽지 않도록 기본값(성공=3대1 이상, 보통=1대1 이상)을 준비해둔다.
-  var CLASSIFICATION_RULES = { success_min_rate: 3, normal_min_rate: 1 };
+  // 조회 실패 시에도 화면이 죽지 않도록 기본값(성공=1대1 이상, 보통=1대1 이상 — 2026.09 대표님 의견 반영해 1로 하향)을 준비해둔다.
+  var CLASSIFICATION_RULES = { success_min_rate: 1, normal_min_rate: 1 };
+
+  // 3단계(2026.09): 가격경쟁력 갭%(-5%/0%) 및 대형평형 평당가 할인율 기본값.
+  // 역시 classification_rules 테이블 값으로 덮어쓰고, 조회 실패 시에도 기본값으로 동작.
+  var PRICE_GAP_RULES = { high_competitiveness_pct: -5, low_competitiveness_pct: 0 };
+  var PRICING_RULES = { large_unit_discount_pct: 5 };
 
   // 성공/보통/실패 자동 분류 — Supabase의 v_complex_classification 뷰와 동일한 규칙을
   // 프론트엔드에서도 그대로 적용(별도 조회 없이 이미 불러온 complexes 값으로 즉시 계산).
@@ -513,6 +546,9 @@
       ruleRows.forEach(function(r){
         if (r.rule_key === "success_min_rate" && r.rule_value !== null) CLASSIFICATION_RULES.success_min_rate = Number(r.rule_value);
         if (r.rule_key === "normal_min_rate" && r.rule_value !== null) CLASSIFICATION_RULES.normal_min_rate = Number(r.rule_value);
+        if (r.rule_key === "high_competitiveness_pct" && r.rule_value !== null) PRICE_GAP_RULES.high_competitiveness_pct = Number(r.rule_value);
+        if (r.rule_key === "low_competitiveness_pct" && r.rule_value !== null) PRICE_GAP_RULES.low_competitiveness_pct = Number(r.rule_value);
+        if (r.rule_key === "large_unit_discount_pct" && r.rule_value !== null) PRICING_RULES.large_unit_discount_pct = Number(r.rule_value);
       });
 
       var txByComplex = {};
@@ -561,6 +597,7 @@
           var p = {
             id: row.id,
             name: row.name,
+            role: row.role,
             shortLabel: row.short_label,
             block: row.block,
             address: row.address,
@@ -592,6 +629,182 @@
   var FLOOR_TIER_COLOR = { "저층":"#2a78d6", "중층":"#eb6834", "고층":"#1baf7a", "미상":"#898781" };
   var FLOOR_TIER_ORDER = ["저층","중층","고층","미상"];
   var PYEONG_SQM = 3.305785; // 1평 = 3.305785㎡
+
+  // ------------------------------------------------------------
+  // 3단계(2026.09): 분양가 시뮬레이터 — 당사 분양예정 현장(own_upcoming)에서
+  // "예상 분양가"를 입력하면 인근 준신축 단지들의 실거래가 기준(주력 타입) 대비
+  // 갭%을 계산해 보여준다. 비주력(예: 대형) 타입은 실거래가 거의 없어,
+  // 주력 타입 평당가에 대형평형 할인율을 적용한 추정치로 대신한다.
+  // 기준 단지 목록은 "준공 5년 이내 + 실거래 확인 가능"한 곳만 사용자가 직접 골라
+  // 확정한 것으로, 자동으로 넓히지 않는다(2026.09 인천계양 A21 기준 확정).
+  // ------------------------------------------------------------
+  var SIMULATOR_CONFIG = {
+    "인천계양 대방 엘리움(NEW)": {
+      baselineComplexNames: [
+        "힐스테이트 자이 계양", "계양하늘채파크포레", "e편한세상 계양더프리미어",
+        "계양 효성해링턴 플레이스", "제일풍경채 계양 위너스카이 1단지", "제일풍경채 계양 위너스카이 2단지"
+      ],
+      minYear: 2025,
+      mainType: { label: "84형", areaMin: 80, areaMax: 89 },
+      estimatedType: { label: "114형", targetSqm: 114 }
+    }
+  };
+
+  // 주력 타입(예: 84형) 기준가 — 기준 단지들의 실거래를 전부 모아 가중평균(거래 1건=1표)으로 계산.
+  function computeMainTypeBaseline(cfg){
+    var all = COMPARISON_COMPLEXES.concat(PROJECTS);
+    var allTx = [];
+    cfg.baselineComplexNames.forEach(function(name){
+      var entity = all.find(function(x){ return x.name === name; });
+      if (!entity || !entity.txHistory) return;
+      entity.txHistory.forEach(function(t){
+        if (!t.area || !t.amt || !t.y) return;
+        if (t.y < cfg.minYear) return;
+        if (t.area < cfg.mainType.areaMin || t.area > cfg.mainType.areaMax) return;
+        if (t.type !== "regular_sale" && t.type !== "presale_resale") return;
+        allTx.push(t);
+      });
+    });
+    if (!allTx.length) return null;
+    var totalAmt = allTx.reduce(function(a,t){ return a + t.amt; }, 0);
+    var totalPy = allTx.reduce(function(a,t){ return a + (t.area / PYEONG_SQM); }, 0);
+    return {
+      txCount: allTx.length,
+      weightedAvgAmt: totalAmt / allTx.length,
+      weightedPricePerPy: totalAmt / totalPy
+    };
+  }
+
+  // 비주력 타입(예: 114형) 추정가 — 실거래가 거의 없어 주력 타입 평당가에
+  // "대형평형 할인율"(기본 5%, classification_rules에서 조정 가능 + 화면에서 직접 조정 가능)을 적용한 추정치.
+  function computeEstimatedTypeBaseline(cfg, mainBaseline, discountPct){
+    if (!mainBaseline) return null;
+    var d = (discountPct === null || discountPct === undefined || isNaN(discountPct))
+      ? PRICING_RULES.large_unit_discount_pct : Number(discountPct);
+    var adjPricePerPy = mainBaseline.weightedPricePerPy * (1 - d/100);
+    var targetPy = cfg.estimatedType.targetSqm / PYEONG_SQM;
+    return {
+      discountPct: d,
+      pricePerPy: adjPricePerPy,
+      estimatedAmt: adjPricePerPy * targetPy
+    };
+  }
+
+  // 예상 분양가(만원) 대 기준가 갭%. 기준가가 없으면 null.
+  function computeSimGapPct(inputAmt, baselineAmt){
+    if (!inputAmt || !baselineAmt || isNaN(inputAmt)) return null;
+    return ((inputAmt - baselineAmt) / baselineAmt) * 100;
+  }
+
+  // price_gap 규칙(-5%/0%)으로 상/중/하 가격경쟁력 라벨.
+  function simCompetitivenessLabel(gapPct){
+    if (gapPct === null || gapPct === undefined) return null;
+    if (gapPct <= PRICE_GAP_RULES.high_competitiveness_pct) return "상";
+    if (gapPct >= PRICE_GAP_RULES.low_competitiveness_pct) return "하";
+    return "중";
+  }
+
+  // 패널이 열려있는 동안의 시뮬레이터 상태(어떤 프로젝트의 설정/기준가를 쓰는 중인지).
+  // 패널을 다시 그릴 때(openPanel/openComparisonPanel)마다 갱신·초기화된다.
+  var simCurrentCfg = null;
+  var simCurrentMainBaseline = null;
+
+  // 당사 분양예정 현장(own_upcoming) 패널에 표시할 시뮬레이터 HTML.
+  // 설정이 없는 프로젝트(아직 SIMULATOR_CONFIG에 등록 안 된 현장)에서는 빈 문자열을 반환.
+  function buildSimulatorHtml(p){
+    var cfg = SIMULATOR_CONFIG[p.name];
+    if (!cfg) { simCurrentCfg = null; simCurrentMainBaseline = null; return ""; }
+    simCurrentCfg = cfg;
+    simCurrentMainBaseline = computeMainTypeBaseline(cfg);
+    var mb = simCurrentMainBaseline;
+
+    var mainBaselineText = mb
+      ? ("기준가(가중평균 · " + cfg.minYear + "년 이후 · 인근 " + cfg.baselineComplexNames.length + "개 단지 실거래 " + mb.txCount + "건): <b>" + formatAmt(Math.round(mb.weightedAvgAmt)) + "</b>")
+      : "기준 단지의 실거래 데이터가 부족해 기준가를 계산할 수 없습니다.";
+
+    var mainBox =
+      '<div class="sim-box">' +
+        '<div class="sim-box-title">' + cfg.mainType.label + ' 예상 분양가</div>' +
+        '<div class="sim-baseline">' + mainBaselineText + '</div>' +
+        '<div class="sim-row">' +
+          '<label>입력</label>' +
+          '<input type="number" class="sim-input" data-sim="main" placeholder="예: 65000" />' +
+          '<span class="sim-unit">만원</span>' +
+        '</div>' +
+        '<div class="sim-result" id="simMainResult"></div>' +
+      '</div>';
+
+    var estBox = "";
+    if (cfg.estimatedType) {
+      estBox =
+        '<div class="sim-box">' +
+          '<div class="sim-box-title">' + cfg.estimatedType.label + ' 예상 분양가<span class="sim-est-tag">실거래 데이터 부족 · 추정치</span></div>' +
+          '<div class="sim-baseline" id="simEstBaselineText"></div>' +
+          '<div class="sim-row">' +
+            '<label>대형평형 할인율</label>' +
+            '<input type="number" class="sim-input" style="max-width:70px;" data-sim="discount" value="' + PRICING_RULES.large_unit_discount_pct + '" />' +
+            '<span class="sim-unit">% (기본값 ' + PRICING_RULES.large_unit_discount_pct + '% · 직접 조정 가능)</span>' +
+          '</div>' +
+          '<div class="sim-row">' +
+            '<label>입력</label>' +
+            '<input type="number" class="sim-input" data-sim="est" placeholder="예: 84000" />' +
+            '<span class="sim-unit">만원</span>' +
+          '</div>' +
+          '<div class="sim-result" id="simEstResult"></div>' +
+        '</div>';
+    }
+
+    return '<div class="sim-section"><div class="section-label">3단계 · 분양가 시뮬레이터</div>' + mainBox + estBox + '</div>';
+  }
+
+  // 시뮬레이터 입력값이 바뀔 때마다(또는 패널을 처음 열었을 때) 결과 영역만 다시 계산해서 채운다.
+  // 패널 전체를 다시 그리지 않으므로 입력 중이던 값/포커스가 유지된다.
+  function renderSimulatorOutputs(){
+    if (!simCurrentCfg) return;
+    var cfg = simCurrentCfg;
+    var mb = simCurrentMainBaseline;
+
+    var mainInput = document.querySelector('[data-sim="main"]');
+    var mainResultEl = document.getElementById("simMainResult");
+    if (mainInput && mainResultEl) {
+      var mainAmt = parseFloat(mainInput.value);
+      if (mb && !isNaN(mainAmt) && mainAmt > 0) {
+        var gap = computeSimGapPct(mainAmt, mb.weightedAvgAmt);
+        var label = simCompetitivenessLabel(gap);
+        var gapText = (gap >= 0 ? "+" : "") + gap.toFixed(1) + "%";
+        var badge = label ? ('<span class="sim-gap-badge" style="background:' + COMPETITIVENESS_COLOR[label] + '">가격경쟁력 · ' + label + '</span>') : "";
+        mainResultEl.innerHTML = '<div class="sim-result-row"><span class="k">기준가 대비 갭</span><span class="v">' + gapText + badge + '</span></div>';
+      } else {
+        mainResultEl.innerHTML = "";
+      }
+    }
+
+    if (cfg.estimatedType) {
+      var discountInput = document.querySelector('[data-sim="discount"]');
+      var estBaselineEl = document.getElementById("simEstBaselineText");
+      var discountVal = discountInput ? parseFloat(discountInput.value) : undefined;
+      var estBaseline = computeEstimatedTypeBaseline(cfg, mb, discountVal);
+      if (estBaselineEl) {
+        estBaselineEl.innerHTML = estBaseline
+          ? ("추정 기준가(" + cfg.mainType.label + " 평당가에 할인율 " + estBaseline.discountPct + "% 적용): <b>" + formatAmt(Math.round(estBaseline.estimatedAmt)) + "</b>")
+          : "기준 단지의 실거래 데이터가 부족해 추정 기준가를 계산할 수 없습니다.";
+      }
+      var estInput = document.querySelector('[data-sim="est"]');
+      var estResultEl = document.getElementById("simEstResult");
+      if (estInput && estResultEl) {
+        var estAmt = parseFloat(estInput.value);
+        if (estBaseline && !isNaN(estAmt) && estAmt > 0) {
+          var gap2 = computeSimGapPct(estAmt, estBaseline.estimatedAmt);
+          var label2 = simCompetitivenessLabel(gap2);
+          var gapText2 = (gap2 >= 0 ? "+" : "") + gap2.toFixed(1) + "%";
+          var badge2 = label2 ? ('<span class="sim-gap-badge" style="background:' + COMPETITIVENESS_COLOR[label2] + '">가격경쟁력 · ' + label2 + '</span>') : "";
+          estResultEl.innerHTML = '<div class="sim-result-row"><span class="k">추정 기준가 대비 갭</span><span class="v">' + gapText2 + badge2 + '</span></div>';
+        } else {
+          estResultEl.innerHTML = "";
+        }
+      }
+    }
+  }
 
   function computeMaxFloor(entity){
     if (entity.maxFloorObs) return entity.maxFloorObs;
@@ -830,6 +1043,11 @@
       var at = e.target.closest("[data-txarea]");
       if (at) { txAreaFilter = at.getAttribute("data-txarea"); renderTxSection(); return; }
     });
+
+    // 3단계 분양가 시뮬레이터 입력(예상 분양가/할인율) — 입력할 때마다 결과만 다시 계산해서 채움(위임 방식).
+    document.getElementById("panelInner").addEventListener("input", function(e){
+      if (e.target.closest("[data-sim]")) { renderSimulatorOutputs(); }
+    });
   }
 
   function placeMarker(p, lat, lng, approximate){
@@ -921,6 +1139,7 @@
         '</div>';
     }
     var noteText = p.panelNote || '완공사진 · 현재 대지사진 · 조감도 · 타입별 실내 사진은 자료 전달 시 이 패널에 갤러리로 추가할 수 있습니다.';
+    var simulatorHtml = buildSimulatorHtml(p);
     document.getElementById("panelInner").innerHTML =
       badge +
       '<h2>' + p.name + '</h2>' +
@@ -933,17 +1152,21 @@
         extraStats +
       '</div>' +
       '<div class="addr-box"><div class="k">주소</div>' + p.address + '</div>' +
+      simulatorHtml +
       premiumHtml +
       '<div id="floorChartRoot"></div>' +
       '<div class="note">' + noteText + '</div>';
     document.getElementById("panel").classList.add("open");
     renderFloorPriceChart("floorChartRoot", p);
+    renderSimulatorOutputs();
   }
 
   function openComparisonPanel(c){
     currentComplex = c;
     txFloorFilter = "all";
     txAreaFilter = "all";
+    simCurrentCfg = null;
+    simCurrentMainBaseline = null;
     var age = c.age;
     var badge = '<span class="status-badge" style="background:' + age.color + ';color:' + age.textColor + '">비교단지 · ' + age.label + '</span>';
     var presaleLabel = c.presaleIsProxy ? '최초 분양가 <span class="proxy-tag">준공 후 실거래가 대용</span>' : '최초 분양가';

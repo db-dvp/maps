@@ -655,6 +655,21 @@
       minYear: 2025,
       mainType: { label: "84형", areaMin: 80, areaMax: 89 },
       estimatedType: { label: "114형", targetSqm: 114.64 } // 114A 114.6602㎡ · 114B 114.6268㎡ 평균(2026.09.14 확정 세대 정보 반영)
+    },
+    // 부산에코델타시티2차(공동29블록) — 전 세대 84형(84A/84B/84C, 539세대)이라 114형 추정 로직은 불필요.
+    // 인천계양과 달리 "5년 이내 + 실거래 충분"을 동시에 만족하는 단지가 없어(2026.09.14 국토부 조사),
+    // 거래량이 충분한 명지 준신축(2020년식) 2개 단지를 기준가로 쓰고, 우리 사업지와 같은 동네(강동동)
+    // 신축 4개 단지는 표본이 84형 기준 4건뿐이라 기준가엔 넣지 않고 "실거래 참고"로만 별도 표시.
+    // (실제 두 그룹의 평당가를 비교해보니 신축이 구축보다 더 비싸다는 근거가 없어 별도 할증도 적용하지 않음.)
+    "부산에코델타시티2차 대방 엘리움": {
+      baselineComplexNames: ["더샵명지퍼스트월드2단지", "더샵명지퍼스트월드3단지"],
+      minYear: 2025,
+      mainType: { label: "84형", areaMin: 80, areaMax: 89 },
+      referenceComplexes: {
+        label: "에코델타시티 강동동(우리 사업지 동네) 신축 실거래",
+        names: ["에코델타호반써밋스마트시티", "강서자이에코델타", "에코델타더베르힐", "에코델타스마트시티수자인"],
+        note: "표본이 84형 기준 4건뿐이라 기준가 계산에는 포함하지 않고 참고용으로만 표시. 인근 일부 단지(부산에코델타시티디에트르더퍼스트 등)에서 마피·정가 매물이 다수 관찰됨(2026.09, 비공식 호가·미체결이라 숫자에는 미반영)."
+      }
     }
   };
 
@@ -663,6 +678,33 @@
     var all = COMPARISON_COMPLEXES.concat(PROJECTS);
     var allTx = [];
     cfg.baselineComplexNames.forEach(function(name){
+      var entity = all.find(function(x){ return x.name === name; });
+      if (!entity || !entity.txHistory) return;
+      entity.txHistory.forEach(function(t){
+        if (!t.area || !t.amt || !t.y) return;
+        if (t.y < cfg.minYear) return;
+        if (t.area < cfg.mainType.areaMin || t.area > cfg.mainType.areaMax) return;
+        if (t.type !== "regular_sale" && t.type !== "presale_resale") return;
+        allTx.push(t);
+      });
+    });
+    if (!allTx.length) return null;
+    var totalAmt = allTx.reduce(function(a,t){ return a + t.amt; }, 0);
+    var totalPy = allTx.reduce(function(a,t){ return a + (t.area / PYEONG_SQM); }, 0);
+    return {
+      txCount: allTx.length,
+      weightedAvgAmt: totalAmt / allTx.length,
+      weightedPricePerPy: totalAmt / totalPy
+    };
+  }
+
+  // "참고용" 인근 단지(referenceComplexes) — 기준가 계산에는 넣지 않고 화면에 실거래 통계만 별도 표시.
+  // computeMainTypeBaseline과 동일한 필터(연식·면적·거래유형)를 cfg.referenceComplexes.names에 적용.
+  function computeReferenceStats(cfg){
+    if (!cfg.referenceComplexes) return null;
+    var all = COMPARISON_COMPLEXES.concat(PROJECTS);
+    var allTx = [];
+    cfg.referenceComplexes.names.forEach(function(name){
       var entity = all.find(function(x){ return x.name === name; });
       if (!entity || !entity.txHistory) return;
       entity.txHistory.forEach(function(t){
@@ -770,7 +812,21 @@
         '</div>';
     }
 
-    return '<div class="sim-section"><div class="section-label">3단계 · 분양가 시뮬레이터</div>' + mainBox + estBox + '</div>';
+    var refBox = "";
+    var refStats = computeReferenceStats(cfg);
+    if (cfg.referenceComplexes) {
+      var refText = refStats
+        ? (cfg.referenceComplexes.label + " (" + cfg.minYear + "년 이후 · " + refStats.txCount + "건 가중평균): <b>" + formatAmt(Math.round(refStats.weightedAvgAmt)) + "</b>")
+        : (cfg.referenceComplexes.label + ": 최근 실거래 없음");
+      refBox =
+        '<div class="sim-box">' +
+          '<div class="sim-box-title">' + cfg.mainType.label + ' 실거래 참고<span class="sim-est-tag">기준가 계산 미포함</span></div>' +
+          '<div class="sim-baseline">' + refText + '</div>' +
+          '<div class="sim-baseline" style="margin-top:4px;">' + cfg.referenceComplexes.note + '</div>' +
+        '</div>';
+    }
+
+    return '<div class="sim-section"><div class="section-label">3단계 · 분양가 시뮬레이터</div>' + mainBox + estBox + refBox + '</div>';
   }
 
   // 시뮬레이터 입력값이 바뀔 때마다(또는 패널을 처음 열었을 때) 결과 영역만 다시 계산해서 채운다.

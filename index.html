@@ -25,6 +25,7 @@
     --age-1to5:#2f6fd6;
     --age-5to10:#12a39c;
     --age-over10:#c1443c;
+    --age-presale:#7d5ba6;
     --shadow:0 12px 32px -12px rgba(24,27,60,.28);
   }
   *{box-sizing:border-box;}
@@ -352,6 +353,7 @@
         <button class="filter-btn" data-filter="1to5"><span class="filter-dot" style="background:var(--age-1to5)"></span>1~5년</button>
         <button class="filter-btn" data-filter="5to10"><span class="filter-dot" style="background:var(--age-5to10)"></span>5~10년</button>
         <button class="filter-btn" data-filter="over10"><span class="filter-dot" style="background:var(--age-over10)"></span>10년 초과</button>
+        <button class="filter-btn" data-filter="presale"><span class="filter-dot" style="background:var(--age-presale)"></span>비교단지 · 준공예정</button>
       </div>
     </div>
 
@@ -388,10 +390,16 @@
   // 경과연수(2026년 기준)로 4구간 색상 구분:
   //   1년 미만 = --age-under1(앰버) / 1~5년 = --age-1to5(블루) / 5~10년 = --age-5to10(틸) / 10년 초과 = --age-over10(레드) — 지도 배경(베이지)과 대비되도록 채도 높은 색으로 조정
   // presalePrice/currentPrice는 온라인상 확인 불가 시 null로 두고 "자료 없음"으로 표시 (추정치 사용 안 함)
+  // build_year가 null인 비교단지(=아직 준공 전, 분양권 전매로만 거래되는 단지)는 "10년 초과"로 잘못
+  // 분류되던 버그가 있었음(null - 2026 연산에서 null이 0으로 취급돼 age가 매우 크게 계산됨, 2026.09.14 발견).
+  // → 준공 전 단지는 별도 "presale(준공예정)" 구간으로 분리, 타사 분양현장(competitor)과 같은 보라색(--age-presale) 사용.
   // ------------------------------------------------------------
   var CURRENT_YEAR = 2026;
 
   function ageBucket(buildYear){
+    if (buildYear === null || buildYear === undefined) {
+      return {key:"presale", label:"준공예정", color:"var(--age-presale)", textColor:"#fff"};
+    }
     var age = CURRENT_YEAR - buildYear;
     if (age < 1) return {key:"under1", label:"1년 미만", color:"var(--age-under1)", textColor:"#fff"};
     if (age < 5) return {key:"1to5", label:"1~5년", color:"var(--age-1to5)", textColor:"#fff"};
@@ -1278,14 +1286,17 @@
     var presaleLabel = c.presaleIsProxy ? '최초 분양가 <span class="proxy-tag">준공 후 실거래가 대용</span>' : '최초 분양가';
     var presale = c.presalePrice ? c.presalePrice : '자료 없음 (온라인 확인 불가)';
     var maxFloorTxt = c.maxFloorObs ? (c.maxFloorObs + "층") : "자료 없음";
+    var buildYearTxt = c.buildYear ? ("준공 " + c.buildYear + "년") : "준공예정(미준공)";
+    var elapsedTxt = c.buildYear ? ((CURRENT_YEAR - c.buildYear) + "년") : "-";
+    var unitsTxt = c.units ? (c.units + "세대") : "확인 안됨";
     document.getElementById("panelInner").innerHTML =
       badge +
       '<h2>' + c.name + '</h2>' +
-      '<div class="sub">준공 ' + c.buildYear + '년 · ' + c.landmark + '</div>' +
+      '<div class="sub">' + buildYearTxt + ' · ' + c.landmark + '</div>' +
       '<div class="section-label">기본정보</div>' +
       '<div class="stat-grid">' +
-        '<div class="stat-cell"><div class="k">세대수</div><div class="v">' + c.units + '세대</div></div>' +
-        '<div class="stat-cell"><div class="k">경과연수</div><div class="v">' + (CURRENT_YEAR - c.buildYear) + '년</div></div>' +
+        '<div class="stat-cell"><div class="k">세대수</div><div class="v">' + unitsTxt + '</div></div>' +
+        '<div class="stat-cell"><div class="k">경과연수</div><div class="v">' + elapsedTxt + '</div></div>' +
         '<div class="stat-cell"><div class="k">최고층수(관찰)</div><div class="v">' + maxFloorTxt + '</div></div>' +
         '<div class="stat-cell"><div class="k">거래건수(21.01~26.08)</div><div class="v">' + c.txHistory.length + '건</div></div>' +
       '</div>' +

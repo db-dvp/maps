@@ -657,19 +657,37 @@
       estimatedType: { label: "114형", targetSqm: 114.64 } // 114A 114.6602㎡ · 114B 114.6268㎡ 평균(2026.09.14 확정 세대 정보 반영)
     },
     // 부산에코델타시티2차(공동29블록) — 전 세대 84형(84A/84B/84C, 539세대)이라 114형 추정 로직은 불필요.
-    // 인천계양과 달리 "5년 이내 + 실거래 충분"을 동시에 만족하는 단지가 없어(2026.09.14 국토부 조사),
-    // 거래량이 충분한 명지 준신축(2020년식) 2개 단지를 기준가로 쓰고, 우리 사업지와 같은 동네(강동동)
-    // 신축 4개 단지는 표본이 84형 기준 4건뿐이라 기준가엔 넣지 않고 "실거래 참고"로만 별도 표시.
-    // (실제 두 그룹의 평당가를 비교해보니 신축이 구축보다 더 비싸다는 근거가 없어 별도 할증도 적용하지 않음.)
+    // (2026.09.14 갱신) 최초엔 강동동(우리 사업지 동네) 실거래가 84형 기준 4건뿐이라 명지 준신축 2개 단지를
+    // 기준가로 쓰고 강동동은 참고로만 표시했으나, "아파트매매"만 조회하고 있었을 뿐 "분양입주권"(준공 전 분양권
+    // 전매) 탭을 빠뜨리고 있었던 것으로 확인 — 분양입주권까지 포함해 강동동 자체를 다시 조사한 결과 84형 기준
+    // 1,043건(13개 단지)으로 표본이 크게 늘어, 명지 대신 강동동 실거래를 기준가로 삼는 것이 더 타당하다고 판단.
+    // 명지 2개 단지는 참고로 남겨두고, 추가로 발견한 인근 신도시(사송신도시·양산시 동면, 준신축 10개 단지)도
+    // "다른 지역 신도시 시세참고" 배너로 별도 표시(기준가 계산에는 포함하지 않음). 별도 카테고리 체계 없이
+    // 연도별 표시만으로 구분(대표님 방침, 2026.09.14).
     "부산에코델타시티2차 대방 엘리움": {
-      baselineComplexNames: ["더샵명지퍼스트월드2단지", "더샵명지퍼스트월드3단지"],
-      minYear: 2025,
+      baselineComplexNames: [
+        "에코델타시티대성베르힐17BL", "에코델타시티푸르지오린", "부산에코델타시티디에트르더퍼스트",
+        "이편한세상에코델타센터포인트", "강서자이에코델타", "부산에코델타시티16블록중흥S-클래스",
+        "에코델타시티푸르지오센터파크", "부산에코델타시티디에트르그랑루체13BL", "에코델타스마트시티수자인",
+        "에코델타더베르힐", "에코델타호반써밋스마트시티", "에코델타시티중흥S클래스에듀리버", "에코델타시티아테라24BL"
+      ],
+      minYear: 2023,
       mainType: { label: "84형", areaMin: 80, areaMax: 89 },
-      referenceComplexes: {
-        label: "에코델타시티 강동동(우리 사업지 동네) 신축 실거래",
-        names: ["에코델타호반써밋스마트시티", "강서자이에코델타", "에코델타더베르힐", "에코델타스마트시티수자인"],
-        note: "표본이 84형 기준 4건뿐이라 기준가 계산에는 포함하지 않고 참고용으로만 표시. 인근 일부 단지(부산에코델타시티디에트르더퍼스트 등)에서 마피·정가 매물이 다수 관찰됨(2026.09, 비공식 호가·미체결이라 숫자에는 미반영)."
-      }
+      marketNote: "인근 일부 단지(부산에코델타시티디에트르더퍼스트 등)에서 마피·정가 매물이 다수 관찰됨(2026.09, 비공식 호가·미체결이라 숫자에는 반영하지 않음).",
+      referenceGroups: [
+        {
+          label: "명지 준신축 실거래 (참고)",
+          names: ["더샵명지퍼스트월드2단지", "더샵명지퍼스트월드3단지"]
+        },
+        {
+          label: "다른 지역 신도시 시세참고 — 사송신도시(경남 양산시 동면)",
+          names: [
+            "사송더샵데시앙1단지", "사송더샵데시앙2차5단지", "사송더샵데시앙2차6단지", "사송더샵데시앙2차7단지",
+            "사송더샵데시앙3단지", "사송더샵데시앙4단지", "사송에비뉴원", "사송역우미린포레스트",
+            "사송트루엘", "양산사송제일풍경채퍼스트파크"
+          ]
+        }
+      ]
     }
   };
 
@@ -698,13 +716,14 @@
     };
   }
 
-  // "참고용" 인근 단지(referenceComplexes) — 기준가 계산에는 넣지 않고 화면에 실거래 통계만 별도 표시.
-  // computeMainTypeBaseline과 동일한 필터(연식·면적·거래유형)를 cfg.referenceComplexes.names에 적용.
-  function computeReferenceStats(cfg){
-    if (!cfg.referenceComplexes) return null;
+  // "참고용" 인근 단지 그룹(cfg.referenceGroups의 항목 하나) — 기준가 계산에는 넣지 않고
+  // 화면에 실거래 통계만 별도 표시. computeMainTypeBaseline과 동일한 필터(연식·면적·거래유형)를
+  // group.names에 적용. 프로젝트 하나에 여러 참고 그룹(예: 명지 + 사송신도시)을 동시에 둘 수 있다.
+  function computeReferenceStats(cfg, group){
+    if (!group) return null;
     var all = COMPARISON_COMPLEXES.concat(PROJECTS);
     var allTx = [];
-    cfg.referenceComplexes.names.forEach(function(name){
+    group.names.forEach(function(name){
       var entity = all.find(function(x){ return x.name === name; });
       if (!entity || !entity.txHistory) return;
       entity.txHistory.forEach(function(t){
@@ -812,21 +831,31 @@
         '</div>';
     }
 
-    var refBox = "";
-    var refStats = computeReferenceStats(cfg);
-    if (cfg.referenceComplexes) {
-      var refText = refStats
-        ? (cfg.referenceComplexes.label + " (" + cfg.minYear + "년 이후 · " + refStats.txCount + "건 가중평균): <b>" + formatAmt(Math.round(refStats.weightedAvgAmt)) + "</b>")
-        : (cfg.referenceComplexes.label + ": 최근 실거래 없음");
-      refBox =
-        '<div class="sim-box">' +
-          '<div class="sim-box-title">' + cfg.mainType.label + ' 실거래 참고<span class="sim-est-tag">기준가 계산 미포함</span></div>' +
-          '<div class="sim-baseline">' + refText + '</div>' +
-          '<div class="sim-baseline" style="margin-top:4px;">' + cfg.referenceComplexes.note + '</div>' +
-        '</div>';
+    var refBoxes = "";
+    if (cfg.referenceGroups && cfg.referenceGroups.length) {
+      refBoxes = cfg.referenceGroups.map(function(group){
+        var refStats = computeReferenceStats(cfg, group);
+        var refText = refStats
+          ? (group.label + " (" + cfg.minYear + "년 이후 · " + refStats.txCount + "건 가중평균): <b>" + formatAmt(Math.round(refStats.weightedAvgAmt)) + "</b>")
+          : (group.label + ": 최근 실거래 없음");
+        var noteHtml = group.note
+          ? ('<div class="sim-baseline" style="margin-top:4px;">' + group.note + '</div>')
+          : "";
+        return (
+          '<div class="sim-box">' +
+            '<div class="sim-box-title">' + cfg.mainType.label + ' 실거래 참고<span class="sim-est-tag">기준가 계산 미포함</span></div>' +
+            '<div class="sim-baseline">' + refText + '</div>' +
+            noteHtml +
+          '</div>'
+        );
+      }).join("");
     }
 
-    return '<div class="sim-section"><div class="section-label">3단계 · 분양가 시뮬레이터</div>' + mainBox + estBox + refBox + '</div>';
+    var marketNoteBox = cfg.marketNote
+      ? ('<div class="sim-baseline" style="margin-top:4px;">' + cfg.marketNote + '</div>')
+      : "";
+
+    return '<div class="sim-section"><div class="section-label">3단계 · 분양가 시뮬레이터</div>' + mainBox + estBox + refBoxes + marketNoteBox + '</div>';
   }
 
   // 시뮬레이터 입력값이 바뀔 때마다(또는 패널을 처음 열었을 때) 결과 영역만 다시 계산해서 채운다.

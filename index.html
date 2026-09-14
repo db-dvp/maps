@@ -641,8 +641,16 @@
   var SIMULATOR_CONFIG = {
     "인천계양 대방 엘리움(NEW)": {
       baselineComplexNames: [
-        "힐스테이트 자이 계양", "계양하늘채파크포레", "e편한세상 계양더프리미어",
+        "계양하늘채파크포레", "e편한세상 계양더프리미어",
         "계양 효성해링턴 플레이스", "제일풍경채 계양 위너스카이 1단지", "제일풍경채 계양 위너스카이 2단지"
+      ],
+      // 힐스테이트 자이 계양(2,371세대)은 기준가 계산에서 제외(2026.09.14).
+      // A21(536세대)과 세대수 차이가 크고(다른 5개 단지는 546~1,669세대로 A21과 더 가까움),
+      // 더블 브랜드(힐스테이트+자이)·작전역 도보 1분(다른 단지 대비 확연히 우수한 역세권)·
+      // 6개 단지 중 가장 최근 준공(2024) 등 여러 요인이 겹쳐 분양가 대비 상승폭(약 95%)이
+      // 나머지 5개 단지(10%대~두 배 미만)보다 확연히 커, 포함 시 기준가가 왜곡될 수 있다고 판단.
+      excludedComplexes: [
+        { name: "힐스테이트 자이 계양", reason: "대단지(2,371세대) · 더블 브랜드(힐스테이트+자이) · 작전역 도보 1분 역세권 · 6개 단지 중 최신 준공(2024) — A21(536세대)과 조건 차이가 커 기준가 계산에서 제외" }
       ],
       minYear: 2025,
       mainType: { label: "84형", areaMin: 80, areaMax: 89 },
@@ -722,10 +730,18 @@
       ? ("기준가(가중평균 · " + cfg.minYear + "년 이후 · 인근 " + cfg.baselineComplexNames.length + "개 단지 실거래 " + mb.txCount + "건): <b>" + formatAmt(Math.round(mb.weightedAvgAmt)) + "</b>")
       : "기준 단지의 실거래 데이터가 부족해 기준가를 계산할 수 없습니다.";
 
+    var excludedNote = "";
+    if (cfg.excludedComplexes && cfg.excludedComplexes.length) {
+      excludedNote = '<div class="sim-baseline" style="margin-top:4px;">제외: ' +
+        cfg.excludedComplexes.map(function(e){ return e.name + '(' + e.reason + ')'; }).join(', ') +
+      '</div>';
+    }
+
     var mainBox =
       '<div class="sim-box">' +
         '<div class="sim-box-title">' + cfg.mainType.label + ' 예상 분양가</div>' +
         '<div class="sim-baseline">' + mainBaselineText + '</div>' +
+        excludedNote +
         '<div class="sim-row">' +
           '<label>입력</label>' +
           '<input type="number" class="sim-input" data-sim="main" placeholder="예: 65000" />' +

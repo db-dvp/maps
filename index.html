@@ -229,7 +229,8 @@
   .premium-row-head span:last-child{text-align:right;}
   .premium-amt{font-weight:700;text-align:right;}
   .unittype-list{border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-top:2px;}
-  .unittype-row{display:grid;grid-template-columns:.7fr .8fr .7fr 1.3fr;gap:6px;align-items:center;padding:6px 10px;font-size:.72rem;border-bottom:1px solid var(--line);}
+  .unittype-row{display:grid;grid-template-columns:.6fr .7fr .6fr 1.1fr .5fr;gap:6px;align-items:center;padding:6px 10px;font-size:.72rem;border-bottom:1px solid var(--line);}
+  .unittype-row a{color:var(--indigo);font-weight:600;}
   .unittype-row:last-child{border-bottom:none;}
   .unittype-row:nth-child(even){background:var(--paper);}
   .unittype-row-head{font-size:.64rem;font-weight:700;color:var(--ink-soft);background:var(--paper)!important;}
@@ -444,13 +445,16 @@
       if (t.hasAlphaRoom === true) extra.push('알파룸 있음');
       if (t.roomCount !== null && t.roomCount !== undefined) extra.push(t.roomCount + '개룸');
       var priceCell = price + (extra.length ? (' <span style="color:var(--ink-soft);font-size:.9em;">(' + extra.join(' · ') + ')</span>') : '');
+      var planCell = t.floorPlanUrl
+        ? ('<a href="' + t.floorPlanUrl + '" target="_blank" rel="noopener">도면보기</a>')
+        : '<span style="color:var(--ink-soft);">-</span>';
       return '<div class="unittype-row"><span class="unittype-name">' + t.typeName + '</span>' +
-        '<span>' + area + '</span><span>' + units + '</span><span>' + priceCell + '</span></div>';
+        '<span>' + area + '</span><span>' + units + '</span><span>' + priceCell + '</span><span>' + planCell + '</span></div>';
     }).join('');
     return '<div class="tx-section">' +
-      '<div class="section-label tx-title">타입별 분양가</div>' +
+      '<div class="section-label tx-title">타입별 정보</div>' +
       '<div class="unittype-list">' +
-        '<div class="unittype-row unittype-row-head"><span>타입</span><span>전용면적</span><span>세대수</span><span>분양가</span></div>' +
+        '<div class="unittype-row unittype-row-head"><span>타입</span><span>전용면적</span><span>세대수</span><span>분양가</span><span>도면</span></div>' +
         rows +
       '</div>' +
     '</div>';
@@ -1393,6 +1397,7 @@
       '</div>' +
       '<div class="addr-box"><div class="k">주소</div>' + c.address + '</div>' +
       '<div class="addr-box"><div class="k">' + presaleLabel + '</div>' + presale + '</div>' +
+      buildUnitTypesHtml(c) +
       '<div id="floorChartRoot"></div>' +
       '<div id="txSectionRoot"></div>' +
       '<div class="note">분양가는 뉴스·분양공고 등 온라인에서 확인 가능한 자료만 반영했고, 확인이 안 되는 단지는 국토부 실거래가 중 가장 이른 거래를 "준공 후 실거래가"로 표시했습니다(추정 아님, 실제 거래가). 실거래 내역은 2021.01~2026.08 국토부 실거래가(매매)를 월 단위로 빠짐없이 전수조사한 결과입니다(60㎡ 이하 제외). 최고층수는 조사된 거래에서 관찰된 값으로 실제 설계 층수와 다를 수 있고, 향(방향)별 데이터는 국토부 자료에 없어 이번엔 제외했습니다.</div>';

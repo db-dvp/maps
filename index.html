@@ -24,7 +24,7 @@
     --age-under1:#e0a728;
     --age-1to5:#2f6fd6;
     --age-5to10:#12a39c;
-    --age-over10:#c1443c;
+    --age-over10:#9c6b3f;
     --age-presale:#7d5ba6;
     --status-scheduled:#c23b7a;
     --shadow:0 12px 32px -12px rgba(24,27,60,.28);
@@ -400,7 +400,13 @@
   // ============================================================
   var KAKAO_APP_KEY = "f6ade909379e30f39034a28f8302e8da";
 
-  var STATUS_COLOR = { upcoming:"#202a5d", competitor:"#7d5ba6", scheduled:"#c23b7a", under1:"#e0a728", "1to5":"#2f6fd6", "5to10":"#12a39c", over10:"#c1443c" };
+  var STATUS_COLOR = { upcoming:"#202a5d", competitor:"#7d5ba6", scheduled:"#c23b7a", under1:"#e0a728", "1to5":"#2f6fd6", "5to10":"#12a39c", over10:"#9c6b3f" };
+  // 마커 z-index(레이어 순서): "10년 초과"는 오래된 단지라는 느낌에 맞게 항상 다른 마커들 뒤로 깔림
+  // (겹칠 때 최근/분양예정 마커가 위로 올라오도록). 2026.09.19 수정: 기존 --age-over10 빨간색(#c1443c)이
+  // --status-scheduled 로즈 마젠타(#c23b7a)와 너무 비슷하다는 피드백으로 색상도 함께 변경(늙은 느낌의
+  // 채도 낮은 갈색/청동색 계열로 교체, CVD 안전성 검증 시 기존 팔레트의 최악 쌍(마젠타↔보라)보다 나빠지지 않음을 확인).
+  var MARKER_ZINDEX = { upcoming:100, scheduled:5, competitor:4, presale:4, under1:4, "1to5":4, "5to10":4, over10:1 };
+  function markerZIndex(key){ return (MARKER_ZINDEX[key] !== undefined) ? MARKER_ZINDEX[key] : 3; }
   // 2단계(2026.09): 성공/보통/실패 분류 배지 색상. 저층/중층/고층 차트 색과는 다른 팔레트를 써서
   // "차트 색"과 "판정 색"이 헷갈리지 않도록 분리했다. 미분류는 배지를 아예 표시하지 않는다.
   var CLASSIFICATION_COLOR = { "성공":"#1a8754", "보통":"#c98a1f", "실패":"#c0392b" };
@@ -1311,7 +1317,7 @@
     el.addEventListener("click", function(){ openPanel(p, approximate); });
 
     var overlay = new kakao.maps.CustomOverlay({
-      position: pos, content: el, yAnchor: 0.5, xAnchor: 0.5, zIndex: (isBrand ? 100 : 3)
+      position: pos, content: el, yAnchor: 0.5, xAnchor: 0.5, zIndex: markerZIndex(p.status)
     });
     overlay.setMap(map);
     markers.push({kind:"project", data:p, overlay:overlay});
@@ -1328,7 +1334,7 @@
     el.addEventListener("click", function(){ openComparisonPanel(c); });
 
     var overlay = new kakao.maps.CustomOverlay({
-      position: pos, content: el, yAnchor: 0.5, xAnchor: 0.5, zIndex: 1
+      position: pos, content: el, yAnchor: 0.5, xAnchor: 0.5, zIndex: markerZIndex(c.age.key)
     });
     overlay.setMap(map);
     markers.push({kind:"comparison", data:c, overlay:overlay});

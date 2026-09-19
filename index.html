@@ -26,6 +26,7 @@
     --age-5to10:#12a39c;
     --age-over10:#c1443c;
     --age-presale:#7d5ba6;
+    --status-scheduled:#c23b7a;
     --shadow:0 12px 32px -12px rgba(24,27,60,.28);
   }
   *{box-sizing:border-box;}
@@ -227,6 +228,14 @@
   .premium-row-head{font-size:.64rem;font-weight:700;color:var(--ink-soft);background:var(--paper)!important;}
   .premium-row-head span:last-child{text-align:right;}
   .premium-amt{font-weight:700;text-align:right;}
+  .unittype-list{border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-top:2px;}
+  .unittype-row{display:grid;grid-template-columns:.7fr .8fr .7fr 1.3fr;gap:6px;align-items:center;padding:6px 10px;font-size:.72rem;border-bottom:1px solid var(--line);}
+  .unittype-row:last-child{border-bottom:none;}
+  .unittype-row:nth-child(even){background:var(--paper);}
+  .unittype-row-head{font-size:.64rem;font-weight:700;color:var(--ink-soft);background:var(--paper)!important;}
+  .unittype-name{font-weight:700;}
+  .scheduled-info-box{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:0 0 12px;font-size:.75rem;line-height:1.6;}
+  .scheduled-info-box a{color:var(--status-scheduled);}
   .floor-chart{width:100%;height:auto;display:block;background:var(--paper-raised);border:1px solid var(--line);border-radius:8px;}
   .sim-section{margin-bottom:16px;}
   .sim-box{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:10px;background:var(--paper);}
@@ -348,6 +357,7 @@
       <div class="age-filters" id="unifiedFilters">
         <button class="filter-btn active" data-filter="all">전체</button>
         <button class="filter-btn" data-filter="upcoming"><span class="filter-dot" style="background:var(--status-upcoming)"></span>분양예정 (당사 현장)</button>
+        <button class="filter-btn" data-filter="scheduled"><span class="filter-dot" style="background:var(--status-scheduled)"></span>분양예정 (타사 현장)</button>
         <button class="filter-btn" data-filter="presale"><span class="filter-dot" style="background:var(--age-presale)"></span>준공예정</button>
         <button class="filter-btn" data-filter="under1"><span class="filter-dot" style="background:var(--age-under1)"></span>1년 미만</button>
         <button class="filter-btn" data-filter="1to5"><span class="filter-dot" style="background:var(--age-1to5)"></span>1~5년</button>
@@ -373,7 +383,7 @@
   // ============================================================
   var KAKAO_APP_KEY = "f6ade909379e30f39034a28f8302e8da";
 
-  var STATUS_COLOR = { upcoming:"#202a5d", competitor:"#7d5ba6", under1:"#e0a728", "1to5":"#2f6fd6", "5to10":"#12a39c", over10:"#c1443c" };
+  var STATUS_COLOR = { upcoming:"#202a5d", competitor:"#7d5ba6", scheduled:"#c23b7a", under1:"#e0a728", "1to5":"#2f6fd6", "5to10":"#12a39c", over10:"#c1443c" };
   // 2단계(2026.09): 성공/보통/실패 분류 배지 색상. 저층/중층/고층 차트 색과는 다른 팔레트를 써서
   // "차트 색"과 "판정 색"이 헷갈리지 않도록 분리했다. 미분류는 배지를 아예 표시하지 않는다.
   var CLASSIFICATION_COLOR = { "성공":"#1a8754", "보통":"#c98a1f", "실패":"#c0392b" };
@@ -418,6 +428,45 @@
   function formatPremium(man){
     var sign = man >= 0 ? "+" : "-";
     return sign + Math.round(Math.abs(man)).toLocaleString() + "만원";
+  }
+
+  // 타입별 분양가/면적/세대수 표 — "분양예정(타사 현장)" 카테고리에서 주로 쓰지만,
+  // complex_unit_types 테이블 자체는 비교단지(향후 ④번 도면 작업)에도 공용으로 쓰도록 설계함.
+  function buildUnitTypesHtml(entity){
+    var types = entity.unitTypes;
+    if (!types || !types.length) return '';
+    var rows = types.map(function(t){
+      var area = (t.areaSqm === null || t.areaSqm === undefined) ? '확인불가' : (t.areaSqm + '㎡');
+      var units = (t.unitsCount === null || t.unitsCount === undefined) ? '확인불가' : (t.unitsCount.toLocaleString() + '세대');
+      var price = (t.priceAmt === null || t.priceAmt === undefined) ? '확인불가' : formatAmt(t.priceAmt);
+      var extra = [];
+      if (t.structureType) extra.push(t.structureType);
+      if (t.hasAlphaRoom === true) extra.push('알파룸 있음');
+      if (t.roomCount !== null && t.roomCount !== undefined) extra.push(t.roomCount + '개룸');
+      var priceCell = price + (extra.length ? (' <span style="color:var(--ink-soft);font-size:.9em;">(' + extra.join(' · ') + ')</span>') : '');
+      return '<div class="unittype-row"><span class="unittype-name">' + t.typeName + '</span>' +
+        '<span>' + area + '</span><span>' + units + '</span><span>' + priceCell + '</span></div>';
+    }).join('');
+    return '<div class="tx-section">' +
+      '<div class="section-label tx-title">타입별 분양가</div>' +
+      '<div class="unittype-list">' +
+        '<div class="unittype-row unittype-row-head"><span>타입</span><span>전용면적</span><span>세대수</span><span>분양가</span></div>' +
+        rows +
+      '</div>' +
+    '</div>';
+  }
+
+  // "분양예정(타사 현장)" 안내 상자 — 모집공고일·접수기간·출처를 보여줌.
+  // 이 카테고리는 아직 분양권 전매 실거래가 없는(=시뮬레이터/층별프리미엄 분석 대상이 아닌) 단지라는 점을
+  // 명확히 알리는 목적도 있음(추정 데이터가 아니라 "아직 데이터가 없다"는 사실 자체를 보여줌).
+  function buildScheduledInfoHtml(p){
+    if (p.status !== "scheduled") return '';
+    var lines = [];
+    lines.push('아직 분양권 전매 실거래가 없어 층별 프리미엄·변동률 분석은 제공되지 않습니다. 모집공고 기준 정보만 표시합니다.');
+    if (p.recruitNoticeDate) lines.push('모집공고일: ' + p.recruitNoticeDate);
+    if (p.subscriptionPeriodText) lines.push('청약 일정: ' + p.subscriptionPeriodText);
+    var srcHtml = p.sourceUrl ? ('<div>출처: <a href="' + p.sourceUrl + '" target="_blank" rel="noopener">공고문/기사 링크</a></div>') : '';
+    return '<div class="scheduled-info-box">' + lines.map(function(l){ return '<div>' + l + '</div>'; }).join('') + srcHtml + '</div>';
   }
 
   // 저층/중층/고층: 건물 전체 층수의 1/3씩이 아니라, "저층(기피층)은 절대 층수 기준 1~5층 고정
@@ -538,18 +587,37 @@
       "type_info","presale_price_note","current_price_note","competition_rate_note","unsold_status_note",
       "status_label","panel_note","block","date_label","max_floor_obs","map_status","landmark",
       "baseline_amt","baseline_area","presale_is_proxy","floor_gap_note",
-      "avg_competition_rate","had_unsold_history","unsold_resolved","sale_stage"].join(",");
+      "avg_competition_rate","had_unsold_history","unsold_resolved","sale_stage",
+      "recruit_notice_date","subscription_period_text","source_url"].join(",");
     var txCols = "id,complex_id,transaction_type,area_sqm,floor,price_man,contract_date";
     var ruleCols = "rule_key,rule_value";
+    // 타입별 정보(분양예정 타입별 분양가 + 추후 ④번 도면 작업에서도 같이 쓰는 테이블) — 없으면(아직 테이블 미생성) 조용히 빈 배열로.
+    var unitTypeCols = "id,complex_id,type_name,area_sqm,units_count,price_amt,room_count,structure_type,has_alpha_room,floor_plan_url,note";
 
     return Promise.all([
       supabaseFetchAll("complexes", complexCols, "name"),
       supabaseFetchAll("transactions", txCols, "id"),
-      supabaseFetchAll("classification_rules", ruleCols, "rule_key").catch(function(){ return []; })
+      supabaseFetchAll("classification_rules", ruleCols, "rule_key").catch(function(){ return []; }),
+      supabaseFetchAll("complex_unit_types", unitTypeCols, "type_name").catch(function(){ return []; })
     ]).then(function(results){
       var complexRows = results[0];
       var txRows = results[1];
       var ruleRows = results[2] || [];
+      var unitTypeRows = results[3] || [];
+      var unitTypesByComplex = {};
+      unitTypeRows.forEach(function(u){
+        (unitTypesByComplex[u.complex_id] = unitTypesByComplex[u.complex_id] || []).push({
+          typeName: u.type_name,
+          areaSqm: (u.area_sqm === null || u.area_sqm === undefined) ? null : Number(u.area_sqm),
+          unitsCount: (u.units_count === null || u.units_count === undefined) ? null : Number(u.units_count),
+          priceAmt: (u.price_amt === null || u.price_amt === undefined) ? null : Number(u.price_amt),
+          roomCount: (u.room_count === null || u.room_count === undefined) ? null : Number(u.room_count),
+          structureType: u.structure_type || null,
+          hasAlphaRoom: (u.has_alpha_room === null || u.has_alpha_room === undefined) ? null : !!u.has_alpha_room,
+          floorPlanUrl: u.floor_plan_url || null,
+          note: u.note || null
+        });
+      });
       ruleRows.forEach(function(r){
         if (r.rule_key === "success_min_rate" && r.rule_value !== null) CLASSIFICATION_RULES.success_min_rate = Number(r.rule_value);
         if (r.rule_key === "normal_min_rate" && r.rule_value !== null) CLASSIFICATION_RULES.normal_min_rate = Number(r.rule_value);
@@ -596,6 +664,7 @@
             baselineArea: (row.baseline_area === null || row.baseline_area === undefined) ? null : Number(row.baseline_area),
             presaleIsProxy: !!row.presale_is_proxy,
             floorGapNote: row.floor_gap_note || null,
+            unitTypes: unitTypesByComplex[row.id] || [],
             txHistory: txs
           };
           c.age = ageBucket(c.buildYear);
@@ -621,6 +690,10 @@
             panelNote: row.panel_note || null,
             floorGapNote: row.floor_gap_note || null,
             successClassification: computeSuccessClassification(row),
+            recruitNoticeDate: row.recruit_notice_date || null,
+            subscriptionPeriodText: row.subscription_period_text || null,
+            sourceUrl: row.source_url || null,
+            unitTypes: unitTypesByComplex[row.id] || [],
             txHistory: txs
           };
           PROJECTS.push(p);
@@ -1267,12 +1340,15 @@
         '</div>';
     }
     var noteText = p.panelNote || '완공사진 · 현재 대지사진 · 조감도 · 타입별 실내 사진은 자료 전달 시 이 패널에 갤러리로 추가할 수 있습니다.';
-    var simulatorHtml = buildSimulatorHtml(p);
+    var simulatorHtml = (p.status === "scheduled") ? '' : buildSimulatorHtml(p); // 분양예정(타사현장)은 실거래가 없어 시뮬레이터 기준가 대상에서 제외
+    var scheduledInfoHtml = buildScheduledInfoHtml(p);
+    var unitTypesHtml = buildUnitTypesHtml(p);
     document.getElementById("panelInner").innerHTML =
       badge +
       '<h2>' + p.name + '</h2>' +
       '<div class="sub">' + p.block + ' · ' + p.dateLabel + '</div>' +
       approxNote +
+      scheduledInfoHtml +
       '<div class="section-label">기본정보</div>' +
       '<div class="stat-grid">' +
         '<div class="stat-cell"><div class="k">세대수</div><div class="v">' + p.units + '세대</div></div>' +
@@ -1280,6 +1356,7 @@
         extraStats +
       '</div>' +
       '<div class="addr-box"><div class="k">주소</div>' + p.address + '</div>' +
+      unitTypesHtml +
       simulatorHtml +
       premiumHtml +
       '<div id="floorChartRoot"></div>' +

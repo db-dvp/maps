@@ -237,14 +237,18 @@
   .floorplan-modal{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;}
   .floorplan-modal.open{display:flex;}
   .floorplan-modal-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.6);}
-  .floorplan-modal-content{position:relative;background:#fff;border-radius:12px;padding:18px;max-width:min(90vw,720px);max-height:88vh;box-shadow:0 12px 40px rgba(0,0,0,.35);}
+  .floorplan-modal-content{position:relative;background:#fff;border-radius:12px;padding:18px;max-width:min(95vw,900px);max-height:94vh;box-shadow:0 12px 40px rgba(0,0,0,.35);}
   .floorplan-modal-close{position:absolute;top:8px;right:8px;width:32px;height:32px;border:none;background:var(--paper);border-radius:50%;font-size:1.1rem;line-height:1;cursor:pointer;color:var(--ink);z-index:2;}
   .floorplan-modal-title{font-weight:700;font-size:.85rem;margin:0 32px 8px 2px;}
-  /* 도면 확대/이동(드래그·스크롤) 뷰포트 — 이미지 자체는 transform으로 확대/이동시키고
-     바깥 뷰포트는 overflow:hidden으로 잘라내는 방식(2026.09.19 추가, 대표님 요청). */
-  .floorplan-modal-viewport{position:relative;overflow:hidden;width:min(84vw,684px);height:68vh;border-radius:8px;background:var(--paper);cursor:grab;touch-action:none;}
+  /* 도면 확대/스크롤 뷰포트(2026.09.19 추가, 2026.09.26 수정) — 이미지를 항상 뷰포트 "가로폭"에
+     맞춰 원래 비율 그대로 꽉 채워서 보여주고(너무 가늘고 작게 쪼그라들지 않게), 세로로 긴 도면
+     (예: 인천계양 A6블록처럼 평면도+3D입체도+마감표가 이어진 긴 이미지)은 뷰포트가 자체
+     스크롤(overflow:auto, 마우스휠·트랙패드·스크롤바·드래그로 전부 가능)되도록 함.
+     확대(+/-, Ctrl+휠)는 이미지 가로폭 %를 늘려서 더 크게 볼 수 있게 하고, 그만큼 스크롤 영역도
+     같이 늘어남(transform:scale 방식이 아니라 실제 레이아웃 크기를 바꾸는 방식이라 항상 동작함). */
+  .floorplan-modal-viewport{position:relative;overflow:auto;width:min(90vw,860px);height:80vh;border-radius:8px;background:var(--paper);cursor:grab;}
   .floorplan-modal-viewport.dragging{cursor:grabbing;}
-  .floorplan-modal-img{display:block;max-width:100%;max-height:100%;margin:0 auto;border-radius:8px;transform-origin:center center;will-change:transform;user-select:none;-webkit-user-drag:none;pointer-events:none;}
+  .floorplan-modal-img{display:block;width:100%;height:auto;margin:0 auto;border-radius:8px;user-select:none;-webkit-user-drag:none;pointer-events:none;}
   .floorplan-modal-controls{position:absolute;bottom:10px;right:10px;display:flex;align-items:center;gap:4px;background:rgba(255,255,255,.92);border-radius:8px;padding:4px;box-shadow:0 2px 8px rgba(0,0,0,.18);z-index:2;}
   .floorplan-zoom-btn{width:30px;height:30px;border:none;background:var(--paper);border-radius:6px;font-size:1.05rem;font-weight:700;cursor:pointer;color:var(--ink);line-height:1;}
   .floorplan-zoom-btn:hover{background:var(--line);}
@@ -394,11 +398,11 @@
         <div class="floorplan-modal-title" id="floorPlanModalTitle"></div>
         <div class="floorplan-modal-viewport" id="floorPlanModalViewport">
           <img class="floorplan-modal-img" id="floorPlanModalImg" src="" alt="도면" draggable="false">
-          <div class="floorplan-modal-controls">
-            <button type="button" class="floorplan-zoom-btn" id="floorPlanZoomOut" aria-label="축소">&minus;</button>
-            <span class="floorplan-zoom-pct" id="floorPlanZoomPct">100%</span>
-            <button type="button" class="floorplan-zoom-btn" id="floorPlanZoomIn" aria-label="확대">+</button>
-          </div>
+        </div>
+        <div class="floorplan-modal-controls">
+          <button type="button" class="floorplan-zoom-btn" id="floorPlanZoomOut" aria-label="축소">&minus;</button>
+          <span class="floorplan-zoom-pct" id="floorPlanZoomPct">100%</span>
+          <button type="button" class="floorplan-zoom-btn" id="floorPlanZoomIn" aria-label="확대">+</button>
         </div>
       </div>
     </div>
@@ -498,10 +502,16 @@
   }
 
   // 도면 이미지를 지도 화면 가운데 모달로 바로 보여줌(외부 사이트 새 탭 이동 없이 사이트 내에서 확인).
-  // +/- 버튼·마우스 휠·드래그로 확대/이동 가능(2026.09.19 추가, 대표님 요청).
+  // (2026.09.19 추가, 2026.09.26 수정) 대표님 피드백: 인천계양 A6블록처럼 세로로 아주 긴 도면
+  // (평면도+3D입체도+마감표가 이어진 이미지)이 뷰포트 "높이"에 맞춰 억지로 줄어들면서 너무
+  // 작고 가늘게 보이고, 그 상태에서 확대(+/-)를 눌러도 어차피 가늘게 찌그러진 이미지가 커질
+  // 뿐이라 잘 안 보이는 문제였음 → 이미지는 항상 뷰포트 "가로폭"에 맞춰 원래 비율 그대로
+  // 꽉 채워서 보여주고, 세로로 길면 뷰포트 자체를 스크롤(마우스휠·트랙패드·스크롤바·드래그)
+  // 해서 내려보는 방식으로 변경. 확대(+/-, Ctrl/⌘+휠)는 이미지 가로폭 %를 늘리는 방식이라
+  // (transform:scale이 아니라 실제 레이아웃 크기 변경) 스크롤 영역도 같이 늘어나서 항상 동작함.
   var FLOORPLAN_ZOOM_MIN = 1, FLOORPLAN_ZOOM_MAX = 5, FLOORPLAN_ZOOM_STEP = 0.25;
-  var floorPlanZoom = 1, floorPlanPanX = 0, floorPlanPanY = 0;
-  var floorPlanDragging = false, floorPlanDragStartX = 0, floorPlanDragStartY = 0, floorPlanPanStartX = 0, floorPlanPanStartY = 0;
+  var floorPlanZoom = 1;
+  var floorPlanDragging = false, floorPlanDragStartX = 0, floorPlanDragStartY = 0, floorPlanScrollStartLeft = 0, floorPlanScrollStartTop = 0;
 
   function openFloorPlanModal(url, title){
     if (!url) return;
@@ -520,45 +530,51 @@
     resetFloorPlanZoom();
   }
 
-  function applyFloorPlanTransform(){
+  function applyFloorPlanZoomWidth(){
     var img = document.getElementById("floorPlanModalImg");
-    img.style.transform = "translate(" + floorPlanPanX + "px," + floorPlanPanY + "px) scale(" + floorPlanZoom + ")";
+    img.style.width = (floorPlanZoom * 100) + "%";
     var pctEl = document.getElementById("floorPlanZoomPct");
     if (pctEl) pctEl.textContent = Math.round(floorPlanZoom * 100) + "%";
   }
   function resetFloorPlanZoom(){
-    floorPlanZoom = 1; floorPlanPanX = 0; floorPlanPanY = 0;
-    applyFloorPlanTransform();
+    floorPlanZoom = 1;
+    applyFloorPlanZoomWidth();
+    var viewport = document.getElementById("floorPlanModalViewport");
+    if (viewport) { viewport.scrollLeft = 0; viewport.scrollTop = 0; }
   }
   function setFloorPlanZoom(next){
     var clamped = Math.min(FLOORPLAN_ZOOM_MAX, Math.max(FLOORPLAN_ZOOM_MIN, next));
-    // 최소 확대(100%)로 돌아오면 이동한 위치도 같이 초기화(다시 열었을 때 화면 밖으로 밀려나 있는 것 방지)
-    if (clamped === FLOORPLAN_ZOOM_MIN) { floorPlanPanX = 0; floorPlanPanY = 0; }
     floorPlanZoom = clamped;
-    applyFloorPlanTransform();
+    applyFloorPlanZoomWidth();
   }
   function zoomFloorPlanBy(delta){ setFloorPlanZoom(floorPlanZoom + delta); }
 
-  // 도면 확대/이동 이벤트 핸들러 — 별도 함수로 빼서(익명함수 대신) initMap() 없이도 단위 테스트 가능하게 함.
+  // 도면 확대/스크롤/드래그 이벤트 핸들러 — 별도 함수로 빼서(익명함수 대신) initMap() 없이도
+  // 단위 테스트 가능하게 함.
   function floorPlanWheel(e){
-    e.preventDefault(); // 모달 뒤 지도/페이지가 같이 스크롤되지 않도록
+    // 기본 마우스휠/트랙패드는 그대로 뷰포트를 스크롤(도면이 길 때 아래로 내려보기 위함, 브라우저
+    // 기본 동작 그대로 둠). Ctrl(윈도우) 또는 Cmd(맥)를 누른 채 휠을 돌릴 때만 확대/축소.
+    if (!(e.ctrlKey || e.metaKey)) return;
+    e.preventDefault();
     zoomFloorPlanBy(e.deltaY < 0 ? FLOORPLAN_ZOOM_STEP : -FLOORPLAN_ZOOM_STEP);
   }
   function floorPlanPointerDown(e){
+    var viewport = document.getElementById("floorPlanModalViewport");
     floorPlanDragging = true;
     floorPlanDragStartX = e.clientX; floorPlanDragStartY = e.clientY;
-    floorPlanPanStartX = floorPlanPanX; floorPlanPanStartY = floorPlanPanY;
-    document.getElementById("floorPlanModalViewport").classList.add("dragging");
+    floorPlanScrollStartLeft = viewport.scrollLeft; floorPlanScrollStartTop = viewport.scrollTop;
+    viewport.classList.add("dragging");
   }
   function floorPlanPointerMove(e){
     if (!floorPlanDragging) return;
-    floorPlanPanX = floorPlanPanStartX + (e.clientX - floorPlanDragStartX);
-    floorPlanPanY = floorPlanPanStartY + (e.clientY - floorPlanDragStartY);
-    applyFloorPlanTransform();
+    var viewport = document.getElementById("floorPlanModalViewport");
+    viewport.scrollLeft = floorPlanScrollStartLeft - (e.clientX - floorPlanDragStartX);
+    viewport.scrollTop = floorPlanScrollStartTop - (e.clientY - floorPlanDragStartY);
   }
   function floorPlanPointerUp(){
+    var viewport = document.getElementById("floorPlanModalViewport");
     floorPlanDragging = false;
-    document.getElementById("floorPlanModalViewport").classList.remove("dragging");
+    viewport.classList.remove("dragging");
   }
 
   // "분양예정(타사 현장)" 안내 상자 — 모집공고일·접수기간·출처를 보여줌.
@@ -1356,7 +1372,7 @@
       if (e.key === "Escape") closeFloorPlanModal();
     });
 
-    // 도면 확대/축소(+/- 버튼, 마우스 휠) · 드래그로 이동
+    // 도면 확대/축소(+/- 버튼, Ctrl/⌘+마우스휠) · 드래그 또는 휠로 스크롤 이동
     document.getElementById("floorPlanZoomIn").addEventListener("click", function(){ zoomFloorPlanBy(FLOORPLAN_ZOOM_STEP); });
     document.getElementById("floorPlanZoomOut").addEventListener("click", function(){ zoomFloorPlanBy(-FLOORPLAN_ZOOM_STEP); });
     var floorPlanViewport = document.getElementById("floorPlanModalViewport");

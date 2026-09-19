@@ -348,12 +348,11 @@
       <div class="age-filters" id="unifiedFilters">
         <button class="filter-btn active" data-filter="all">전체</button>
         <button class="filter-btn" data-filter="upcoming"><span class="filter-dot" style="background:var(--status-upcoming)"></span>분양예정 (당사 현장)</button>
-        <button class="filter-btn" data-filter="competitor"><span class="filter-dot" style="background:var(--status-competitor)"></span>분양·전매 비교 (타사 현장)</button>
+        <button class="filter-btn" data-filter="presale"><span class="filter-dot" style="background:var(--age-presale)"></span>준공예정</button>
         <button class="filter-btn" data-filter="under1"><span class="filter-dot" style="background:var(--age-under1)"></span>1년 미만</button>
         <button class="filter-btn" data-filter="1to5"><span class="filter-dot" style="background:var(--age-1to5)"></span>1~5년</button>
         <button class="filter-btn" data-filter="5to10"><span class="filter-dot" style="background:var(--age-5to10)"></span>5~10년</button>
         <button class="filter-btn" data-filter="over10"><span class="filter-dot" style="background:var(--age-over10)"></span>10년 초과</button>
-        <button class="filter-btn" data-filter="presale"><span class="filter-dot" style="background:var(--age-presale)"></span>비교단지 · 준공예정</button>
       </div>
     </div>
 
@@ -475,7 +474,7 @@
 
   var COMPARISON_COMPLEXES = []; // Supabase complexes(role=comparison) + transactions에서 런타임에 채워짐 (loadDataFromSupabase 참고)
 
-  var map, geocoder, markers = [], activeFilter = "all";
+  var map, geocoder, markers = [], activeFilters = new Set(["all"]);
   var currentComplex = null, txFloorFilter = "all", txAreaFilter = "all";
 
   // ============================================================
@@ -1137,11 +1136,22 @@
       });
     });
 
+    // 필터는 중복 선택 가능(예: "5~10년"과 "1년 미만"을 동시에 켜서 같이 보기) — "전체"는 단독 선택이며
+    // 개별 항목을 켜면 자동으로 꺼지고, 개별 항목을 전부 끄면 다시 "전체"로 돌아온다.
     document.querySelectorAll("#unifiedFilters .filter-btn").forEach(function(btn){
       btn.addEventListener("click", function(){
-        document.querySelectorAll("#unifiedFilters .filter-btn").forEach(function(b){ b.classList.remove("active"); });
-        btn.classList.add("active");
-        activeFilter = btn.getAttribute("data-filter");
+        var key = btn.getAttribute("data-filter");
+        if (key === "all") {
+          activeFilters = new Set(["all"]);
+        } else {
+          activeFilters.delete("all");
+          if (activeFilters.has(key)) { activeFilters.delete(key); } else { activeFilters.add(key); }
+          if (activeFilters.size === 0) { activeFilters = new Set(["all"]); }
+        }
+        document.querySelectorAll("#unifiedFilters .filter-btn").forEach(function(b){
+          var k = b.getAttribute("data-filter");
+          if (activeFilters.has(k)) { b.classList.add("active"); } else { b.classList.remove("active"); }
+        });
         refreshMarkers();
       });
     });
@@ -1206,14 +1216,18 @@
     refreshMarkers();
   }
 
+  // 마커 하나가 어떤 필터 카테고리에 속하는지 계산.
+  // "분양·전매 비교(타사 현장)"(status="competitor")는 준공 전 단계라는 점에서
+  // 비교단지의 "준공예정"(age.key="presale")과 같은 카테고리로 합쳐서 필터링한다(둘 다 보라색·"준공예정" 필터 하나로 묶임).
+  function markerFilterKey(m){
+    if (m.kind === "comparison") return m.data.age.key;
+    return (m.data.status === "competitor") ? "presale" : m.data.status;
+  }
+
   function refreshMarkers(){
     markers.forEach(function(m){
-      var visible;
-      if (m.kind === "comparison") {
-        visible = (activeFilter === "all") || (activeFilter === m.data.age.key);
-      } else {
-        visible = (activeFilter === "all") || (activeFilter === m.data.status);
-      }
+      var key = markerFilterKey(m);
+      var visible = activeFilters.has("all") || activeFilters.has(key);
       m.overlay.setMap(visible ? map : null);
     });
   }

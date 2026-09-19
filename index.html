@@ -237,10 +237,18 @@
   .floorplan-modal{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;}
   .floorplan-modal.open{display:flex;}
   .floorplan-modal-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.6);}
-  .floorplan-modal-content{position:relative;background:#fff;border-radius:12px;padding:18px;max-width:min(90vw,720px);max-height:88vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.35);}
-  .floorplan-modal-close{position:absolute;top:8px;right:8px;width:32px;height:32px;border:none;background:var(--paper);border-radius:50%;font-size:1.1rem;line-height:1;cursor:pointer;color:var(--ink);}
-  .floorplan-modal-title{font-weight:700;font-size:.85rem;margin:0 32px 10px 2px;}
-  .floorplan-modal-img{display:block;max-width:100%;max-height:72vh;margin:0 auto;border-radius:8px;}
+  .floorplan-modal-content{position:relative;background:#fff;border-radius:12px;padding:18px;max-width:min(90vw,720px);max-height:88vh;box-shadow:0 12px 40px rgba(0,0,0,.35);}
+  .floorplan-modal-close{position:absolute;top:8px;right:8px;width:32px;height:32px;border:none;background:var(--paper);border-radius:50%;font-size:1.1rem;line-height:1;cursor:pointer;color:var(--ink);z-index:2;}
+  .floorplan-modal-title{font-weight:700;font-size:.85rem;margin:0 32px 8px 2px;}
+  /* 도면 확대/이동(드래그·스크롤) 뷰포트 — 이미지 자체는 transform으로 확대/이동시키고
+     바깥 뷰포트는 overflow:hidden으로 잘라내는 방식(2026.09.19 추가, 대표님 요청). */
+  .floorplan-modal-viewport{position:relative;overflow:hidden;width:min(84vw,684px);height:68vh;border-radius:8px;background:var(--paper);cursor:grab;touch-action:none;}
+  .floorplan-modal-viewport.dragging{cursor:grabbing;}
+  .floorplan-modal-img{display:block;max-width:100%;max-height:100%;margin:0 auto;border-radius:8px;transform-origin:center center;will-change:transform;user-select:none;-webkit-user-drag:none;pointer-events:none;}
+  .floorplan-modal-controls{position:absolute;bottom:10px;right:10px;display:flex;align-items:center;gap:4px;background:rgba(255,255,255,.92);border-radius:8px;padding:4px;box-shadow:0 2px 8px rgba(0,0,0,.18);z-index:2;}
+  .floorplan-zoom-btn{width:30px;height:30px;border:none;background:var(--paper);border-radius:6px;font-size:1.05rem;font-weight:700;cursor:pointer;color:var(--ink);line-height:1;}
+  .floorplan-zoom-btn:hover{background:var(--line);}
+  .floorplan-zoom-pct{font-size:.68rem;color:var(--ink-soft);min-width:34px;text-align:center;}
   .unittype-name{font-weight:700;}
   .scheduled-info-box{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:0 0 12px;font-size:.75rem;line-height:1.6;}
   .scheduled-info-box a{color:var(--status-scheduled);}
@@ -384,7 +392,14 @@
       <div class="floorplan-modal-content">
         <button type="button" class="floorplan-modal-close" id="floorPlanModalClose" aria-label="닫기">&times;</button>
         <div class="floorplan-modal-title" id="floorPlanModalTitle"></div>
-        <img class="floorplan-modal-img" id="floorPlanModalImg" src="" alt="도면">
+        <div class="floorplan-modal-viewport" id="floorPlanModalViewport">
+          <img class="floorplan-modal-img" id="floorPlanModalImg" src="" alt="도면" draggable="false">
+          <div class="floorplan-modal-controls">
+            <button type="button" class="floorplan-zoom-btn" id="floorPlanZoomOut" aria-label="축소">&minus;</button>
+            <span class="floorplan-zoom-pct" id="floorPlanZoomPct">100%</span>
+            <button type="button" class="floorplan-zoom-btn" id="floorPlanZoomIn" aria-label="확대">+</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -483,6 +498,11 @@
   }
 
   // 도면 이미지를 지도 화면 가운데 모달로 바로 보여줌(외부 사이트 새 탭 이동 없이 사이트 내에서 확인).
+  // +/- 버튼·마우스 휠·드래그로 확대/이동 가능(2026.09.19 추가, 대표님 요청).
+  var FLOORPLAN_ZOOM_MIN = 1, FLOORPLAN_ZOOM_MAX = 5, FLOORPLAN_ZOOM_STEP = 0.25;
+  var floorPlanZoom = 1, floorPlanPanX = 0, floorPlanPanY = 0;
+  var floorPlanDragging = false, floorPlanDragStartX = 0, floorPlanDragStartY = 0, floorPlanPanStartX = 0, floorPlanPanStartY = 0;
+
   function openFloorPlanModal(url, title){
     if (!url) return;
     var modal = document.getElementById("floorPlanModal");
@@ -490,12 +510,55 @@
     var titleEl = document.getElementById("floorPlanModalTitle");
     img.src = url;
     titleEl.textContent = (title ? (title + " ") : "") + "도면";
+    resetFloorPlanZoom();
     modal.classList.add("open");
   }
   function closeFloorPlanModal(){
     var modal = document.getElementById("floorPlanModal");
     modal.classList.remove("open");
     document.getElementById("floorPlanModalImg").src = "";
+    resetFloorPlanZoom();
+  }
+
+  function applyFloorPlanTransform(){
+    var img = document.getElementById("floorPlanModalImg");
+    img.style.transform = "translate(" + floorPlanPanX + "px," + floorPlanPanY + "px) scale(" + floorPlanZoom + ")";
+    var pctEl = document.getElementById("floorPlanZoomPct");
+    if (pctEl) pctEl.textContent = Math.round(floorPlanZoom * 100) + "%";
+  }
+  function resetFloorPlanZoom(){
+    floorPlanZoom = 1; floorPlanPanX = 0; floorPlanPanY = 0;
+    applyFloorPlanTransform();
+  }
+  function setFloorPlanZoom(next){
+    var clamped = Math.min(FLOORPLAN_ZOOM_MAX, Math.max(FLOORPLAN_ZOOM_MIN, next));
+    // 최소 확대(100%)로 돌아오면 이동한 위치도 같이 초기화(다시 열었을 때 화면 밖으로 밀려나 있는 것 방지)
+    if (clamped === FLOORPLAN_ZOOM_MIN) { floorPlanPanX = 0; floorPlanPanY = 0; }
+    floorPlanZoom = clamped;
+    applyFloorPlanTransform();
+  }
+  function zoomFloorPlanBy(delta){ setFloorPlanZoom(floorPlanZoom + delta); }
+
+  // 도면 확대/이동 이벤트 핸들러 — 별도 함수로 빼서(익명함수 대신) initMap() 없이도 단위 테스트 가능하게 함.
+  function floorPlanWheel(e){
+    e.preventDefault(); // 모달 뒤 지도/페이지가 같이 스크롤되지 않도록
+    zoomFloorPlanBy(e.deltaY < 0 ? FLOORPLAN_ZOOM_STEP : -FLOORPLAN_ZOOM_STEP);
+  }
+  function floorPlanPointerDown(e){
+    floorPlanDragging = true;
+    floorPlanDragStartX = e.clientX; floorPlanDragStartY = e.clientY;
+    floorPlanPanStartX = floorPlanPanX; floorPlanPanStartY = floorPlanPanY;
+    document.getElementById("floorPlanModalViewport").classList.add("dragging");
+  }
+  function floorPlanPointerMove(e){
+    if (!floorPlanDragging) return;
+    floorPlanPanX = floorPlanPanStartX + (e.clientX - floorPlanDragStartX);
+    floorPlanPanY = floorPlanPanStartY + (e.clientY - floorPlanDragStartY);
+    applyFloorPlanTransform();
+  }
+  function floorPlanPointerUp(){
+    floorPlanDragging = false;
+    document.getElementById("floorPlanModalViewport").classList.remove("dragging");
   }
 
   // "분양예정(타사 현장)" 안내 상자 — 모집공고일·접수기간·출처를 보여줌.
@@ -1291,6 +1354,17 @@
     document.getElementById("floorPlanModalBackdrop").addEventListener("click", closeFloorPlanModal);
     document.addEventListener("keydown", function(e){
       if (e.key === "Escape") closeFloorPlanModal();
+    });
+
+    // 도면 확대/축소(+/- 버튼, 마우스 휠) · 드래그로 이동
+    document.getElementById("floorPlanZoomIn").addEventListener("click", function(){ zoomFloorPlanBy(FLOORPLAN_ZOOM_STEP); });
+    document.getElementById("floorPlanZoomOut").addEventListener("click", function(){ zoomFloorPlanBy(-FLOORPLAN_ZOOM_STEP); });
+    var floorPlanViewport = document.getElementById("floorPlanModalViewport");
+    floorPlanViewport.addEventListener("wheel", floorPlanWheel, { passive: false });
+    floorPlanViewport.addEventListener("pointerdown", floorPlanPointerDown);
+    floorPlanViewport.addEventListener("pointermove", floorPlanPointerMove);
+    ["pointerup","pointerleave","pointercancel"].forEach(function(evt){
+      floorPlanViewport.addEventListener(evt, floorPlanPointerUp);
     });
 
     // 3단계 분양가 시뮬레이터 입력(예상 분양가/할인율) — 입력할 때마다 결과만 다시 계산해서 채움(위임 방식).

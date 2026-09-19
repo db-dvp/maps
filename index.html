@@ -230,10 +230,17 @@
   .premium-amt{font-weight:700;text-align:right;}
   .unittype-list{border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-top:2px;}
   .unittype-row{display:grid;grid-template-columns:.6fr .7fr .6fr 1.1fr .5fr;gap:6px;align-items:center;padding:6px 10px;font-size:.72rem;border-bottom:1px solid var(--line);}
-  .unittype-row a{color:var(--indigo);font-weight:600;}
+  .unittype-row a, .unittype-row .floorplan-link{color:var(--indigo);font-weight:600;background:none;border:none;padding:0;font:inherit;cursor:pointer;text-decoration:underline;}
   .unittype-row:last-child{border-bottom:none;}
   .unittype-row:nth-child(even){background:var(--paper);}
   .unittype-row-head{font-size:.64rem;font-weight:700;color:var(--ink-soft);background:var(--paper)!important;}
+  .floorplan-modal{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;}
+  .floorplan-modal.open{display:flex;}
+  .floorplan-modal-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.6);}
+  .floorplan-modal-content{position:relative;background:#fff;border-radius:12px;padding:18px;max-width:min(90vw,720px);max-height:88vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.35);}
+  .floorplan-modal-close{position:absolute;top:8px;right:8px;width:32px;height:32px;border:none;background:var(--paper);border-radius:50%;font-size:1.1rem;line-height:1;cursor:pointer;color:var(--ink);}
+  .floorplan-modal-title{font-weight:700;font-size:.85rem;margin:0 32px 10px 2px;}
+  .floorplan-modal-img{display:block;max-width:100%;max-height:72vh;margin:0 auto;border-radius:8px;}
   .unittype-name{font-weight:700;}
   .scheduled-info-box{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:0 0 12px;font-size:.75rem;line-height:1.6;}
   .scheduled-info-box a{color:var(--status-scheduled);}
@@ -371,6 +378,15 @@
       <button class="panel-close" id="panelClose">&times;</button>
       <div class="panel-inner" id="panelInner"></div>
     </div>
+
+    <div class="floorplan-modal" id="floorPlanModal">
+      <div class="floorplan-modal-backdrop" id="floorPlanModalBackdrop"></div>
+      <div class="floorplan-modal-content">
+        <button type="button" class="floorplan-modal-close" id="floorPlanModalClose" aria-label="닫기">&times;</button>
+        <div class="floorplan-modal-title" id="floorPlanModalTitle"></div>
+        <img class="floorplan-modal-img" id="floorPlanModalImg" src="" alt="도면">
+      </div>
+    </div>
   </div>
 
   </div>
@@ -446,7 +462,7 @@
       if (t.roomCount !== null && t.roomCount !== undefined) extra.push(t.roomCount + '개룸');
       var priceCell = price + (extra.length ? (' <span style="color:var(--ink-soft);font-size:.9em;">(' + extra.join(' · ') + ')</span>') : '');
       var planCell = t.floorPlanUrl
-        ? ('<a href="' + t.floorPlanUrl + '" target="_blank" rel="noopener">도면보기</a>')
+        ? ('<button type="button" class="floorplan-link" data-plan-url="' + t.floorPlanUrl + '" data-plan-title="' + t.typeName + '">도면보기</button>')
         : '<span style="color:var(--ink-soft);">-</span>';
       return '<div class="unittype-row"><span class="unittype-name">' + t.typeName + '</span>' +
         '<span>' + area + '</span><span>' + units + '</span><span>' + priceCell + '</span><span>' + planCell + '</span></div>';
@@ -458,6 +474,22 @@
         rows +
       '</div>' +
     '</div>';
+  }
+
+  // 도면 이미지를 지도 화면 가운데 모달로 바로 보여줌(외부 사이트 새 탭 이동 없이 사이트 내에서 확인).
+  function openFloorPlanModal(url, title){
+    if (!url) return;
+    var modal = document.getElementById("floorPlanModal");
+    var img = document.getElementById("floorPlanModalImg");
+    var titleEl = document.getElementById("floorPlanModalTitle");
+    img.src = url;
+    titleEl.textContent = (title ? (title + " ") : "") + "도면";
+    modal.classList.add("open");
+  }
+  function closeFloorPlanModal(){
+    var modal = document.getElementById("floorPlanModal");
+    modal.classList.remove("open");
+    document.getElementById("floorPlanModalImg").src = "";
   }
 
   // "분양예정(타사 현장)" 안내 상자 — 모집공고일·접수기간·출처를 보여줌.
@@ -1243,6 +1275,16 @@
       if (ft) { txFloorFilter = ft.getAttribute("data-txfloor"); renderTxSection(); return; }
       var at = e.target.closest("[data-txarea]");
       if (at) { txAreaFilter = at.getAttribute("data-txarea"); renderTxSection(); return; }
+      // 타입별 정보 표의 "도면보기" — 외부 사이트로 새 탭을 여는 대신 지도 화면 가운데에 모달로 바로 보여줌
+      var pt = e.target.closest("[data-plan-url]");
+      if (pt) { openFloorPlanModal(pt.getAttribute("data-plan-url"), pt.getAttribute("data-plan-title")); return; }
+    });
+
+    // 도면 모달 열기/닫기 (배경 클릭·닫기 버튼·Esc 키 전부 지원)
+    document.getElementById("floorPlanModalClose").addEventListener("click", closeFloorPlanModal);
+    document.getElementById("floorPlanModalBackdrop").addEventListener("click", closeFloorPlanModal);
+    document.addEventListener("keydown", function(e){
+      if (e.key === "Escape") closeFloorPlanModal();
     });
 
     // 3단계 분양가 시뮬레이터 입력(예상 분양가/할인율) — 입력할 때마다 결과만 다시 계산해서 채움(위임 방식).

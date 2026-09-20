@@ -101,6 +101,7 @@
   }
   .filterbar .age-filters .filter-btn{width:auto;justify-content:center;}
   .map-collapse-btn{margin-left:auto;flex-shrink:0;}
+  .compare-collapse-btn{flex-shrink:0;}
 
   .map-card{
     position:relative;flex:0 1 42%;min-width:220px;height:100%;
@@ -117,8 +118,13 @@
     flex:1 1 auto;min-width:0;height:100%;
     padding:16px 16px 16px 0;box-sizing:border-box;
     display:flex;flex-direction:column;
+    transition:flex-basis .25s ease, opacity .2s ease, padding .25s ease;
   }
   .map-card.collapsed + .compare-card{padding-left:16px;}
+  /* 2026.09.20(6차): 반대로 "지도만 보기"도 가능하도록 — 비교표 카드를 접으면 지도 카드가
+     .stage의 남은 공간을 전부 차지한다(flex:1 1 auto인 map-card가 이제 유일한 flex 아이템). */
+  .compare-card.collapsed{flex:0 0 0;min-width:0;padding:0;opacity:0;overflow:hidden;pointer-events:none;}
+  .map-card.full-width{flex:1 1 auto;padding-right:16px;}
   .compare-card-inner{
     flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;
     background:var(--paper-raised);border:1px solid var(--line);
@@ -282,6 +288,15 @@
     background:rgba(255,255,255,.98);color:var(--ink);
     padding:3px 9px;box-shadow:0 1px 6px rgba(0,0,0,.28);
   }
+  /* 2026.09.20(6차): 지도 확대/축소 정도에 따라 마커 이름표(텍스트)만 3단계로 바뀐다 —
+     전국 단위(인천+부산 다 보이는 정도로 축소)일 땐 아예 숨기고, 한 지역(구 단위 정도로 확대)
+     이면 조금 작게, 그보다 더 확대하면(개별 단지를 자세히 볼 정도) 원래 크기로 돌아온다.
+     마커 점(핀) 자체 크기는 그대로 — 이름표만 대상. updateMarkerLabelTier()가 지도 zoom_changed
+     이벤트마다 #map에 아래 클래스를 넣고 뺀다. */
+  #map.marker-labels-hidden .marker-label{display:none;}
+  #map.marker-labels-compact .marker-label{font-size:9px;padding:2px 6px;}
+  #map.marker-labels-compact .marker-label-sm{font-size:8.5px;padding:1.5px 5px;}
+  #map.marker-labels-compact .marker-label-brand{font-size:9.5px;padding:2px 7px;}
   /* ⑥-1(2026.09.20): 예전엔 패널이 지도 위에 절대위치로 "덮어씌워지는" 방식이라, 이제는
      오른쪽에 비교표(실제 데이터가 있는 열)가 있어서 패널이 열리면 표의 뒷쪽 열(최초대비·최근거래)이
      가려지는 문제가 있었음. 패널을 .stage의 flex 아이템으로 바꿔서, 열릴 때 지도 카드/비교표 폭이
@@ -568,6 +583,7 @@
       <button class="filter-btn" data-filter="5to10"><span class="filter-dot" style="background:var(--age-5to10)"></span>5~10년</button>
       <!-- "10년 초과" 필터는 2026.09.20부로 제거: 해당 단지들을 화면에서 전부 제외해서 항상 결과가 0개였음 -->
     </div>
+    <button type="button" class="filter-btn compare-collapse-btn" id="compareCollapseBtn">표 접기</button>
     <button type="button" class="filter-btn map-collapse-btn" id="mapCollapseBtn">지도 접기</button>
   </div>
 
@@ -1761,6 +1777,10 @@
     map.setLevel(map.getLevel() - 1); // 초기 화면이 너무 줌아웃되어 있어 한 단계 더 확대
     map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
 
+    // 2026.09.20(6차): 지도 확대/축소 정도에 따라 마커 이름표 크기를 3단계로 전환(위 CSS 참고).
+    kakao.maps.event.addListener(map, "zoom_changed", updateMarkerLabelTier);
+    updateMarkerLabelTier();
+
     if (kakao.maps.services) {
       geocoder = new kakao.maps.services.Geocoder();
     }
@@ -1849,10 +1869,33 @@
 
     // ⑥ 레이아웃 개편: 지도 접기/펼치기 — 카카오 지도는 컨테이너 크기가 바뀌면 relayout()을
     // 호출해줘야 정상적으로 다시 그려지므로, CSS 트랜지션(.25s)이 끝난 뒤 한 번 호출한다.
-    document.getElementById("mapCollapseBtn").addEventListener("click", function(){
-      var card = document.getElementById("mapCard");
-      var collapsed = card.classList.toggle("collapsed");
+    // 2026.09.20(6차): 반대 방향("지도만 보기")도 추가 — 비교표 카드를 접으면 지도 카드가
+    // 남은 공간을 전부 차지(.full-width)한다. 두 카드가 동시에 접히면 화면이 텅 비어버리므로,
+    // 한쪽을 접을 때 다른 쪽이 접혀있었다면 자동으로 펼쳐서 항상 최소 하나는 보이게 한다.
+    var mapCard = document.getElementById("mapCard");
+    var compareCard = document.getElementById("compareCard");
+    var mapCollapseBtn = document.getElementById("mapCollapseBtn");
+    var compareCollapseBtn = document.getElementById("compareCollapseBtn");
+
+    mapCollapseBtn.addEventListener("click", function(){
+      var collapsed = mapCard.classList.toggle("collapsed");
       this.textContent = collapsed ? "지도 펼치기" : "지도 접기";
+      if (collapsed && compareCard.classList.contains("collapsed")) {
+        compareCard.classList.remove("collapsed");
+        mapCard.classList.remove("full-width");
+        compareCollapseBtn.textContent = "표 접기";
+      }
+      setTimeout(function(){ if (map) map.relayout(); }, 260);
+    });
+
+    compareCollapseBtn.addEventListener("click", function(){
+      var collapsed = compareCard.classList.toggle("collapsed");
+      this.textContent = collapsed ? "표 펼치기" : "표 접기";
+      mapCard.classList.toggle("full-width", collapsed);
+      if (collapsed && mapCard.classList.contains("collapsed")) {
+        mapCard.classList.remove("collapsed");
+        mapCollapseBtn.textContent = "지도 접기";
+      }
       setTimeout(function(){ if (map) map.relayout(); }, 260);
     });
 
@@ -2065,6 +2108,22 @@
     });
   }
 
+  // 2026.09.20(6차): 지도 zoom_changed 이벤트마다 호출 — 현재 확대 정도(level)에 맞춰
+  // #map에 marker-labels-hidden/marker-labels-compact 클래스를 넣거나 뺀다(위 CSS 참고).
+  // level 숫자가 클수록 더 축소된 상태(카카오맵 규칙): 8 이상=전국 단위(숨김), 4~7=지역 단위(작게),
+  // 3 이하=단지 단위로 확대(원래 크기).
+  function updateMarkerLabelTier(){
+    var mapEl = document.getElementById("map");
+    if (!mapEl || !map) return;
+    var lvl = map.getLevel();
+    mapEl.classList.remove("marker-labels-hidden", "marker-labels-compact");
+    if (lvl >= 8) {
+      mapEl.classList.add("marker-labels-hidden");
+    } else if (lvl >= 4) {
+      mapEl.classList.add("marker-labels-compact");
+    }
+  }
+
   // 검색 결과 선택 / 비교표 행 클릭 / 지도 마커 클릭이 공유하는 공통 동작:
   // 필터를 "전체"로 풀어서 항상 보이게 하고, 지도를 이동시키고, 상세 패널을 연다.
   function focusMarker(m){
@@ -2076,8 +2135,26 @@
     refreshMarkers();
 
     var pos = m.overlay.getPosition();
-    map.setLevel(4);
-    map.setCenter(pos);
+    // 2026.09.20(6차): 아직 지도가 전국 단위(인천+부산이 한 화면에 다 보이는 정도로 축소된
+    // 상태)일 때 마커를 클릭하면, 그 마커 하나로만 확 당겨서 확대하는 대신, 같은 지역(주소
+    // 기준 인천/부산)에 속한 단지들이 대략 다 보이도록 "지역 단위"로만 확대한다 — "인천지역이나
+    // 부산지역 아무거나 클릭했을 때 얼추 그쪽으로 확대"되길 원한다는 요청. 이미 어느 정도
+    // 확대돼있는 상태(지역/단지 단위)에서 클릭하면 원래처럼 그 단지 하나로 딱 맞춰 확대한다.
+    var wasCountryView = map.getLevel() >= 9;
+    var rk = regionKeyOf(m.data.address);
+    var regionBounds = null;
+    if (wasCountryView && rk) {
+      regionBounds = new kakao.maps.LatLngBounds();
+      markers.forEach(function(mm){
+        if (regionKeyOf(mm.data.address) === rk) regionBounds.extend(mm.overlay.getPosition());
+      });
+    }
+    if (regionBounds) {
+      map.setBounds(regionBounds, 60, 60, 60, 60);
+    } else {
+      map.setLevel(4);
+      map.setCenter(pos);
+    }
 
     if (m.kind === "project") {
       openPanel(m.data, false);

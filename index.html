@@ -528,7 +528,7 @@
       <button class="filter-btn" data-filter="under1"><span class="filter-dot" style="background:var(--age-under1)"></span>1년 미만</button>
       <button class="filter-btn" data-filter="1to5"><span class="filter-dot" style="background:var(--age-1to5)"></span>1~5년</button>
       <button class="filter-btn" data-filter="5to10"><span class="filter-dot" style="background:var(--age-5to10)"></span>5~10년</button>
-      <button class="filter-btn" data-filter="over10"><span class="filter-dot" style="background:var(--age-over10)"></span>10년 초과</button>
+      <!-- "10년 초과" 필터는 2026.09.20부로 제거: 해당 단지들을 화면에서 전부 제외해서 항상 결과가 0개였음 -->
     </div>
     <button type="button" class="filter-btn map-collapse-btn" id="mapCollapseBtn">지도 접기</button>
   </div>
@@ -1021,6 +1021,11 @@
             txHistory: txs
           };
           c.age = ageBucket(c.buildYear);
+          // 2026.09.20: "10년 초과" 원도심 비교단지는 신도시(A21/부산에코델타) 분양가 판단에
+          // 참고 가치가 낮다는 대표님 판단에 따라 지도·비교표·검색·KPI 등 화면에서 전부 제외.
+          // DB(complexes/transactions)의 실제 데이터는 그대로 남겨두고, 여기서 화면용 배열에
+          // 담기 전에만 걸러내는 방식이라 나중에 다시 필요하면 이 한 줄만 없애면 즉시 복원됨.
+          if (c.age.key === "over10") return;
           COMPARISON_COMPLEXES.push(c);
         } else {
           var p = {

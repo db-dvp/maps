@@ -103,7 +103,7 @@
   .map-collapse-btn{margin-left:auto;flex-shrink:0;}
 
   .map-card{
-    position:relative;flex:0 0 42%;min-width:260px;height:100%;
+    position:relative;flex:0 1 42%;min-width:220px;height:100%;
     padding:16px;box-sizing:border-box;
     transition:flex-basis .25s ease, opacity .2s ease, padding .25s ease;
   }
@@ -129,6 +129,15 @@
     border-bottom:1px solid var(--line);flex-shrink:0;flex-wrap:wrap;
   }
   .compare-count{font-size:.78rem;font-weight:700;color:var(--ink);}
+  .compare-scope-banner{
+    display:none;align-items:center;gap:10px;justify-content:space-between;
+    padding:9px 16px;background:#eef1fb;border-bottom:1px solid var(--line);
+    font-size:.74rem;color:var(--ink);flex-shrink:0;
+  }
+  .compare-scope-banner button{
+    border:1px solid var(--indigo-mid);background:var(--paper-raised);color:var(--indigo);
+    font-size:.7rem;font-weight:700;padding:4px 10px;border-radius:999px;cursor:pointer;flex-shrink:0;
+  }
   .compare-search{
     flex-shrink:0;width:170px;font-size:.76rem;padding:6px 10px;
     border:1px solid var(--line-strong);border-radius:7px;color:var(--ink);
@@ -259,14 +268,17 @@
     background:rgba(255,255,255,.98);color:var(--ink);
     padding:3px 9px;box-shadow:0 1px 6px rgba(0,0,0,.28);
   }
+  /* ⑥-1(2026.09.20): 예전엔 패널이 지도 위에 절대위치로 "덮어씌워지는" 방식이라, 이제는
+     오른쪽에 비교표(실제 데이터가 있는 열)가 있어서 패널이 열리면 표의 뒷쪽 열(최초대비·최근거래)이
+     가려지는 문제가 있었음. 패널을 .stage의 flex 아이템으로 바꿔서, 열릴 때 지도 카드/비교표 폭이
+     같이 줄어들며 자리를 "밀어서" 만들어주도록 수정(더 이상 표를 덮지 않음).*/
   .panel{
-    position:absolute;top:0;right:0;bottom:0;width:460px;max-width:94vw;
+    position:relative;flex:0 0 0;width:0;min-width:0;overflow:hidden;
     background:var(--paper-raised);box-shadow:-8px 0 24px -12px rgba(0,0,0,.25);
-    z-index:15;transform:translateX(100%);transition:transform .25s ease;
-    overflow-y:auto;
-    font-size:13px;
+    transition:flex-basis .25s ease, width .25s ease;
+    font-size:13px;flex-shrink:0;
   }
-  .panel.open{transform:translateX(0);}
+  .panel.open{flex:0 0 420px;width:420px;max-width:94vw;overflow-y:auto;}
   .panel-inner{padding:20px 24px 28px;}
   .panel-close{
     position:absolute;top:14px;right:14px;border:none;background:var(--paper);
@@ -415,9 +427,18 @@
     .topbar{gap:8px;padding:10px 12px;}
     .filters{gap:4px;}
     .filter-btn{font-size:.7rem;padding:5px 9px;}
-    .panel{width:100vw;max-width:100vw;}
     .search-box{width:150px;}
     .search-box input{padding:8px 10px;font-size:.76rem;}
+  }
+  /* 좁은 화면(≤900px)에서는 지도/비교표가 위아래로 쌓이므로, 패널을 flex로 "밀어내는" 대신
+     예전처럼 화면 아래에서 올라오는 오버레이로 되돌린다(밀어낼 만한 가로 공간이 없어서). */
+  @media (max-width:900px){
+    .panel{
+      position:absolute;top:auto;left:0;right:0;bottom:0;width:100%;max-width:100%;
+      flex:none;height:82vh;transform:translateY(100%);transition:transform .25s ease;
+      overflow-y:auto;z-index:16;
+    }
+    .panel.open{transform:translateY(0);}
   }
   #authGate{
     position:fixed;inset:0;z-index:9999;
@@ -529,6 +550,7 @@
             <option value="name">이름순</option>
           </select>
         </div>
+        <div class="compare-scope-banner" id="compareScopeBanner"></div>
         <div class="compare-head">
           <span>단지명</span><span>최근거래 전용면적</span><span>평당가</span><span>최초대비</span><span>최근거래</span>
         </div>
@@ -838,6 +860,9 @@
 
   var map, geocoder, markers = [], activeFilters = new Set(["all"]);
   var currentComplex = null, txFloorFilter = "all", txAreaFilter = "all";
+  // ⑥-1(2026.09.20): 당사 현장(엘리움) 패널을 열면, 그 현장을 위해 등록해둔 비교단지·참고단지만
+  // 비교표에 남기고 나머지는 숨긴다(SIMULATOR_CONFIG의 baselineComplexNames/referenceGroups 재사용).
+  var projectScopeFilter = null, projectScopeLabel = null;
 
   // ============================================================
   // Supabase 연동: 하드코딩 배열 대신 실제 DB(complexes/transactions)에서
@@ -1057,6 +1082,9 @@
     var searchEl = document.getElementById("compareSearch");
     var q = searchEl ? searchEl.value.trim() : "";
     return markers.filter(function(m){
+      // 당사 현장 범위 필터가 걸려 있으면(예: "엘리움" 패널을 연 상태) 연식/상태 필터는 무시하고
+      // 그 현장의 비교 자료로 등록된 단지만 보여준다.
+      if (projectScopeFilter) return projectScopeFilter.has(m.data.name);
       var key = markerFilterKey(m);
       var visible = activeFilters.has("all") || activeFilters.has(key);
       if (!visible) return false;
@@ -1092,9 +1120,22 @@
     var rowsEl = document.getElementById("compareRows");
     var countEl = document.getElementById("compareCount");
     var sortEl = document.getElementById("compareSort");
+    var bannerEl = document.getElementById("compareScopeBanner");
     if (!rowsEl || !countEl || !sortEl) return;
     var rows = sortCompareRows(compareRowsData(), sortEl.value);
     countEl.textContent = rows.length + "개 단지";
+    if (bannerEl) {
+      if (projectScopeFilter) {
+        bannerEl.style.display = "flex";
+        bannerEl.innerHTML = '<span>"' + projectScopeLabel + '"의 비교 자료만 표시 중</span>' +
+          '<button type="button" id="compareScopeClearBtn">전체 단지 보기</button>';
+        var clearBtn = document.getElementById("compareScopeClearBtn");
+        if (clearBtn) clearBtn.addEventListener("click", clearProjectScope);
+      } else {
+        bannerEl.style.display = "none";
+        bannerEl.innerHTML = "";
+      }
+    }
     if (!rows.length) {
       rowsEl.innerHTML = '<div class="compare-empty">조건에 맞는 단지가 없습니다</div>';
       return;
@@ -1132,6 +1173,24 @@
   function scheduleCompareRender(){
     if (_compareRenderTimer) clearTimeout(_compareRenderTimer);
     _compareRenderTimer = setTimeout(renderCompareTable, 60);
+  }
+
+  // 당사 현장(p) 하나에 대해 "비교 자료"로 등록해둔 단지 이름 전체를 모은다.
+  // SIMULATOR_CONFIG[p.name]의 baselineComplexNames(기준가 계산에 쓰는 단지) +
+  // excludedComplexes(계산에서는 뺐지만 같은 지역 비교단지) + referenceGroups(참고용) 전부 포함 —
+  // "기준가로 쓰는지"와 무관하게 그 현장을 위해 등록해둔 비교 자료라면 전부 관련 자료로 취급한다.
+  function buildProjectScopeNames(p, cfg){
+    var names = new Set([p.name]);
+    (cfg.baselineComplexNames || []).forEach(function(n){ names.add(n); });
+    (cfg.excludedComplexes || []).forEach(function(e){ names.add(e.name); });
+    (cfg.referenceGroups || []).forEach(function(g){ (g.names || []).forEach(function(n){ names.add(n); }); });
+    return names;
+  }
+
+  function clearProjectScope(){
+    projectScopeFilter = null;
+    projectScopeLabel = null;
+    renderCompareTable();
   }
 
   // ------------------------------------------------------------
@@ -1867,6 +1926,16 @@
     currentComplex = p;
     txFloorFilter = "all";
     txAreaFilter = "all";
+    // 당사 현장(엘리움)이고 그 현장을 위해 등록해둔 비교자료(SIMULATOR_CONFIG)가 있으면,
+    // 비교표를 "그 현장 관련 자료만"으로 좁힌다. 그 외(비교단지·타사 현장 등)를 클릭하면 원래 범위로 돌아간다.
+    var scopeCfg = SIMULATOR_CONFIG[p.name];
+    if (p.status === "upcoming" && scopeCfg) {
+      projectScopeFilter = buildProjectScopeNames(p, scopeCfg);
+      projectScopeLabel = p.name;
+    } else {
+      projectScopeFilter = null;
+      projectScopeLabel = null;
+    }
     var badge = '<span class="status-badge" style="background:' + STATUS_COLOR[p.status] + '">' + p.statusLabel + '</span>';
     if (p.successClassification && CLASSIFICATION_COLOR[p.successClassification]) {
       badge += '<span class="classification-badge" style="background:' + CLASSIFICATION_COLOR[p.successClassification] + '">분양성과 · ' + p.successClassification + '</span>';
@@ -1934,6 +2003,8 @@
     currentComplex = c;
     txFloorFilter = "all";
     txAreaFilter = "all";
+    projectScopeFilter = null;
+    projectScopeLabel = null;
     simCurrentCfg = null;
     simCurrentMainBaseline = null;
     var age = c.age;

@@ -398,23 +398,25 @@
   .compare-popup-distance{flex-shrink:0;padding:14px 44px 10px 20px;font-size:.8rem;font-weight:700;color:#202a5d;background:#eef1fb;border-bottom:1px solid var(--line);cursor:move;user-select:none;}
   .compare-popup-distance:empty{display:none;}
   .compare-popup-scroll{overflow-y:auto;flex:1;}
-  @keyframes compareSpotlightPulse{
-    0%{transform:translate(-50%,-50%) scale(1);}
-    50%{transform:translate(-50%,-50%) scale(1.3);}
-    100%{transform:translate(-50%,-50%) scale(1);}
+  /* 2026.09.20(4차): 추상적인 색깔 점 대신, 실제 지도에 있는 마커(핀+이름표)를 그대로 복제해서
+     이 레이어에 띄우고 깜빡이게 한다("기존 마커와 이름이 맨 위 레이어로 올라와서 마커만 깜빡이는
+     느낌"). 연결선은 흰색이 너무 강하다는 피드백으로 회색 계열로, 거리 라벨도 검정 대신 앱의
+     기본 카드 스타일(밝은 배경+어두운 글자)로 부드럽게 바꿈. */
+  @keyframes compareSpotlightBlink{
+    0%,100%{opacity:1;}
+    50%{opacity:.25;}
   }
-  .compare-spotlight-dot{
-    position:absolute;width:20px;height:20px;border-radius:50%;
-    transform:translate(-50%,-50%);border:2.5px solid #fff;
-    animation:compareSpotlightPulse 1.1s ease-in-out infinite;
+  .compare-spotlight-clone{
+    position:absolute;transform:translate(-50%,-50%);
+    animation:compareSpotlightBlink 1s ease-in-out infinite;
+    filter:drop-shadow(0 2px 6px rgba(0,0,0,.45));
+    pointer-events:none;
   }
-  .compare-spotlight-dot.anchor{background:#2f6fd6;box-shadow:0 0 0 4px rgba(255,255,255,.85),0 0 16px 5px rgba(47,111,214,.9);}
-  .compare-spotlight-dot.target{background:#ffa726;box-shadow:0 0 0 4px rgba(255,255,255,.85),0 0 16px 5px rgba(255,167,38,.9);}
   .compare-spotlight-tag{
     position:absolute;transform:translate(-50%,-50%);
-    background:#1c1c1c;color:#fff;font-size:12px;font-weight:800;
-    padding:4px 10px;border-radius:999px;box-shadow:0 3px 10px rgba(0,0,0,.4);
-    white-space:nowrap;border:1.5px solid rgba(255,255,255,.85);
+    background:var(--paper-raised);color:var(--ink);font-size:12px;font-weight:700;
+    padding:4px 10px;border-radius:999px;box-shadow:var(--shadow);
+    white-space:nowrap;border:1px solid var(--line-strong);
   }
   .floorplan-modal{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;}
   .floorplan-modal.open{display:flex;}
@@ -2121,8 +2123,10 @@
   // 2026.09.20(3차): 마커 강조를 지도 위에만 그렸더니 팝업의 어두운 배경(backdrop)에 그대로
   // 덮여서 흐릿하게만 보였음("레이어 맨 앞으로 당겨오는 느낌"으로 해달라는 피드백). 그래서 실제
   // 지도에 그리는 대신, 두 단지의 화면 픽셀 좌표를 계산해서 배경보다 위(z-index 높은) 별도
-  // 레이어(#comparePopupSpotlight)에 점·연결선·거리 라벨을 "복사해서" 띄운다 — 배경이 얼마나
+  // 레이어(#comparePopupSpotlight)에 연결선·거리 라벨·마커를 "복사해서" 띄운다 — 배경이 얼마나
   // 어둡든 상관없이 항상 또렷하게 보임. popupSpotlightState가 null이면 아무것도 안 그림.
+  // 2026.09.20(4차): 추상적인 점 대신, 실제 마커 DOM(overlay.getContent())을 그대로 복제해서
+  // 띄우고 깜빡이게 함 — "기존 마커와 이름이 맨 위로 올라와서 마커만 깜빡이는 느낌".
   var popupSpotlightState = null;
 
   function projectLatLngToScreen(latlng){
@@ -2137,15 +2141,23 @@
     if (!root) return;
     if (!popupSpotlightState) { root.innerHTML = ""; return; }
     var s = popupSpotlightState;
-    var p1 = projectLatLngToScreen(s.anchorLatLng);
-    var p2 = projectLatLngToScreen(s.targetLatLng);
+    var p1 = projectLatLngToScreen(s.anchorMarker.overlay.getPosition());
+    var p2 = projectLatLngToScreen(s.targetMarker.overlay.getPosition());
     var midX = (p1.x + p2.x) / 2, midY = (p1.y + p2.y) / 2;
     root.innerHTML =
       '<svg><line x1="' + p1.x + '" y1="' + p1.y + '" x2="' + p2.x + '" y2="' + p2.y +
-        '" stroke="#ffffff" stroke-width="2.5" stroke-dasharray="7 6" stroke-opacity="0.9"/></svg>' +
-      '<div class="compare-spotlight-dot anchor" style="left:' + p1.x + 'px;top:' + p1.y + 'px;"></div>' +
-      '<div class="compare-spotlight-dot target" style="left:' + p2.x + 'px;top:' + p2.y + 'px;"></div>' +
+        '" stroke="#9aa1ac" stroke-width="2" stroke-dasharray="7 6" stroke-opacity="0.85"/></svg>' +
       '<div class="compare-spotlight-tag" style="left:' + midX + 'px;top:' + midY + 'px;">' + s.distText + '</div>';
+
+    [ [s.anchorMarker, p1], [s.targetMarker, p2] ].forEach(function(pair){
+      var srcEl = pair[0].overlay.getContent();
+      if (!srcEl || !srcEl.cloneNode) return;
+      var clone = srcEl.cloneNode(true);
+      clone.classList.add("compare-spotlight-clone");
+      clone.style.left = pair[1].x + "px";
+      clone.style.top = pair[1].y + "px";
+      root.appendChild(clone);
+    });
   }
 
   function clearComparePopupMapDecorations(){
@@ -2186,8 +2198,8 @@
       bounds.extend(pos2);
       map.setBounds(bounds, 70, 70, 70, 70);
 
-      // 두 지점·연결선·거리 라벨은 지도가 아니라 배경보다 위의 강조 레이어에 그림(위 설명 참고).
-      popupSpotlightState = { anchorLatLng: pos1, targetLatLng: pos2, distText: distText };
+      // 두 마커(실제 핀 복제)·연결선·거리 라벨은 지도가 아니라 배경보다 위의 강조 레이어에 그림(위 설명 참고).
+      popupSpotlightState = { anchorMarker: anchorMarker, targetMarker: m, distText: distText };
       updateComparePopupSpotlight();
     } else {
       distanceEl.innerHTML = m.data.name;

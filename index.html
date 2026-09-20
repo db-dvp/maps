@@ -399,18 +399,18 @@
   .compare-popup-distance:empty{display:none;}
   .compare-popup-scroll{overflow-y:auto;flex:1;}
   /* 2026.09.20(4차): 추상적인 색깔 점 대신, 실제 지도에 있는 마커(핀+이름표)를 그대로 복제해서
-     이 레이어에 띄우고 깜빡이게 한다("기존 마커와 이름이 맨 위 레이어로 올라와서 마커만 깜빡이는
-     느낌"). 연결선은 흰색이 너무 강하다는 피드백으로 회색 계열로, 거리 라벨도 검정 대신 앱의
-     기본 카드 스타일(밝은 배경+어두운 글자)로 부드럽게 바꿈. */
-  @keyframes compareSpotlightBlink{
-    0%,100%{opacity:1;}
-    50%{opacity:.25;}
-  }
+     이 레이어에 띄운다. 연결선은 흰색이 너무 강하다는 피드백으로 회색 계열로, 거리 라벨도 검정
+     대신 앱의 기본 카드 스타일(밝은 배경+어두운 글자)로 부드럽게 바꿈.
+     2026.09.20(5차): 깜빡이는 게 눈이 시리다는 피드백으로 깜빡임(opacity 애니메이션)은 없애고,
+     대신 마커의 "점(핀)" 부분만 살짝 키워서 눈에 띄게 함 — 이름표 글씨 크기는 그대로 유지. */
   .compare-spotlight-clone{
     position:absolute;transform:translate(-50%,-50%);
-    animation:compareSpotlightBlink 1s ease-in-out infinite;
     filter:drop-shadow(0 2px 6px rgba(0,0,0,.45));
     pointer-events:none;
+  }
+  .compare-spotlight-clone .marker-dot-sm,
+  .compare-spotlight-clone .marker-dot-brand{
+    transform:scale(1.45);
   }
   .compare-spotlight-tag{
     position:absolute;transform:translate(-50%,-50%);

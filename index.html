@@ -250,7 +250,8 @@
   .tx-area{color:var(--ink-soft);}
   .tx-floor{font-weight:700;color:var(--ink);}
   .tx-amt{font-weight:700;}
-  .tx-change{font-weight:700;text-align:right;}
+  .tx-change{font-weight:700;text-align:right;display:flex;flex-direction:column;align-items:flex-end;line-height:1.3;}
+  .tx-change-sub{font-size:.6rem;font-weight:500;color:var(--ink-soft);}
   .tx-change-up{color:#c1443c;}
   .tx-change-down{color:#2f6fd6;}
   .tx-change-flat{color:var(--ink-soft);}
@@ -409,7 +410,7 @@
     </div>
 
     <div class="search-box" id="searchBox">
-      <input type="text" id="searchInput" placeholder="단지명 검색 (예: 한라비발디)" autocomplete="off">
+      <input type="text" id="searchInput" placeholder="단지명 검색 (예: 엘리움)" autocomplete="off">
       <div class="search-results" id="searchResults"></div>
     </div>
 
@@ -661,11 +662,53 @@
     return (txPerArea / basePerArea - 1) * 100;
   }
 
-  function formatPctChange(pct){
+  // "분양·전매 비교(타사 현장)" 단지처럼 단지 전체 단일 기준가(baselineAmt/baselineArea)가 없는 경우,
+  // complex_unit_types(타입별 분양가·전용면적)에서 거래 전용면적과 가장 가까운 타입을 찾아 그 타입의
+  // 분양가(㎡당)를 기준으로 삼는다 — "도면/타입/전용면적 기준으로 비교"해 달라는 요청 반영.
+  // 면적이 동일/거의 동일한 서브타입이 여러 개면(예: 59A/59B가 같은 전용면적) 그 타입들의 ㎡당가를
+  // 평균해 대표값으로 사용. 가장 가까운 타입도 전용면적 차이가 5㎡를 넘으면 매칭 신뢰도가 낮다고 보고
+  // null(비교불가) 처리한다.
+  function matchUnitTypeBaseline(txArea, unitTypes){
+    if (!txArea || !unitTypes || !unitTypes.length) return null;
+    var candidates = unitTypes.filter(function(u){ return u.areaSqm && u.priceAmt; });
+    if (!candidates.length) return null;
+    var minDiff = Infinity;
+    candidates.forEach(function(u){
+      var d = Math.abs(u.areaSqm - txArea);
+      if (d < minDiff) minDiff = d;
+    });
+    if (minDiff > 5) return null; // 가장 가까운 타입조차 5㎡ 이상 차이나면 매칭하지 않음
+    var matched = candidates.filter(function(u){ return Math.abs(u.areaSqm - txArea) - minDiff < 0.05; });
+    var sumPerArea = 0;
+    matched.forEach(function(u){ sumPerArea += (u.priceAmt / u.areaSqm); });
+    var isProxy = matched.some(function(u){ return u.note && u.note.indexOf("분양가 아님") !== -1; });
+    return {
+      pricePerArea: sumPerArea / matched.length,
+      labels: matched.map(function(u){ return u.typeName; }),
+      isProxy: isProxy
+    };
+  }
+
+  // 단지 전체 단일 기준가가 있으면 그대로(pctChange), 없으면 타입별 매칭(matchUnitTypeBaseline)으로 대체.
+  // 반환값: { pct, label, isProxy } — pct가 null이면 "비교불가"(매칭 가능한 타입이 없거나 분양가 정보가 없는 경우).
+  function computeTxPctChange(t, c){
+    if (c.baselineAmt && c.baselineArea) {
+      return { pct: pctChange(t.amt, t.area, c.baselineAmt, c.baselineArea), label: null, isProxy: !!c.presaleIsProxy };
+    }
+    var m = matchUnitTypeBaseline(t.area, c.unitTypes);
+    if (!m || !t.amt || !t.area) return { pct: null, label: null, isProxy: false };
+    var txPerArea = t.amt / t.area;
+    var pct = (txPerArea / m.pricePerArea - 1) * 100;
+    var label = m.labels.length === 1 ? m.labels[0] : (m.labels.length <= 2 ? m.labels.join("/") : (m.labels[0] + " 등"));
+    return { pct: pct, label: label, isProxy: m.isProxy };
+  }
+
+  function formatPctChange(pct, typeLabel, isProxy){
     if (pct === null || pct === undefined || isNaN(pct)) return '<span class="tx-change tx-change-na">비교불가</span>';
     var sign = pct > 0 ? "+" : "";
     var cls = pct > 0 ? "tx-change-up" : (pct < 0 ? "tx-change-down" : "tx-change-flat");
-    return '<span class="tx-change ' + cls + '">' + sign + pct.toFixed(1) + "%</span>";
+    var sub = typeLabel ? ('<span class="tx-change-sub">' + typeLabel + '형' + (isProxy ? '·실거래대용' : '') + '</span>') : '';
+    return '<span class="tx-change"><span class="' + cls + '">' + sign + pct.toFixed(1) + "%</span>" + sub + '</span>';
   }
 
   // presalePrice: 뉴스·입주자모집공고 등에서 확인된 "최초 분양가". 확인 안 되는 단지는
@@ -1713,13 +1756,13 @@
 
     var rows = filtered.map(function(t){
       var fb = floorBucketLabel(t.f, maxFloor);
-      var pct = pctChange(t.amt, t.area, c.baselineAmt, c.baselineArea);
+      var cmp = computeTxPctChange(t, c);
       return '<div class="tx-row">' +
         '<span class="tx-date">' + t.y + '.' + String(t.m).padStart(2,"0") + '</span>' +
         '<span class="tx-area">' + areaLabel(t.area) + '</span>' +
         '<span class="tx-floor">' + fb + '(' + t.f + '층)</span>' +
         '<span class="tx-amt">' + formatAmt(t.amt) + '</span>' +
-        formatPctChange(pct) +
+        formatPctChange(cmp.pct, cmp.label, cmp.isProxy) +
       '</div>';
     }).join("");
     var headerRow =
@@ -1728,11 +1771,14 @@
       '</div>';
     if (!rows) rows = '<div class="note" style="padding:8px 0;">해당 조건의 거래 표본이 없습니다.</div>';
 
+    var hasUnitTypeBaseline = (c.unitTypes || []).some(function(u){ return u.areaSqm && u.priceAmt; });
     var baselineNote = c.baselineAmt
       ? ('<div class="note" style="margin:-4px 0 8px;">변동률 기준: ' +
           (c.presaleIsProxy ? '준공 후 실거래가 대용치' : '최초 분양가') + ' ' +
           formatAmt(c.baselineAmt) + ' (' + c.baselineArea + '㎡) 대비 ㎡당 가격으로 환산해 계산</div>')
-      : '';
+      : (hasUnitTypeBaseline
+          ? '<div class="note" style="margin:-4px 0 8px;">변동률 기준: 단지 전체 단일 분양가 대신, 거래와 전용면적이 가장 가까운 타입(도면·타입별 정보)의 분양가를 ㎡당 가격으로 환산해 계산 — 각 거래 아래 매칭된 타입명이 함께 표시됩니다. "·실거래대용"은 분양가 대신 준공 후 실거래가 평균을 기준으로 썼다는 뜻입니다. 매칭 가능한 타입이 없거나(전용면적 차이 5㎡ 초과) 타입별 분양가 정보 자체가 없으면 "비교불가"로 표시됩니다.</div>'
+          : '<div class="note" style="margin:-4px 0 8px;">이 단지는 타입별 분양가 정보를 아직 확보하지 못해 "최초 대비" 변동률을 계산할 수 없습니다(도면·세대수 정보는 있어도 가격 정보가 없는 경우). 전부 "비교불가"로 표시됩니다.</div>');
 
     root.innerHTML =
       '<div class="tx-section">' +

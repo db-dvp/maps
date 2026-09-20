@@ -82,7 +82,7 @@
   }
   .maptype-toggle button.active{background:var(--indigo);color:#fff;}
   .search-box{
-    position:absolute;top:14px;right:14px;z-index:15;
+    position:absolute;top:60px;left:14px;z-index:12;
     background:var(--paper-raised);border:1px solid var(--line);
     border-radius:10px;box-shadow:var(--shadow);
     width:240px;
@@ -1567,6 +1567,9 @@
   }
 
   function openPanel(p, approximate){
+    currentComplex = p;
+    txFloorFilter = "all";
+    txAreaFilter = "all";
     var badge = '<span class="status-badge" style="background:' + STATUS_COLOR[p.status] + '">' + p.statusLabel + '</span>';
     if (p.successClassification && CLASSIFICATION_COLOR[p.successClassification]) {
       badge += '<span class="classification-badge" style="background:' + CLASSIFICATION_COLOR[p.successClassification] + '">분양성과 · ' + p.successClassification + '</span>';
@@ -1621,9 +1624,11 @@
       simulatorHtml +
       premiumHtml +
       '<div id="floorChartRoot"></div>' +
+      '<div id="txSectionRoot"></div>' +
       '<div class="note">' + noteText + '</div>';
     document.getElementById("panel").classList.add("open");
     renderFloorPriceChart("floorChartRoot", p);
+    renderTxSection();
     renderSimulatorOutputs();
   }
 
@@ -1673,6 +1678,8 @@
       root.innerHTML = '<div class="tx-section"><div class="tx-title">층별·면적별 실거래 내역</div><div class="note">국토부 실거래가 표본에서 확인된 거래가 없습니다.</div></div>';
       return;
     }
+    var maxFloor = computeMaxFloor(c); // c.maxFloorObs가 없는 항목(PROJECTS 쪽 "분양·전매 비교" 마커 등)은 실거래 중 관찰된 최고층으로 대신 계산
+
     var areaLabels = [];
     txs.forEach(function(t){
       var lab = areaLabel(t.area);
@@ -1693,7 +1700,7 @@
       })).join("");
 
     var filtered = txs.filter(function(t){
-      var fb = floorBucketLabel(t.f, c.maxFloorObs);
+      var fb = floorBucketLabel(t.f, maxFloor);
       if (txFloorFilter !== "all" && fb !== txFloorFilter) return false;
       if (txAreaFilter !== "all" && areaLabel(t.area) !== txAreaFilter) return false;
       return true;
@@ -1705,7 +1712,7 @@
     });
 
     var rows = filtered.map(function(t){
-      var fb = floorBucketLabel(t.f, c.maxFloorObs);
+      var fb = floorBucketLabel(t.f, maxFloor);
       var pct = pctChange(t.amt, t.area, c.baselineAmt, c.baselineArea);
       return '<div class="tx-row">' +
         '<span class="tx-date">' + t.y + '.' + String(t.m).padStart(2,"0") + '</span>' +

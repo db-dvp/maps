@@ -384,33 +384,37 @@
      위한 모달(floorplan-modal보다 z-index 1 낮춰서, 팝업 안에서 도면보기를 열면 그게 맨 위로 옴). */
   .compare-popup-modal{position:fixed;inset:0;z-index:9998;display:none;align-items:center;justify-content:center;padding:16px;}
   .compare-popup-modal.open{display:flex;}
-  .compare-popup-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.55);}
-  .compare-popup-content{position:relative;background:var(--paper-raised);border-radius:12px;width:min(94vw,520px);max-height:88vh;box-shadow:0 12px 40px rgba(0,0,0,.35);display:flex;flex-direction:column;overflow:hidden;}
+  /* 2026.09.20(3차): 마커 강조를 지도 레이어(실제 카카오맵 위)에만 그리면 팝업의 어두운
+     배경(backdrop)에 그대로 덮여서 흐릿하게만 보인다는 게 핵심 원인이었음 — 대표님 표현으로
+     "레이어 맨 앞으로 당겨오는 느낌". 그래서 강조 표시(점·연결선·거리 라벨)를 실제 지도가 아니라
+     배경보다 위(z-index 높은) 별도의 화면 레이어(comparePopupSpotlight)에, 두 단지의 화면 픽셀
+     좌표를 계산해서 "복사해서 띄우는" 방식으로 그린다. z-index 순서: 배경(1) < 강조 레이어(2) <
+     팝업 카드(3) — 전부 이 모달 안에서만 유효한 상대값.*/
+  .compare-popup-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.55);z-index:1;}
+  .compare-popup-spotlight{position:fixed;inset:0;z-index:2;pointer-events:none;}
+  .compare-popup-spotlight svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;}
+  .compare-popup-content{position:relative;z-index:3;background:var(--paper-raised);border-radius:12px;width:min(94vw,520px);max-height:88vh;box-shadow:0 12px 40px rgba(0,0,0,.35);display:flex;flex-direction:column;overflow:hidden;}
   .compare-popup-close{position:absolute;top:10px;right:10px;width:32px;height:32px;border:none;background:var(--paper);border-radius:50%;font-size:1.1rem;line-height:1;cursor:pointer;color:var(--ink);z-index:2;}
   .compare-popup-distance{flex-shrink:0;padding:14px 44px 10px 20px;font-size:.8rem;font-weight:700;color:#202a5d;background:#eef1fb;border-bottom:1px solid var(--line);cursor:move;user-select:none;}
   .compare-popup-distance:empty{display:none;}
   .compare-popup-scroll{overflow-y:auto;flex:1;}
-  /* 지도 위 강조: 엘리움(anchor)은 파란색, 클릭한 단지(target)는 빨간색 링으로 구분해서
-     팝업이 열려있는 동안 계속 눈에 띄게 펄스(다른 마커에 섞여 안 보이는 문제 대응). */
-  @keyframes comparePopupPulseAnchor{
-    0%{box-shadow:0 0 0 0 rgba(32,42,93,.6),0 0 0 1.5px rgba(0,0,0,.45),0 2px 7px rgba(0,0,0,.45);}
-    70%{box-shadow:0 0 0 11px rgba(32,42,93,0),0 0 0 1.5px rgba(0,0,0,.45),0 2px 7px rgba(0,0,0,.45);}
-    100%{box-shadow:0 0 0 0 rgba(32,42,93,0),0 0 0 1.5px rgba(0,0,0,.45),0 2px 7px rgba(0,0,0,.45);}
+  @keyframes compareSpotlightPulse{
+    0%{transform:translate(-50%,-50%) scale(1);}
+    50%{transform:translate(-50%,-50%) scale(1.3);}
+    100%{transform:translate(-50%,-50%) scale(1);}
   }
-  @keyframes comparePopupPulseTarget{
-    0%{box-shadow:0 0 0 0 rgba(224,67,60,.65),0 0 0 1.5px rgba(0,0,0,.45),0 2px 7px rgba(0,0,0,.45);}
-    70%{box-shadow:0 0 0 11px rgba(224,67,60,0),0 0 0 1.5px rgba(0,0,0,.45),0 2px 7px rgba(0,0,0,.45);}
-    100%{box-shadow:0 0 0 0 rgba(224,67,60,0),0 0 0 1.5px rgba(0,0,0,.45),0 2px 7px rgba(0,0,0,.45);}
+  .compare-spotlight-dot{
+    position:absolute;width:20px;height:20px;border-radius:50%;
+    transform:translate(-50%,-50%);border:2.5px solid #fff;
+    animation:compareSpotlightPulse 1.1s ease-in-out infinite;
   }
-  .marker-pin.compare-popup-highlight-anchor > div:first-of-type{
-    animation:comparePopupPulseAnchor 1.3s ease-out infinite;
-  }
-  .marker-pin.compare-popup-highlight-target > div:first-of-type{
-    animation:comparePopupPulseTarget 1.3s ease-out infinite;
-  }
-  .compare-popup-distance-tag{
-    background:#e0433c;color:#fff;font-size:11px;font-weight:700;
-    padding:3px 9px;border-radius:999px;box-shadow:0 2px 6px rgba(0,0,0,.3);white-space:nowrap;
+  .compare-spotlight-dot.anchor{background:#2f6fd6;box-shadow:0 0 0 4px rgba(255,255,255,.85),0 0 16px 5px rgba(47,111,214,.9);}
+  .compare-spotlight-dot.target{background:#ffa726;box-shadow:0 0 0 4px rgba(255,255,255,.85),0 0 16px 5px rgba(255,167,38,.9);}
+  .compare-spotlight-tag{
+    position:absolute;transform:translate(-50%,-50%);
+    background:#1c1c1c;color:#fff;font-size:12px;font-weight:800;
+    padding:4px 10px;border-radius:999px;box-shadow:0 3px 10px rgba(0,0,0,.4);
+    white-space:nowrap;border:1.5px solid rgba(255,255,255,.85);
   }
   .floorplan-modal{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;}
   .floorplan-modal.open{display:flex;}
@@ -612,6 +616,7 @@
 
     <div class="compare-popup-modal" id="comparePopupModal">
       <div class="compare-popup-backdrop" id="comparePopupBackdrop"></div>
+      <div class="compare-popup-spotlight" id="comparePopupSpotlight"></div>
       <div class="compare-popup-content">
         <button type="button" class="compare-popup-close" id="comparePopupClose" aria-label="닫기">&times;</button>
         <div class="compare-popup-distance" id="comparePopupDistance"></div>
@@ -1915,6 +1920,8 @@
 
     // 팝업 드래그 이동 — 상단 거리표시 배너를 손잡이로 잡고 움직일 수 있게(지도 위에 겹쳐서
     // 안 보이는 부분이 있으면 옆으로 치워둘 수 있도록). 팝업을 다시 열면 위치는 가운데로 초기화됨.
+    // move/up 리스너를 손잡이가 아니라 document에 걸어서, 드래그 중 커서가 그 좁은 배너 밖으로
+    // 살짝 벗어나도(예: 빠르게 움직일 때) 드래그가 끊기지 않도록 함.
     (function(){
       var handle = document.getElementById("comparePopupDistance");
       var content = document.querySelector(".compare-popup-content");
@@ -1926,17 +1933,21 @@
         content.style.margin = "0";
         content.style.left = rect.left + "px";
         content.style.top = rect.top + "px";
-        handle.setPointerCapture(e.pointerId);
       });
-      handle.addEventListener("pointermove", function(e){
+      document.addEventListener("pointermove", function(e){
         if (!drag) return;
         content.style.left = (drag.startLeft + (e.clientX - drag.startX)) + "px";
         content.style.top = (drag.startTop + (e.clientY - drag.startY)) + "px";
       });
       ["pointerup","pointercancel"].forEach(function(evt){
-        handle.addEventListener(evt, function(){ drag = null; });
+        document.addEventListener(evt, function(){ drag = null; });
       });
     })();
+
+    // 비교 스코프 팝업의 강조 레이어(선·점·거리 라벨)는 지도 화면 픽셀 좌표를 그대로 복사해서
+    // 그리는 방식이라, 지도를 수동으로 더 움직이거나(팬/줌) 창 크기가 바뀌면 다시 계산해줘야 함.
+    kakao.maps.event.addListener(map, "idle", updateComparePopupSpotlight);
+    window.addEventListener("resize", updateComparePopupSpotlight);
 
     // 도면 모달 열기/닫기 (배경 클릭·닫기 버튼·Esc 키 전부 지원)
     document.getElementById("floorPlanModalClose").addEventListener("click", closeFloorPlanModal);
@@ -2107,28 +2118,39 @@
     return (m / 1000).toFixed(1) + "km";
   }
 
-  // 2026.09.20(2차): 마커가 많아서 어느 게 엘리움이고 어느 게 클릭한 단지인지 눈에 안 들어온다는
-  // 피드백 → (1)두 마커를 잇는 실제 선을 지도에 그려서 "정말 그 거리인지" 눈으로 바로 확인 가능,
-  // (2)두 마커 모두 팝업이 열려있는 동안 계속 눈에 띄게 강조(다른 마커보다 위로 올리고 색깔
-  // 다른 펄스 링), (3)팝업 자체를 드래그로 옮길 수 있게 해서 필요하면 지도 위로 안 겹치게 치울 수
-  // 있도록 함. 아래 변수들은 팝업이 열려있는 동안 지도에 추가된 장식(선·거리표시·강조)을
-  // 기억해뒀다가, 팝업을 닫거나 다른 단지로 다시 열 때 깨끗이 지우기 위한 것.
-  var popupLine = null, popupMidOverlay = null, popupHighlightMarkers = [];
+  // 2026.09.20(3차): 마커 강조를 지도 위에만 그렸더니 팝업의 어두운 배경(backdrop)에 그대로
+  // 덮여서 흐릿하게만 보였음("레이어 맨 앞으로 당겨오는 느낌"으로 해달라는 피드백). 그래서 실제
+  // 지도에 그리는 대신, 두 단지의 화면 픽셀 좌표를 계산해서 배경보다 위(z-index 높은) 별도
+  // 레이어(#comparePopupSpotlight)에 점·연결선·거리 라벨을 "복사해서" 띄운다 — 배경이 얼마나
+  // 어둡든 상관없이 항상 또렷하게 보임. popupSpotlightState가 null이면 아무것도 안 그림.
+  var popupSpotlightState = null;
 
-  function restoreMarkerZIndex(mm){
-    if (mm.kind === "project") mm.overlay.setZIndex(markerZIndex(mm.data.status));
-    else mm.overlay.setZIndex(markerZIndex(mm.data.age.key));
+  function projectLatLngToScreen(latlng){
+    var proj = map.getProjection();
+    var pt = proj.containerPointFromCoords ? proj.containerPointFromCoords(latlng) : proj.pointFromCoords(latlng);
+    var mapRect = document.getElementById("map").getBoundingClientRect();
+    return { x: mapRect.left + pt.x, y: mapRect.top + pt.y };
+  }
+
+  function updateComparePopupSpotlight(){
+    var root = document.getElementById("comparePopupSpotlight");
+    if (!root) return;
+    if (!popupSpotlightState) { root.innerHTML = ""; return; }
+    var s = popupSpotlightState;
+    var p1 = projectLatLngToScreen(s.anchorLatLng);
+    var p2 = projectLatLngToScreen(s.targetLatLng);
+    var midX = (p1.x + p2.x) / 2, midY = (p1.y + p2.y) / 2;
+    root.innerHTML =
+      '<svg><line x1="' + p1.x + '" y1="' + p1.y + '" x2="' + p2.x + '" y2="' + p2.y +
+        '" stroke="#ffffff" stroke-width="2.5" stroke-dasharray="7 6" stroke-opacity="0.9"/></svg>' +
+      '<div class="compare-spotlight-dot anchor" style="left:' + p1.x + 'px;top:' + p1.y + 'px;"></div>' +
+      '<div class="compare-spotlight-dot target" style="left:' + p2.x + 'px;top:' + p2.y + 'px;"></div>' +
+      '<div class="compare-spotlight-tag" style="left:' + midX + 'px;top:' + midY + 'px;">' + s.distText + '</div>';
   }
 
   function clearComparePopupMapDecorations(){
-    if (popupLine) { popupLine.setMap(null); popupLine = null; }
-    if (popupMidOverlay) { popupMidOverlay.setMap(null); popupMidOverlay = null; }
-    popupHighlightMarkers.forEach(function(mm){
-      var el = mm.overlay.getContent();
-      if (el && el.classList) el.classList.remove("compare-popup-highlight-anchor", "compare-popup-highlight-target");
-      restoreMarkerZIndex(mm);
-    });
-    popupHighlightMarkers = [];
+    popupSpotlightState = null;
+    updateComparePopupSpotlight();
   }
 
   function resetComparePopupPosition(){
@@ -2155,7 +2177,8 @@
       var pos1 = anchorMarker.overlay.getPosition();
       var pos2 = m.overlay.getPosition();
       var distM = haversineDistanceM(pos1.getLat(), pos1.getLng(), pos2.getLat(), pos2.getLng());
-      distanceEl.innerHTML = m.data.name + ' · "' + projectScopeLabel + '"으로부터 직선거리 약 ' + formatDistanceM(distM);
+      var distText = formatDistanceM(distM);
+      distanceEl.innerHTML = m.data.name + ' · "' + projectScopeLabel + '"으로부터 직선거리 약 ' + distText;
 
       // 지도를 한 단지로 이동시키는 대신, 엘리움과 이 단지가 둘 다 보이도록 범위를 잡아 축소한다.
       var bounds = new kakao.maps.LatLngBounds();
@@ -2163,37 +2186,9 @@
       bounds.extend(pos2);
       map.setBounds(bounds, 70, 70, 70, 70);
 
-      // 두 지점을 잇는 선 — "정말 그 거리만큼 떨어져 있는지" 지도에서 바로 확인할 수 있게.
-      popupLine = new kakao.maps.Polyline({
-        path: [pos1, pos2],
-        strokeWeight: 3,
-        strokeColor: "#e0433c",
-        strokeOpacity: 0.85,
-        strokeStyle: "shortdash"
-      });
-      popupLine.setMap(map);
-
-      var midLatLng = new kakao.maps.LatLng((pos1.getLat() + pos2.getLat()) / 2, (pos1.getLng() + pos2.getLng()) / 2);
-      var midEl = document.createElement("div");
-      midEl.className = "compare-popup-distance-tag";
-      midEl.textContent = formatDistanceM(distM);
-      popupMidOverlay = new kakao.maps.CustomOverlay({ position: midLatLng, content: midEl, yAnchor: 0.5, zIndex: 210 });
-      popupMidOverlay.setMap(map);
-
-      // 두 마커 모두 다른 마커들보다 위로 올리고, 팝업이 열려있는 동안 계속 눈에 띄게(펄스) —
-      // 엘리움은 파란색 링, 클릭한 단지는 빨간색 링으로 구분. 팝업을 닫으면 원래대로 복구.
-      var anchorContent = anchorMarker.overlay.getContent();
-      var targetContent = m.overlay.getContent();
-      if (anchorContent && anchorContent.classList) {
-        anchorContent.classList.add("compare-popup-highlight-anchor");
-        anchorMarker.overlay.setZIndex(200);
-        popupHighlightMarkers.push(anchorMarker);
-      }
-      if (targetContent && targetContent.classList) {
-        targetContent.classList.add("compare-popup-highlight-target");
-        m.overlay.setZIndex(199);
-        popupHighlightMarkers.push(m);
-      }
+      // 두 지점·연결선·거리 라벨은 지도가 아니라 배경보다 위의 강조 레이어에 그림(위 설명 참고).
+      popupSpotlightState = { anchorLatLng: pos1, targetLatLng: pos2, distText: distText };
+      updateComparePopupSpotlight();
     } else {
       distanceEl.innerHTML = m.data.name;
     }

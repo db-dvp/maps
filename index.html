@@ -306,8 +306,8 @@
     display:inline-block;font-size:.68rem;font-weight:700;padding:3px 9px;
     border-radius:999px;color:#fff;margin-bottom:8px;margin-left:6px;letter-spacing:.01em;
   }
-  .panel h2{font-size:1.05rem;margin:0 0 3px;line-height:1.35;font-weight:800;}
-  .panel .sub{color:var(--ink-soft);font-size:.76rem;margin-bottom:14px;}
+  .panel h2, .compare-popup-content h2{font-size:1.05rem;margin:0 0 3px;line-height:1.35;font-weight:800;}
+  .panel .sub, .compare-popup-content .sub{color:var(--ink-soft);font-size:.76rem;margin-bottom:14px;}
   .section-label{
     font-size:.68rem;font-weight:700;color:var(--ink-soft);letter-spacing:.04em;
     margin:0 0 6px;padding-bottom:6px;border-bottom:1px solid var(--line-strong);
@@ -380,6 +380,16 @@
   .unittype-row:last-child{border-bottom:none;}
   .unittype-row:nth-child(even){background:var(--paper);}
   .unittype-row-head{font-size:.64rem;font-weight:700;color:var(--ink-soft);background:var(--paper)!important;}
+  /* 2026.09.20: 비교표에서 다른 단지를 볼 때 지도를 이동시키지 않고 팝업으로 상세정보를 보여주기
+     위한 모달(floorplan-modal보다 z-index 1 낮춰서, 팝업 안에서 도면보기를 열면 그게 맨 위로 옴). */
+  .compare-popup-modal{position:fixed;inset:0;z-index:9998;display:none;align-items:center;justify-content:center;padding:16px;}
+  .compare-popup-modal.open{display:flex;}
+  .compare-popup-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.55);}
+  .compare-popup-content{position:relative;background:var(--paper-raised);border-radius:12px;width:min(94vw,520px);max-height:88vh;box-shadow:0 12px 40px rgba(0,0,0,.35);display:flex;flex-direction:column;overflow:hidden;}
+  .compare-popup-close{position:absolute;top:10px;right:10px;width:32px;height:32px;border:none;background:var(--paper);border-radius:50%;font-size:1.1rem;line-height:1;cursor:pointer;color:var(--ink);z-index:2;}
+  .compare-popup-distance{flex-shrink:0;padding:14px 44px 10px 20px;font-size:.8rem;font-weight:700;color:#202a5d;background:#eef1fb;border-bottom:1px solid var(--line);}
+  .compare-popup-distance:empty{display:none;}
+  .compare-popup-scroll{overflow-y:auto;flex:1;}
   .floorplan-modal{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;}
   .floorplan-modal.open{display:flex;}
   .floorplan-modal-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.6);}
@@ -576,6 +586,17 @@
     <div class="panel" id="panel">
       <button class="panel-close" id="panelClose">&times;</button>
       <div class="panel-inner" id="panelInner"></div>
+    </div>
+
+    <div class="compare-popup-modal" id="comparePopupModal">
+      <div class="compare-popup-backdrop" id="comparePopupBackdrop"></div>
+      <div class="compare-popup-content">
+        <button type="button" class="compare-popup-close" id="comparePopupClose" aria-label="닫기">&times;</button>
+        <div class="compare-popup-distance" id="comparePopupDistance"></div>
+        <div class="compare-popup-scroll">
+          <div class="panel-inner" id="comparePopupInner"></div>
+        </div>
+      </div>
     </div>
 
     <div class="floorplan-modal" id="floorPlanModal">
@@ -878,6 +899,9 @@
   // ⑥-1(2026.09.20): 당사 현장(엘리움) 패널을 열면, 그 현장을 위해 등록해둔 비교단지·참고단지만
   // 비교표에 남기고 나머지는 숨긴다(SIMULATOR_CONFIG의 baselineComplexNames/referenceGroups 재사용).
   var projectScopeFilter = null, projectScopeLabel = null;
+  // 2026.09.20: 비교 스코프 팝업(openComparePopup)의 자체 상태 — 옆 패널의 currentComplex/
+  // txFloorFilter/txAreaFilter와는 완전히 분리되어 있어 팝업을 열고 닫아도 옆 패널에 영향 없음.
+  var popupCurrentEntity = null, popupTxFilter = { floor: "all", area: "all" };
 
   // ============================================================
   // Supabase 연동: 하드코딩 배열 대신 실제 DB(complexes/transactions)에서
@@ -1807,13 +1831,21 @@
     document.getElementById("compareSearch").addEventListener("input", renderCompareTable);
     document.getElementById("compareSort").addEventListener("change", renderCompareTable);
 
-    // 비교표 행 클릭(또는 Enter/Space) → 검색 결과 선택과 동일하게 지도 이동 + 상세 패널 오픈
+    // 비교표 행 클릭(또는 Enter/Space): 스코프(예: 엘리움)가 걸려있고 그 스코프 자신이 아닌 다른
+    // 단지를 클릭했을 때는 지도를 이동시키지 않고 팝업으로 상세정보를 보여준다(엘리움을 놓치지
+    // 않고 이어서 다른 단지도 계속 눌러볼 수 있도록). 스코프가 없거나(검색·마커 직접 클릭 등
+    // 기존 경로) 스코프 자신의 행을 클릭한 경우는 기존과 동일하게 지도 이동 + 패널 오픈.
     document.getElementById("compareRows").addEventListener("click", function(e){
       var row = e.target.closest(".compare-row");
       if (!row) return;
       var cid = row.getAttribute("data-cid");
       var m = markers.find(function(mm){ return String(mm.data.id) === cid; });
-      if (m) focusMarker(m);
+      if (!m) return;
+      if (projectScopeFilter && m.data.name !== projectScopeLabel) {
+        openComparePopup(m);
+      } else {
+        focusMarker(m);
+      }
     });
     document.getElementById("compareRows").addEventListener("keydown", function(e){
       if (e.key !== "Enter" && e.key !== " ") return;
@@ -1836,11 +1868,38 @@
       if (pt) { openFloorPlanModal(pt.getAttribute("data-plan-url"), pt.getAttribute("data-plan-title")); return; }
     });
 
+    // 비교 스코프 팝업 내 층별/면적별 실거래 필터 — 옆 패널의 전역 txFloorFilter/txAreaFilter와
+    // 완전히 분리된 자체 상태(popupTxFilter)로 동작해서, 팝업을 열고 닫아도 옆 패널의 필터 상태가
+    // 바뀌지 않는다.
+    document.getElementById("comparePopupInner").addEventListener("click", function(e){
+      var ft = e.target.closest("[data-txfloor]");
+      var at = e.target.closest("[data-txarea]");
+      var pt = e.target.closest("[data-plan-url]");
+      if (!ft && !at && !pt) return;
+      if (ft) popupTxFilter.floor = ft.getAttribute("data-txfloor");
+      if (at) popupTxFilter.area = at.getAttribute("data-txarea");
+      if (pt) { openFloorPlanModal(pt.getAttribute("data-plan-url"), pt.getAttribute("data-plan-title")); return; }
+      if (popupCurrentEntity) {
+        renderTxSection({
+          complex: popupCurrentEntity,
+          root: document.getElementById("comparePopupInner_txSection"),
+          floorFilter: popupTxFilter.floor,
+          areaFilter: popupTxFilter.area
+        });
+      }
+    });
+    document.getElementById("comparePopupClose").addEventListener("click", closeComparePopup);
+    document.getElementById("comparePopupBackdrop").addEventListener("click", closeComparePopup);
+
     // 도면 모달 열기/닫기 (배경 클릭·닫기 버튼·Esc 키 전부 지원)
     document.getElementById("floorPlanModalClose").addEventListener("click", closeFloorPlanModal);
     document.getElementById("floorPlanModalBackdrop").addEventListener("click", closeFloorPlanModal);
     document.addEventListener("keydown", function(e){
-      if (e.key === "Escape") closeFloorPlanModal();
+      if (e.key !== "Escape") return;
+      var fp = document.getElementById("floorPlanModal");
+      if (fp && fp.classList.contains("open")) { closeFloorPlanModal(); return; }
+      var cp = document.getElementById("comparePopupModal");
+      if (cp && cp.classList.contains("open")) { closeComparePopup(); }
     });
 
     // 도면 확대/축소(+/- 버튼, Ctrl/⌘+마우스휠) · 드래그 또는 휠로 스크롤 이동
@@ -1979,18 +2038,92 @@
     document.getElementById("searchResults").classList.remove("open");
   }
 
-  function openPanel(p, approximate){
-    currentComplex = p;
-    txFloorFilter = "all";
-    txAreaFilter = "all";
-    // 당사 현장(엘리움)이면 비교표를 "같은 지역(주소 기준 인천/부산) 단지만"으로 좁힌다.
-    // 그 외(비교단지·타사 현장 등)를 클릭하면 원래 범위로 돌아간다.
-    if (p.status === "upcoming") {
-      projectScopeFilter = buildProjectScopeNames(p);
-      projectScopeLabel = p.name;
+  // ------------------------------------------------------------
+  // 2026.09.20: "비교 스코프" 팝업 — 엘리움처럼 스코프가 걸린 상태에서 비교표의 다른 단지를
+  // 클릭하면, 지도가 그 단지로 "이동"해서 엘리움을 놓치는 대신, 엘리움과 그 단지가 둘 다
+  // 화면에 같이 보이도록 지도를 축소하고, 상세정보는 팝업(모달)으로 띄운다. 팝업은 옆에 열려
+  // 있는 기존 패널(엘리움)의 전역상태를 건드리지 않아서, 팝업을 닫으면 표 스코프가 그대로
+  // 유지되어 이어서 다른 단지를 또 클릭해볼 수 있다.
+  // ------------------------------------------------------------
+  function haversineDistanceM(lat1, lng1, lat2, lng2){
+    var R = 6371000;
+    var toRad = function(d){ return d * Math.PI / 180; };
+    var dLat = toRad(lat2 - lat1), dLng = toRad(lng2 - lng1);
+    var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng/2) * Math.sin(dLng/2);
+    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  function formatDistanceM(m){
+    if (m < 1000) return Math.round(m) + "m";
+    return (m / 1000).toFixed(1) + "km";
+  }
+
+  function openComparePopup(m){
+    popupCurrentEntity = m.data;
+    popupTxFilter = { floor: "all", area: "all" };
+
+    var anchorMarker = projectScopeLabel
+      ? markers.find(function(mm){ return mm.data.name === projectScopeLabel; })
+      : null;
+
+    var distanceEl = document.getElementById("comparePopupDistance");
+    if (anchorMarker && anchorMarker !== m) {
+      var pos1 = anchorMarker.overlay.getPosition();
+      var pos2 = m.overlay.getPosition();
+      var distM = haversineDistanceM(pos1.getLat(), pos1.getLng(), pos2.getLat(), pos2.getLng());
+      distanceEl.innerHTML = '"' + projectScopeLabel + '"으로부터 직선거리 약 ' + formatDistanceM(distM);
+
+      // 지도를 한 단지로 이동시키는 대신, 엘리움과 이 단지가 둘 다 보이도록 범위를 잡아 축소한다.
+      var bounds = new kakao.maps.LatLngBounds();
+      bounds.extend(pos1);
+      bounds.extend(pos2);
+      map.setBounds(bounds, 70, 70, 70, 70);
+
+      var content = m.overlay.getContent();
+      if (content && content.classList) {
+        content.classList.add("search-highlight");
+        setTimeout(function(){ content.classList.remove("search-highlight"); }, 1300);
+      }
     } else {
-      projectScopeFilter = null;
-      projectScopeLabel = null;
+      distanceEl.innerHTML = "";
+    }
+
+    if (m.kind === "project") {
+      openPanel(m.data, false, { containerId: "comparePopupInner", popup: true });
+    } else {
+      openComparisonPanel(m.data, { containerId: "comparePopupInner", popup: true });
+    }
+
+    document.getElementById("comparePopupModal").classList.add("open");
+  }
+
+  function closeComparePopup(){
+    document.getElementById("comparePopupModal").classList.remove("open");
+    popupCurrentEntity = null;
+  }
+
+  // opts.popup === true면 "비교표에서 다른 단지를 팝업으로 볼 때" 호출된 것 — 옆에 이미 열려있는
+  // 기존 패널(엘리움 등)의 전역상태(currentComplex/필터/스코프)를 절대 건드리지 않고, opts.containerId
+  // (팝업 안의 별도 div)에만 내용을 그려준다. 시뮬레이터도 팝업에서는 생략(전역 시뮬레이터 상태 보호).
+  function openPanel(p, approximate, opts){
+    opts = opts || {};
+    var isPopup = !!opts.popup;
+    var containerId = opts.containerId || "panelInner";
+    if (!isPopup) {
+      currentComplex = p;
+      txFloorFilter = "all";
+      txAreaFilter = "all";
+      // 당사 현장(엘리움)이면 비교표를 "같은 지역(주소 기준 인천/부산) 단지만"으로 좁힌다.
+      // 그 외(비교단지·타사 현장 등)를 클릭하면 원래 범위로 돌아간다.
+      if (p.status === "upcoming") {
+        projectScopeFilter = buildProjectScopeNames(p);
+        projectScopeLabel = p.name;
+      } else {
+        projectScopeFilter = null;
+        projectScopeLabel = null;
+      }
     }
     var badge = '<span class="status-badge" style="background:' + STATUS_COLOR[p.status] + '">' + p.statusLabel + '</span>';
     if (p.successClassification && CLASSIFICATION_COLOR[p.successClassification]) {
@@ -2026,10 +2159,16 @@
         '</div>';
     }
     var noteText = p.panelNote || '완공사진 · 현재 대지사진 · 조감도 · 타입별 실내 사진은 자료 전달 시 이 패널에 갤러리로 추가할 수 있습니다.';
-    var simulatorHtml = (p.status === "scheduled") ? '' : buildSimulatorHtml(p); // 분양예정(타사현장)은 실거래가 없어 시뮬레이터 기준가 대상에서 제외
+    // 팝업 안에서는 3단계 분양가 시뮬레이터를 아예 그리지 않는다 — buildSimulatorHtml이 전역
+    // simCurrentCfg/simCurrentMainBaseline을 부수효과로 바꿔버려서, 옆 패널(엘리움 등)의 시뮬레이터
+    // 상태가 팝업 여닫음에 따라 깨질 수 있기 때문(팝업 대상은 실제로도 "당사 분양예정" 현장이 아니라
+    // 비교단지·타사 현장이라 시뮬레이터가 필요한 경우도 거의 없음).
+    var simulatorHtml = (isPopup || p.status === "scheduled") ? '' : buildSimulatorHtml(p); // 분양예정(타사현장)은 실거래가 없어 시뮬레이터 기준가 대상에서 제외
     var scheduledInfoHtml = buildScheduledInfoHtml(p);
     var unitTypesHtml = buildUnitTypesHtml(p);
-    document.getElementById("panelInner").innerHTML =
+    var chartId = containerId + "_floorChart";
+    var txId = containerId + "_txSection";
+    document.getElementById(containerId).innerHTML =
       badge +
       '<h2>' + p.name + '</h2>' +
       '<div class="sub">' + p.block + ' · ' + p.dateLabel + '</div>' +
@@ -2045,24 +2184,37 @@
       unitTypesHtml +
       simulatorHtml +
       premiumHtml +
-      '<div id="floorChartRoot"></div>' +
-      '<div id="txSectionRoot"></div>' +
+      '<div id="' + chartId + '"></div>' +
+      '<div id="' + txId + '"></div>' +
       '<div class="note">' + noteText + '</div>';
-    document.getElementById("panel").classList.add("open");
-    renderFloorPriceChart("floorChartRoot", p);
-    renderTxSection();
-    renderSimulatorOutputs();
-    if (typeof renderCompareTable === "function") renderCompareTable();
+    if (!isPopup) {
+      document.getElementById("panel").classList.add("open");
+    }
+    renderFloorPriceChart(chartId, p);
+    if (isPopup) {
+      renderTxSection({ complex: p, root: document.getElementById(txId), floorFilter: "all", areaFilter: "all" });
+    } else {
+      renderTxSection();
+      renderSimulatorOutputs();
+      if (typeof renderCompareTable === "function") renderCompareTable();
+    }
   }
 
-  function openComparisonPanel(c){
-    currentComplex = c;
-    txFloorFilter = "all";
-    txAreaFilter = "all";
-    projectScopeFilter = null;
-    projectScopeLabel = null;
-    simCurrentCfg = null;
-    simCurrentMainBaseline = null;
+  // opts.popup === true면 팝업 모드 — openPanel과 동일한 이유로 전역상태(currentComplex/필터/
+  // 스코프/시뮬레이터)를 건드리지 않고 opts.containerId에만 그린다.
+  function openComparisonPanel(c, opts){
+    opts = opts || {};
+    var isPopup = !!opts.popup;
+    var containerId = opts.containerId || "panelInner";
+    if (!isPopup) {
+      currentComplex = c;
+      txFloorFilter = "all";
+      txAreaFilter = "all";
+      projectScopeFilter = null;
+      projectScopeLabel = null;
+      simCurrentCfg = null;
+      simCurrentMainBaseline = null;
+    }
     var age = c.age;
     var badge = '<span class="status-badge" style="background:' + age.color + ';color:' + age.textColor + '">비교단지 · ' + age.label + '</span>';
     var presaleLabel = c.presaleIsProxy ? '최초 분양가 <span class="proxy-tag">준공 후 실거래가 대용</span>' : '최초 분양가';
@@ -2071,7 +2223,9 @@
     var buildYearTxt = c.buildYear ? ("준공 " + c.buildYear + "년") : "준공예정(미준공)";
     var elapsedTxt = c.buildYear ? ((CURRENT_YEAR - c.buildYear) + "년") : "-";
     var unitsTxt = c.units ? (c.units + "세대") : "확인 안됨";
-    document.getElementById("panelInner").innerHTML =
+    var chartId = containerId + "_floorChart";
+    var txId = containerId + "_txSection";
+    document.getElementById(containerId).innerHTML =
       badge +
       '<h2>' + c.name + '</h2>' +
       '<div class="sub">' + buildYearTxt + ' · ' + c.landmark + '</div>' +
@@ -2085,20 +2239,33 @@
       '<div class="addr-box"><div class="k">주소</div>' + c.address + '</div>' +
       '<div class="addr-box"><div class="k">' + presaleLabel + '</div>' + presale + '</div>' +
       buildUnitTypesHtml(c) +
-      '<div id="floorChartRoot"></div>' +
-      '<div id="txSectionRoot"></div>' +
+      '<div id="' + chartId + '"></div>' +
+      '<div id="' + txId + '"></div>' +
       '<div class="note">분양가는 뉴스·분양공고 등 온라인에서 확인 가능한 자료만 반영했고, 확인이 안 되는 단지는 국토부 실거래가 중 가장 이른 거래를 "준공 후 실거래가"로 표시했습니다(추정 아님, 실제 거래가). 실거래 내역은 2021.01~2026.08 국토부 실거래가(매매)를 월 단위로 빠짐없이 전수조사한 결과입니다(60㎡ 이하 제외). 최고층수는 조사된 거래에서 관찰된 값으로 실제 설계 층수와 다를 수 있고, 향(방향)별 데이터는 국토부 자료에 없어 이번엔 제외했습니다.</div>';
-    document.getElementById("panel").classList.add("open");
-    renderFloorPriceChart("floorChartRoot", c);
-    renderTxSection();
-    if (typeof renderCompareTable === "function") renderCompareTable();
+    if (!isPopup) {
+      document.getElementById("panel").classList.add("open");
+    }
+    renderFloorPriceChart(chartId, c);
+    if (isPopup) {
+      renderTxSection({ complex: c, root: document.getElementById(txId), floorFilter: "all", areaFilter: "all" });
+    } else {
+      renderTxSection();
+      if (typeof renderCompareTable === "function") renderCompareTable();
+    }
   }
 
-  function renderTxSection(){
-    var c = currentComplex;
+  // opts 없이 호출하면(기존 호출부 전부) 예전과 동일하게 전역상태(currentComplex/txFloorFilter/
+  // txAreaFilter)와 "txSectionRoot"를 그대로 사용한다. 2026.09.20: 비교표에서 다른 단지를 팝업으로
+  // 볼 때(openComparePopup)는 opts로 별도 entity/필터/root를 넘겨서, 옆에 열려있는 기존 패널의
+  // 전역상태(currentComplex 등)를 전혀 건드리지 않고 팝업 안에서만 독립적으로 필터링되게 한다.
+  function renderTxSection(opts){
+    opts = opts || {};
+    var c = (opts.complex !== undefined) ? opts.complex : currentComplex;
     if (!c) return;
-    var root = document.getElementById("txSectionRoot");
+    var root = opts.root || document.getElementById("txSectionRoot");
     if (!root) return;
+    var floorFilter = (opts.floorFilter !== undefined) ? opts.floorFilter : txFloorFilter;
+    var areaFilterVal = (opts.areaFilter !== undefined) ? opts.areaFilter : txAreaFilter;
     var txs = c.txHistory || [];
     if (txs.length === 0) {
       root.innerHTML = '<div class="tx-section"><div class="tx-title">층별·면적별 실거래 내역</div><div class="note">국토부 실거래가 표본에서 확인된 거래가 없습니다.</div></div>';
@@ -2115,20 +2282,20 @@
 
     var floorChips = ["all","저층","중층","고층"].map(function(f){
       var label = f === "all" ? "전체" : f;
-      var active = (txFloorFilter === f) ? " active" : "";
+      var active = (floorFilter === f) ? " active" : "";
       return '<button class="filter-btn tx-chip' + active + '" data-txfloor="' + f + '">' + label + '</button>';
     }).join("");
 
-    var areaChips = ['<button class="filter-btn tx-chip' + (txAreaFilter==="all"?" active":"") + '" data-txarea="all">전체</button>']
+    var areaChips = ['<button class="filter-btn tx-chip' + (areaFilterVal==="all"?" active":"") + '" data-txarea="all">전체</button>']
       .concat(areaLabels.map(function(lab){
-        var active = (txAreaFilter === lab) ? " active" : "";
+        var active = (areaFilterVal === lab) ? " active" : "";
         return '<button class="filter-btn tx-chip' + active + '" data-txarea="' + lab + '">' + lab + '</button>';
       })).join("");
 
     var filtered = txs.filter(function(t){
       var fb = floorBucketLabel(t.f, maxFloor);
-      if (txFloorFilter !== "all" && fb !== txFloorFilter) return false;
-      if (txAreaFilter !== "all" && areaLabel(t.area) !== txAreaFilter) return false;
+      if (floorFilter !== "all" && fb !== floorFilter) return false;
+      if (areaFilterVal !== "all" && areaLabel(t.area) !== areaFilterVal) return false;
       return true;
     });
     filtered.sort(function(a,b){

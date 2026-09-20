@@ -68,7 +68,7 @@
     font-size:.82rem;padding:10px 20px;display:none;line-height:1.5;
   }
   .setup-banner code{background:rgba(0,0,0,.06);padding:1px 5px;border-radius:4px;}
-  .stage{position:relative;flex:1;min-height:0;}
+  .stage{position:relative;flex:1;min-height:0;display:flex;}
   #appRoot{display:flex;flex-direction:column;flex:1;min-height:0;width:100%;}
   #map{width:100%;height:100%;}
   .maptype-toggle{
@@ -81,12 +81,97 @@
     font-weight:600;color:var(--ink-soft);cursor:pointer;
   }
   .maptype-toggle button.active{background:var(--indigo);color:#fff;}
-  .search-box{
-    position:absolute;top:60px;left:14px;z-index:12;
-    background:var(--paper-raised);border:1px solid var(--line);
-    border-radius:10px;box-shadow:var(--shadow);
-    width:240px;
+
+  /* ⑥ 레이아웃 개편(2026.09.20): 지도 위에 뜨던 검색창·필터를 상단 필터바로 옮기고,
+     화면을 "지도 카드(좌) + 정렬형 비교표(우)"로 분할한다. 기존 .search-box/.age-filters/.filter-btn
+     클래스는 그대로 재사용하고(JS 바인딩 그대로 동작), 배치만 필터바 안으로 바꾼다. */
+  .filterbar{
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    padding:10px 20px;background:var(--paper-raised);
+    border-bottom:1px solid var(--line);position:relative;z-index:18;
   }
+  .filterbar .search-box{position:relative;width:230px;flex-shrink:0;}
+  .filterbar .search-results{
+    position:absolute;left:0;right:0;top:100%;z-index:19;
+    background:var(--paper-raised);border:1px solid var(--line);border-top:none;
+    border-radius:0 0 10px 10px;box-shadow:var(--shadow);
+  }
+  .filterbar .age-filters{
+    flex-direction:row;flex-wrap:wrap;gap:6px;min-width:0;
+  }
+  .filterbar .age-filters .filter-btn{width:auto;justify-content:center;}
+  .map-collapse-btn{margin-left:auto;flex-shrink:0;}
+
+  .map-card{
+    position:relative;flex:0 0 42%;min-width:260px;height:100%;
+    padding:16px;box-sizing:border-box;
+    transition:flex-basis .25s ease, opacity .2s ease, padding .25s ease;
+  }
+  .map-card.collapsed{flex:0 0 0;min-width:0;padding:0;opacity:0;overflow:hidden;pointer-events:none;}
+  .map-card-inner{
+    position:relative;width:100%;height:100%;overflow:hidden;
+    background:var(--paper-raised);border:1px solid var(--line);
+    border-radius:12px;box-shadow:var(--shadow);
+  }
+  .compare-card{
+    flex:1 1 auto;min-width:0;height:100%;
+    padding:16px 16px 16px 0;box-sizing:border-box;
+    display:flex;flex-direction:column;
+  }
+  .map-card.collapsed + .compare-card{padding-left:16px;}
+  .compare-card-inner{
+    flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;
+    background:var(--paper-raised);border:1px solid var(--line);
+    border-radius:12px;box-shadow:var(--shadow);
+  }
+  .compare-toolbar{
+    display:flex;align-items:center;gap:10px;padding:12px 16px;
+    border-bottom:1px solid var(--line);flex-shrink:0;flex-wrap:wrap;
+  }
+  .compare-count{font-size:.78rem;font-weight:700;color:var(--ink);}
+  .compare-search{
+    flex-shrink:0;width:170px;font-size:.76rem;padding:6px 10px;
+    border:1px solid var(--line-strong);border-radius:7px;color:var(--ink);
+    background:var(--paper);font-family:inherit;
+  }
+  .compare-sort{
+    flex-shrink:0;font-size:.76rem;padding:6px 8px;
+    border:1px solid var(--line-strong);border-radius:7px;color:var(--ink);
+    background:var(--paper);font-family:inherit;
+  }
+  .compare-head, .compare-row{
+    display:grid;grid-template-columns:1.9fr .8fr 1fr 1fr .9fr;gap:8px;
+    align-items:center;padding:9px 16px;box-sizing:border-box;
+  }
+  .compare-head{
+    font-size:.66rem;font-weight:700;color:var(--ink-soft);
+    border-bottom:1px solid var(--line-strong);flex-shrink:0;
+  }
+  .compare-head span:not(:first-child){text-align:right;}
+  .compare-rows{overflow-y:auto;flex:1;min-height:0;}
+  .compare-row{
+    font-size:.76rem;border-bottom:1px solid var(--line);cursor:pointer;
+  }
+  .compare-row:hover{background:var(--paper);}
+  .compare-row.active{background:#eef1fb;}
+  .compare-row:focus-visible{outline:2px solid var(--indigo-mid);outline-offset:-2px;}
+  .cmp-name-main{font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .cmp-name-sub{font-size:.66rem;color:var(--ink-soft);margin-top:2px;}
+  .cmp-area, .cmp-date{color:var(--ink-soft);text-align:right;}
+  .cmp-price{font-weight:700;text-align:right;}
+  .cmp-pct{text-align:right;font-weight:700;}
+  .cmp-up{color:#c1443c;}
+  .cmp-down{color:#2f6fd6;}
+  .cmp-flat{color:var(--ink-soft);}
+  .cmp-na{color:var(--ink-soft);font-weight:600;font-size:.68rem;}
+  .compare-empty{padding:40px 16px;text-align:center;color:var(--ink-soft);font-size:.8rem;}
+  @media (max-width:900px){
+    .stage{flex-direction:column;}
+    .map-card{flex:0 0 320px;width:100%;}
+    .compare-card{padding:16px;}
+    .map-card.collapsed + .compare-card{padding:16px;}
+  }
+
   .search-box input{
     width:100%;box-sizing:border-box;border:none;background:transparent;
     padding:10px 14px;font-size:.82rem;font-family:inherit;color:var(--ink);
@@ -395,36 +480,59 @@
     </div>
   </div>
 
+  <div class="filterbar" id="filterBar">
+    <div class="search-box" id="searchBox">
+      <input type="text" id="searchInput" placeholder="단지명 검색 (예: 엘리움)" autocomplete="off">
+      <div class="search-results" id="searchResults"></div>
+    </div>
+    <div class="age-filters" id="unifiedFilters">
+      <button class="filter-btn active" data-filter="all">전체</button>
+      <button class="filter-btn" data-filter="upcoming"><span class="filter-dot" style="background:var(--status-upcoming)"></span>분양예정 (당사 현장)</button>
+      <button class="filter-btn" data-filter="scheduled"><span class="filter-dot" style="background:var(--status-scheduled)"></span>분양예정 (타사 현장)</button>
+      <button class="filter-btn" data-filter="presale"><span class="filter-dot" style="background:var(--age-presale)"></span>준공예정</button>
+      <button class="filter-btn" data-filter="under1"><span class="filter-dot" style="background:var(--age-under1)"></span>1년 미만</button>
+      <button class="filter-btn" data-filter="1to5"><span class="filter-dot" style="background:var(--age-1to5)"></span>1~5년</button>
+      <button class="filter-btn" data-filter="5to10"><span class="filter-dot" style="background:var(--age-5to10)"></span>5~10년</button>
+      <button class="filter-btn" data-filter="over10"><span class="filter-dot" style="background:var(--age-over10)"></span>10년 초과</button>
+    </div>
+    <button type="button" class="filter-btn map-collapse-btn" id="mapCollapseBtn">지도 접기</button>
+  </div>
+
   <div class="setup-banner" id="setupBanner">
     카카오 지도 키가 아직 설정되지 않았습니다. 이 파일 맨 아래 스크립트의 <code>KAKAO_APP_KEY</code> 값을
     developers.kakao.com 에서 발급받은 <b>JavaScript 키</b>로 바꿔주세요. (앱 설정 &rarr; 플랫폼 &rarr; Web 에 이 파일을 여는 도메인도 등록해야 합니다. 로컬 테스트는 <code>http://localhost</code> 로 등록하면 됩니다.)
   </div>
 
   <div class="stage">
-    <div id="map"></div>
-
-    <div class="maptype-toggle" id="maptypeToggle">
-      <button data-type="roadmap" class="active">일반지도</button>
-      <button data-type="skyview">위성</button>
-      <button data-type="hybrid">위성+지명</button>
+    <div class="map-card" id="mapCard">
+      <div class="map-card-inner">
+        <div id="map"></div>
+        <div class="maptype-toggle" id="maptypeToggle">
+          <button data-type="roadmap" class="active">일반지도</button>
+          <button data-type="skyview">위성</button>
+          <button data-type="hybrid">위성+지명</button>
+        </div>
+      </div>
     </div>
 
-    <div class="search-box" id="searchBox">
-      <input type="text" id="searchInput" placeholder="단지명 검색 (예: 엘리움)" autocomplete="off">
-      <div class="search-results" id="searchResults"></div>
-    </div>
-
-    <div class="legend">
-      <div class="legend-title" style="margin-top:0;padding-top:0;border-top:none;">단지 필터</div>
-      <div class="age-filters" id="unifiedFilters">
-        <button class="filter-btn active" data-filter="all">전체</button>
-        <button class="filter-btn" data-filter="upcoming"><span class="filter-dot" style="background:var(--status-upcoming)"></span>분양예정 (당사 현장)</button>
-        <button class="filter-btn" data-filter="scheduled"><span class="filter-dot" style="background:var(--status-scheduled)"></span>분양예정 (타사 현장)</button>
-        <button class="filter-btn" data-filter="presale"><span class="filter-dot" style="background:var(--age-presale)"></span>준공예정</button>
-        <button class="filter-btn" data-filter="under1"><span class="filter-dot" style="background:var(--age-under1)"></span>1년 미만</button>
-        <button class="filter-btn" data-filter="1to5"><span class="filter-dot" style="background:var(--age-1to5)"></span>1~5년</button>
-        <button class="filter-btn" data-filter="5to10"><span class="filter-dot" style="background:var(--age-5to10)"></span>5~10년</button>
-        <button class="filter-btn" data-filter="over10"><span class="filter-dot" style="background:var(--age-over10)"></span>10년 초과</button>
+    <div class="compare-card" id="compareCard">
+      <div class="compare-card-inner">
+        <div class="compare-toolbar">
+          <span class="compare-count" id="compareCount">0개 단지</span>
+          <div style="flex-grow:1;"></div>
+          <input type="search" class="compare-search" id="compareSearch" placeholder="목록 내 검색" autocomplete="off">
+          <select class="compare-sort" id="compareSort">
+            <option value="py_asc">평당가 낮은순</option>
+            <option value="py_desc">평당가 높은순</option>
+            <option value="pct_desc">최초대비 높은순</option>
+            <option value="pct_asc">최초대비 낮은순</option>
+            <option value="name">이름순</option>
+          </select>
+        </div>
+        <div class="compare-head">
+          <span>단지명</span><span>최근거래 전용면적</span><span>평당가</span><span>최초대비</span><span>최근거래</span>
+        </div>
+        <div class="compare-rows" id="compareRows"></div>
       </div>
     </div>
 
@@ -914,6 +1022,117 @@
   var FLOOR_TIER_COLOR = { "저층":"#2a78d6", "중층":"#eb6834", "고층":"#1baf7a", "미상":"#898781" };
   var FLOOR_TIER_ORDER = ["저층","중층","고층","미상"];
   var PYEONG_SQM = 3.305785; // 1평 = 3.305785㎡
+
+  // ------------------------------------------------------------
+  // ⑥ 레이아웃 개편(2026.09.20): 우측 "정렬형 비교표"에 들어가는 단지별 대표값 계산.
+  // 새로운 가격 로직을 따로 만들지 않고, 이미 검증된 computeTxPctChange(최초 대비 %)와
+  // 같은 계산을 그대로 재사용한다 — 단지의 "가장 최근 실거래 1건"을 대표값으로 삼아
+  // 평당가(만원/평)와 최초대비 %를 함께 보여준다. 실거래가 아예 없는 단지(당사 분양예정 등)는
+  // "실거래 없음"으로 표시하고 정렬 시 항상 맨 뒤로 보낸다.
+  // ------------------------------------------------------------
+  function computeEntitySummary(entity){
+    var txs = (entity.txHistory || []).filter(function(t){ return t.amt && t.area; });
+    if (!txs.length) return null;
+    txs = txs.slice().sort(function(a, b){
+      var ka = (a.y || 0) * 400 + (a.m || 0) * 31 + (a.d || 0);
+      var kb = (b.y || 0) * 400 + (b.m || 0) * 31 + (b.d || 0);
+      return kb - ka;
+    });
+    var latest = txs[0];
+    var py = (latest.amt / (latest.area / PYEONG_SQM));
+    var cmp = computeTxPctChange(latest, entity);
+    var dateLabel = latest.y ? (latest.y + "." + (latest.m ? String(latest.m).padStart(2, "0") : "?")) : "-";
+    return {
+      pricePerPy: py,
+      pct: cmp.pct,
+      isProxy: cmp.isProxy,
+      areaLabel: latest.area ? (Math.round(latest.area) + "㎡") : "-",
+      dateLabel: dateLabel,
+      txCount: txs.length
+    };
+  }
+
+  // 현재 활성 필터 + 비교표 내 검색어를 모두 만족하는 마커만 골라 {marker, entity, summary} 목록으로 변환.
+  function compareRowsData(){
+    var searchEl = document.getElementById("compareSearch");
+    var q = searchEl ? searchEl.value.trim() : "";
+    return markers.filter(function(m){
+      var key = markerFilterKey(m);
+      var visible = activeFilters.has("all") || activeFilters.has(key);
+      if (!visible) return false;
+      if (q && m.data.name.indexOf(q) === -1) return false;
+      return true;
+    }).map(function(m){
+      return { marker: m, entity: m.data, summary: computeEntitySummary(m.data) };
+    });
+  }
+
+  function sortCompareRows(rows, sortKey){
+    function metric(r){
+      if (sortKey.indexOf("py") === 0) return r.summary ? r.summary.pricePerPy : null;
+      if (sortKey.indexOf("pct") === 0) return r.summary ? r.summary.pct : null;
+      return null;
+    }
+    if (sortKey === "name") {
+      rows.sort(function(a, b){ return a.entity.name.localeCompare(b.entity.name, "ko"); });
+      return rows;
+    }
+    var dir = sortKey.indexOf("_desc") !== -1 ? -1 : 1;
+    rows.sort(function(a, b){
+      var av = metric(a), bv = metric(b);
+      if ((av === null || av === undefined || isNaN(av)) && (bv === null || bv === undefined || isNaN(bv))) return 0;
+      if (av === null || av === undefined || isNaN(av)) return 1; // 비교불가/실거래없음은 항상 맨 뒤
+      if (bv === null || bv === undefined || isNaN(bv)) return -1;
+      return (av - bv) * dir;
+    });
+    return rows;
+  }
+
+  function renderCompareTable(){
+    var rowsEl = document.getElementById("compareRows");
+    var countEl = document.getElementById("compareCount");
+    var sortEl = document.getElementById("compareSort");
+    if (!rowsEl || !countEl || !sortEl) return;
+    var rows = sortCompareRows(compareRowsData(), sortEl.value);
+    countEl.textContent = rows.length + "개 단지";
+    if (!rows.length) {
+      rowsEl.innerHTML = '<div class="compare-empty">조건에 맞는 단지가 없습니다</div>';
+      return;
+    }
+    rowsEl.innerHTML = rows.map(function(r){
+      var e = r.entity, s = r.summary, m = r.marker;
+      var kindLabel = (m.kind === "comparison")
+        ? ("비교단지 · " + e.age.label)
+        : (e.statusLabel || (e.status === "upcoming" ? "당사 분양예정" : "분양·전매 비교"));
+      var priceTxt = (s && s.pricePerPy) ? formatAmt(Math.round(s.pricePerPy)) : "-";
+      var pctTxt;
+      if (!s) {
+        pctTxt = '<span class="cmp-na">실거래 없음</span>';
+      } else if (s.pct === null || s.pct === undefined || isNaN(s.pct)) {
+        pctTxt = '<span class="cmp-na">비교불가</span>';
+      } else {
+        var sign = s.pct > 0 ? "+" : "";
+        var cls = s.pct > 0 ? "cmp-up" : (s.pct < 0 ? "cmp-down" : "cmp-flat");
+        pctTxt = '<span class="' + cls + '">' + sign + s.pct.toFixed(1) + "%" + (s.isProxy ? '<span class="cmp-na"> ·실거래대용</span>' : '') + '</span>';
+      }
+      var active = (currentComplex === e) ? " active" : "";
+      return '<div class="compare-row' + active + '" data-cid="' + e.id + '" tabindex="0" role="button" aria-label="' + e.name + ' 상세보기">' +
+        '<div><div class="cmp-name-main">' + e.name + '</div><div class="cmp-name-sub">' + kindLabel + '</div></div>' +
+        '<div class="cmp-area">' + (s ? s.areaLabel : "-") + '</div>' +
+        '<div class="cmp-price">' + priceTxt + '</div>' +
+        '<div class="cmp-pct">' + pctTxt + '</div>' +
+        '<div class="cmp-date">' + (s ? s.dateLabel : "-") + '</div>' +
+      '</div>';
+    }).join("");
+  }
+
+  // 마커가 지오코딩 완료 순서대로 하나씩 비동기로 추가되므로, 매번 즉시 다시 그리지 않고
+  // 짧게 모아서(디바운스) 한 번에 다시 그린다.
+  var _compareRenderTimer = null;
+  function scheduleCompareRender(){
+    if (_compareRenderTimer) clearTimeout(_compareRenderTimer);
+    _compareRenderTimer = setTimeout(renderCompareTable, 60);
+  }
 
   // ------------------------------------------------------------
   // 3단계(2026.09): 분양가 시뮬레이터 — 당사 분양예정 현장(own_upcoming)에서
@@ -1455,7 +1674,35 @@
           if (activeFilters.has(k)) { b.classList.add("active"); } else { b.classList.remove("active"); }
         });
         refreshMarkers();
+        renderCompareTable();
       });
+    });
+
+    // ⑥ 레이아웃 개편: 지도 접기/펼치기 — 카카오 지도는 컨테이너 크기가 바뀌면 relayout()을
+    // 호출해줘야 정상적으로 다시 그려지므로, CSS 트랜지션(.25s)이 끝난 뒤 한 번 호출한다.
+    document.getElementById("mapCollapseBtn").addEventListener("click", function(){
+      var card = document.getElementById("mapCard");
+      var collapsed = card.classList.toggle("collapsed");
+      this.textContent = collapsed ? "지도 펼치기" : "지도 접기";
+      setTimeout(function(){ if (map) map.relayout(); }, 260);
+    });
+
+    // 비교표 내 검색 / 정렬
+    document.getElementById("compareSearch").addEventListener("input", renderCompareTable);
+    document.getElementById("compareSort").addEventListener("change", renderCompareTable);
+
+    // 비교표 행 클릭(또는 Enter/Space) → 검색 결과 선택과 동일하게 지도 이동 + 상세 패널 오픈
+    document.getElementById("compareRows").addEventListener("click", function(e){
+      var row = e.target.closest(".compare-row");
+      if (!row) return;
+      var cid = row.getAttribute("data-cid");
+      var m = markers.find(function(mm){ return String(mm.data.id) === cid; });
+      if (m) focusMarker(m);
+    });
+    document.getElementById("compareRows").addEventListener("keydown", function(e){
+      if (e.key !== "Enter" && e.key !== " ") return;
+      var row = e.target.closest(".compare-row");
+      if (row) { e.preventDefault(); row.click(); }
     });
 
     document.getElementById("panelClose").addEventListener("click", function(){
@@ -1520,6 +1767,7 @@
     overlay.setMap(map);
     markers.push({kind:"project", data:p, overlay:overlay});
     refreshMarkers();
+    scheduleCompareRender();
   }
 
   function placeComparisonMarker(c, lat, lng){
@@ -1537,6 +1785,7 @@
     overlay.setMap(map);
     markers.push({kind:"comparison", data:c, overlay:overlay});
     refreshMarkers();
+    scheduleCompareRender();
   }
 
   // 마커 하나가 어떤 필터 카테고리에 속하는지 계산.
@@ -1581,7 +1830,9 @@
     });
   }
 
-  function selectSearchResult(m){
+  // 검색 결과 선택 / 비교표 행 클릭 / 지도 마커 클릭이 공유하는 공통 동작:
+  // 필터를 "전체"로 풀어서 항상 보이게 하고, 지도를 이동시키고, 상세 패널을 연다.
+  function focusMarker(m){
     // 현재 필터에 가려져 있을 수 있으므로 "전체"로 전환해 항상 보이게 한다.
     activeFilters = new Set(["all"]);
     document.querySelectorAll("#unifiedFilters .filter-btn").forEach(function(b){
@@ -1604,7 +1855,10 @@
       content.classList.add("search-highlight");
       setTimeout(function(){ content.classList.remove("search-highlight"); }, 1300);
     }
+  }
 
+  function selectSearchResult(m){
+    focusMarker(m);
     document.getElementById("searchInput").value = m.data.name;
     document.getElementById("searchResults").classList.remove("open");
   }
@@ -1673,6 +1927,7 @@
     renderFloorPriceChart("floorChartRoot", p);
     renderTxSection();
     renderSimulatorOutputs();
+    if (typeof renderCompareTable === "function") renderCompareTable();
   }
 
   function openComparisonPanel(c){
@@ -1709,6 +1964,7 @@
     document.getElementById("panel").classList.add("open");
     renderFloorPriceChart("floorChartRoot", c);
     renderTxSection();
+    if (typeof renderCompareTable === "function") renderCompareTable();
   }
 
   function renderTxSection(){

@@ -100,8 +100,11 @@
     flex-direction:row;flex-wrap:wrap;gap:6px;min-width:0;
   }
   .filterbar .age-filters .filter-btn{width:auto;justify-content:center;}
+  /* 2026.09.21: 두 버튼 다 margin-left:auto를 줘서 필터바 오른쪽 끝에 "표 접기"+"지도 접기"가
+     서로 붙어서 나오게 한다(flex에서는 한 줄에 auto 마진이 여러 개면 먼저 나온 것만 남는 공간을
+     흡수하고, 그 다음 것들은 자연스럽게 그 뒤에 붙는다 — 즉 둘이 나란히 오른쪽 끝에 붙음). */
   .map-collapse-btn{margin-left:auto;flex-shrink:0;}
-  .compare-collapse-btn{flex-shrink:0;}
+  .compare-collapse-btn{margin-left:auto;flex-shrink:0;}
 
   .map-card{
     position:relative;flex:0 1 42%;min-width:220px;height:100%;
@@ -1872,6 +1875,26 @@
     // 2026.09.20(6차): 반대 방향("지도만 보기")도 추가 — 비교표 카드를 접으면 지도 카드가
     // 남은 공간을 전부 차지(.full-width)한다. 두 카드가 동시에 접히면 화면이 텅 비어버리므로,
     // 한쪽을 접을 때 다른 쪽이 접혀있었다면 자동으로 펼쳐서 항상 최소 하나는 보이게 한다.
+    // 2026.09.21: relayout()을 트랜지션이 끝난 뒤 딱 한 번만 부르면, 카드 폭이 서서히 바뀌는
+    // .25초 동안 지도가 늘어나거나 잘린 채로 있다가 끝에 "뚝" 하고 제자리를 잡는 것처럼 보였음.
+    // 그래서 CSS 트랜지션과 같은 시간 동안 매 프레임마다 relayout()+setCenter()를 반복 호출해서,
+    // 카드 폭이 변하는 동안 지도(한반도 등)가 계속 화면 가운데를 유지하며 같이 스무스하게
+    // 넓어지거나 좁아지도록 한다.
+    function animateMapResize(durationMs){
+      if (!map) return;
+      var savedCenter = map.getCenter();
+      var start = (window.performance && performance.now) ? performance.now() : Date.now();
+      function step(){
+        var now = (window.performance && performance.now) ? performance.now() : Date.now();
+        map.relayout();
+        map.setCenter(savedCenter);
+        if (now - start < durationMs) {
+          requestAnimationFrame(step);
+        }
+      }
+      requestAnimationFrame(step);
+    }
+
     var mapCard = document.getElementById("mapCard");
     var compareCard = document.getElementById("compareCard");
     var mapCollapseBtn = document.getElementById("mapCollapseBtn");
@@ -1885,7 +1908,7 @@
         mapCard.classList.remove("full-width");
         compareCollapseBtn.textContent = "표 접기";
       }
-      setTimeout(function(){ if (map) map.relayout(); }, 260);
+      animateMapResize(320);
     });
 
     compareCollapseBtn.addEventListener("click", function(){
@@ -1896,7 +1919,7 @@
         mapCard.classList.remove("collapsed");
         mapCollapseBtn.textContent = "지도 접기";
       }
-      setTimeout(function(){ if (map) map.relayout(); }, 260);
+      animateMapResize(320);
     });
 
     // 비교표 내 검색 / 정렬

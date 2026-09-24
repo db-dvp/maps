@@ -624,19 +624,20 @@
   #map3dLoading.visible{display:flex;}
 
   /* ---- 인천 비교단지 마커(건물에 떠 있는 핀) + 말풍선 팝업 ---- */
-  .cmpx-marker-wrap{ position:relative; width:30px; height:44px; cursor:pointer; }
+  /* 12차(2026-09-24): 마커 크기 축소(30x44 -> 22x32) */
+  .cmpx-marker-wrap{ position:relative; width:22px; height:32px; cursor:pointer; }
   .cmpx-marker-pin{
-    position:absolute; top:0; left:0; width:30px; height:30px; border-radius:50%;
-    background:var(--cmpx-color,#c1440e); border:3px solid #fff;
-    box-shadow:0 3px 9px rgba(0,0,0,.4), 0 0 0 2px rgba(0,0,0,.12);
+    position:absolute; top:0; left:0; width:22px; height:22px; border-radius:50%;
+    background:var(--cmpx-color,#c1440e); border:2px solid #fff;
+    box-shadow:0 2px 7px rgba(0,0,0,.4), 0 0 0 2px rgba(0,0,0,.12);
     display:flex; align-items:center; justify-content:center;
-    font-size:14px; line-height:1; transition:transform .15s ease;
+    font-size:10px; line-height:1; transition:transform .15s ease;
   }
   .cmpx-marker-wrap:hover .cmpx-marker-pin{ transform:scale(1.15); }
   .cmpx-marker-pin::after{
-    content:""; position:absolute; top:28px; left:8px; width:0; height:0;
-    border-left:7px solid transparent; border-right:7px solid transparent;
-    border-top:14px solid var(--cmpx-color,#c1440e);
+    content:""; position:absolute; top:20px; left:6px; width:0; height:0;
+    border-left:5px solid transparent; border-right:5px solid transparent;
+    border-top:10px solid var(--cmpx-color,#c1440e);
     filter:drop-shadow(0 2px 1px rgba(0,0,0,.2));
   }
   .mapboxgl-popup.cmpx-popup .mapboxgl-popup-content{

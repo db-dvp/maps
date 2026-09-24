@@ -787,6 +787,10 @@ window.initMap3D = function(){
     var SUPABASE_ANON_KEY_3D = "sb_publishable_qw-URFALkEDIOrYhzZ4aSg_igF6nK_e";
     var PYEONG_SQM_3D = 3.305785;
     var AGE_COLORS_3D = { under1:"#e0a728", "1to5":"#2f6fd6", "5to10":"#12a39c", over10:"#9c6b3f", presale:"#7d5ba6" };
+    // 13차(2026-09-25): 2D 사이트의 STATUS_COLOR(경쟁현장 role=competitor/own_upcoming 전용 색상표)와
+    // 완전히 동일한 값을 그대로 씀 — 2D/3D 마커 색이 달라 보이는 문제 방지.
+    var STATUS_COLOR_3D = { upcoming:"#202a5d", competitor:"#7d5ba6", scheduled:"#c23b7a", under1:"#e0a728", "1to5":"#2f6fd6", "5to10":"#12a39c", over10:"#9c6b3f" };
+    var STATUS_LABEL_3D = { upcoming:"당사 분양예정", competitor:"타사 현장", scheduled:"분양예정(타사)", under1:"입주 1년 미만" };
 
     function supabaseFetchAll3D(table, selectCols, extraQuery, orderCol){
       var pageSize = 1000;
@@ -869,10 +873,12 @@ window.initMap3D = function(){
     }
 
     // 말풍선 팝업 내용 — 2D 우측 패널(openComparisonPanel)의 핵심 요약만 압축.
-    function cmpxSpeechBubbleHtml(c){
-      var age = ageBucket3D(c.buildYear);
+    // 13차(2026-09-25): age를 내부에서 다시 계산하지 않고 밖에서 넘겨받음 — 비교단지(role=comparison)는
+    // 연식 배지, 경쟁현장(role=competitor)은 2D와 동일한 상태 배지(분양예정/입주1년미만 등)를 쓰기 때문.
+    function cmpxSpeechBubbleHtml(c, badge){
+      var age = badge;
       var summary = computeEntitySummary3D(c);
-      var sub = (c.buildYear ? (c.buildYear + "년 준공") : "준공예정") + (c.landmark ? (" · " + c.landmark) : "");
+      var sub = (c.buildYear ? (c.buildYear + "년 준공") : (c.dateLabel || "준공예정")) + (c.landmark ? (" · " + c.landmark) : "");
       var priceHtml;
       if (summary) {
         var hasPct = summary.pct !== null && summary.pct !== undefined && !isNaN(summary.pct);
@@ -903,14 +909,39 @@ window.initMap3D = function(){
 
     var comparisonComplexMarkers = [];
 
+    // 13차(2026-09-25): 마커를 실제로 만드는 부분을 분리 — 좌표가 어디서 왔든(지오코딩/앵커) 똑같이 호출됨.
+    function createComparisonMarker3D(c, badge, lng, lat){
+      var floors = c.maxFloorObs || 15;
+      var altitude = floors * 3 + 6; // buildTowersGeoJSON과 같은 "층당 3m" 기준 + 여유 6m 위에 마커가 뜸
+
+      var wrap = document.createElement("div");
+      wrap.className = "cmpx-marker-wrap";
+      var pin = document.createElement("div");
+      pin.className = "cmpx-marker-pin";
+      pin.style.setProperty("--cmpx-color", badge.color);
+      wrap.appendChild(pin);
+
+      // 12차: 마커 크기 축소에 맞춰 팝업 offset도 축소(30 -> 22)
+      var popup = new mapboxgl.Popup({ offset: 22, closeButton: true, className: "cmpx-popup", maxWidth: "250px" })
+        .setHTML(cmpxSpeechBubbleHtml(c, badge));
+
+      // 12차: pitchAlignment을 "map"(지면에 눕는 정렬)에서 "viewport"(항상 카메라를 보고 세워짐)로 변경
+      var marker = new mapboxgl.Marker({
+        element: wrap, altitude: altitude, anchor: "bottom",
+        pitchAlignment: "viewport", rotationAlignment: "viewport"
+      }).setLngLat([lng, lat]).setPopup(popup).addTo(map);
+
+      comparisonComplexMarkers.push(marker);
+    }
+
     function loadIncheonComparisonMarkers(){
-      var complexCols = ["id","name","address","build_year","units","landmark","max_floor_obs",
-        "baseline_amt","baseline_area","presale_is_proxy"].join(",");
+      var complexCols = ["id","name","role","address","build_year","units","landmark","max_floor_obs",
+        "baseline_amt","baseline_area","presale_is_proxy","map_status","status_label","date_label"].join(",");
       var txCols = "id,complex_id,transaction_type,area_sqm,floor,price_man,contract_date";
       var unitTypeCols = "id,complex_id,type_name,area_sqm,units_count,price_amt,note";
 
       Promise.all([
-        // 12차(2026-09-24): 준공예정이라 그동안 제외됐던 경쟁현장(role=competitor)도 함께 포함(좌표는 이미 INCHEON_MARKER_ANCHORS에 있음)
+        // 12차(2026-09-24): 준공예정이라 그동안 제외됐던 경쟁현장(role=competitor)도 함께 포함
         supabaseFetchAll3D("complexes", complexCols, "&role=in.(comparison,competitor)", "name"),
         supabaseFetchAll3D("transactions", txCols, "", "id"),
         supabaseFetchAll3D("complex_unit_types", unitTypeCols, "", "type_name").catch(function(){ return []; })
@@ -931,11 +962,27 @@ window.initMap3D = function(){
         var txByComplex = {};
         txRows.forEach(function(t){ (txByComplex[t.complex_id] = txByComplex[t.complex_id] || []).push(t); });
 
-        var placed = 0, skippedNoAnchor = [];
+        var placed = 0, skippedNoCoord = [];
         complexRows.forEach(function(row){
           if (INCHEON_MARKER_SKIP_NAMES[row.name]) return;
-          var anchor = INCHEON_MARKER_ANCHORS[row.name];
-          if (!anchor) { skippedNoAnchor.push(row.name); return; }
+
+          // 13차: 2D와 마커 색이 다르게 보이던 문제 수정 — 2D와 완전히 같은 규칙으로 배지(연식/상태)를 계산.
+          // role=comparison만 "연식" 기준(ageBucket3D)을 쓰고, role=competitor(타사 경쟁현장)는
+          // 2D의 PROJECTS와 동일하게 map_status(없으면 "competitor" 기본값) 기준 상태 배지를 씀 —
+          // 그래서 준공년도가 비어있는(null) 경쟁현장이 전부 "준공예정"(보라) 하나로 뭉뚱그려지지 않음.
+          var badge;
+          if (row.role === "comparison") {
+            badge = ageBucket3D(row.build_year);
+            // 12차(2026-09-24): "10년초과" 단지는 마커 표시 대상에서 제외
+            if (badge.key === "over10") { return; }
+          } else {
+            var st = row.map_status || "competitor";
+            badge = {
+              key: st,
+              label: row.status_label || STATUS_LABEL_3D[st] || st,
+              color: STATUS_COLOR_3D[st] || STATUS_COLOR_3D.competitor
+            };
+          }
 
           var rawTx = txByComplex[row.id] || [];
           var txs = rawTx.map(function(t){
@@ -950,6 +997,7 @@ window.initMap3D = function(){
           });
           var c = {
             id: row.id, name: row.name, address: row.address, buildYear: row.build_year,
+            dateLabel: row.date_label || null,
             units: row.units, landmark: row.landmark || "", maxFloorObs: row.max_floor_obs || null,
             baselineAmt: (row.baseline_amt === null || row.baseline_amt === undefined) ? null : Number(row.baseline_amt),
             baselineArea: (row.baseline_area === null || row.baseline_area === undefined) ? null : Number(row.baseline_area),
@@ -957,34 +1005,33 @@ window.initMap3D = function(){
             unitTypes: unitTypesByComplex[row.id] || [],
             txHistory: txs
           };
-          var age = ageBucket3D(c.buildYear);
-          // 12차(2026-09-24): "10년초과" 단지는 마커 표시 대상에서 제외
-          if (age.key === "over10") { return; }
-          var floors = c.maxFloorObs || 15;
-          var altitude = floors * 3 + 6; // buildTowersGeoJSON과 같은 "층당 3m" 기준 + 여유 6m 위에 마커가 뜸
 
-          var wrap = document.createElement("div");
-          wrap.className = "cmpx-marker-wrap";
-          var pin = document.createElement("div");
-          pin.className = "cmpx-marker-pin";
-          pin.style.setProperty("--cmpx-color", age.color);
-          wrap.appendChild(pin);
-
-          // 12차: 마커 크기 축소에 맞춰 팝업 offset도 축소(30 -> 22)
-          var popup = new mapboxgl.Popup({ offset: 22, closeButton: true, className: "cmpx-popup", maxWidth: "250px" })
-            .setHTML(cmpxSpeechBubbleHtml(c));
-
-          // 12차: pitchAlignment을 "map"(지면에 눕는 정렬)에서 "viewport"(항상 카메라를 보고 세워짐)로 변경
-          var marker = new mapboxgl.Marker({
-            element: wrap, altitude: altitude, anchor: "bottom",
-            pitchAlignment: "viewport", rotationAlignment: "viewport"
-          }).setLngLat(anchor).setPopup(popup).addTo(map);
-
-          comparisonComplexMarkers.push(marker);
-          placed++;
+          // 13차: 2D와 마커 위치가 다르게 찍히던 문제 수정 — 하드코딩된 좌표 사전 대신, 2D와 똑같이
+          // 카카오 지오코더로 주소를 실시간 변환(2D의 초기화 코드에서 만든 전역 geocoder를 그대로 재사용).
+          // 지오코딩이 안 되는 경우에만 기존 좌표 사전(INCHEON_MARKER_ANCHORS)을 예비로 씀.
+          function placeWithFallback(){
+            var anchor = INCHEON_MARKER_ANCHORS[row.name];
+            if (!anchor) { skippedNoCoord.push(row.name); return; }
+            createComparisonMarker3D(c, badge, anchor[0], anchor[1]);
+            placed++;
+          }
+          if (typeof geocoder !== "undefined" && geocoder && row.address) {
+            geocoder.addressSearch(row.address, function(result, status){
+              if (status === kakao.maps.services.Status.OK) {
+                createComparisonMarker3D(c, badge, parseFloat(result[0].x), parseFloat(result[0].y));
+                placed++;
+              } else {
+                placeWithFallback();
+              }
+            });
+          } else {
+            placeWithFallback();
+          }
         });
 
-        console.log("[비교단지 마커] " + placed + "개 배치 완료. 좌표 없어 생략: " + (skippedNoAnchor.join(", ") || "없음"));
+        setTimeout(function(){
+          console.log("[비교단지 마커] 배치 시도 완료(지오코딩은 비동기라 최종 개수는 잠시 후 확정). 좌표 전혀 없어 생략: " + (skippedNoCoord.join(", ") || "없음"));
+        }, 3000);
       }).catch(function(err){
         console.error("인천 비교단지 마커 로딩 실패:", err);
       });

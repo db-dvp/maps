@@ -590,11 +590,14 @@
     font-weight:700;color:var(--ink-soft);cursor:pointer;
   }
   .map3d-mode-toggle button.active{background:var(--indigo);color:#fff;}
+  /* 18차(2026-09-25): 3번 요청 — 하단 전체폭 바 대신, 2D의 "일반/위성" 지도유형 버튼과 같은
+     좌상단 자리로 옮김(3D일 땐 그 버튼이 숨어있어서 자리가 비어있음). 가로로 길게 늘어놓던
+     묶음을 세로로 쌓는 작은 패널 형태로 바꿔서 좁은 좌상단 공간에 자연스럽게 들어가게 함. */
   #map3dControls{
-    position:absolute;bottom:14px;left:14px;right:14px;z-index:10;
+    position:absolute;top:14px;left:14px;z-index:10;
     background:var(--paper-raised);border:1px solid var(--line);border-radius:12px;
-    box-shadow:var(--shadow);padding:9px 14px;
-    display:none;gap:12px;flex-wrap:wrap;align-items:center;
+    box-shadow:var(--shadow);padding:9px 11px;max-width:200px;
+    display:none;flex-direction:column;gap:7px;align-items:flex-start;
   }
   #map3dControls.visible{display:flex;}
   .m3d-control-group{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
@@ -658,11 +661,17 @@
     filter:drop-shadow(0 2px 1px rgba(0,0,0,.2));
   }
   /* 15차(2026-09-25): 당사 현장(role=own_upcoming) 3D 마커를 2D의 "대방산업개발 D 로고" 마커와
-     같은 느낌으로 — 색 원 대신 흰 배경 안에 로고 이미지를 넣는다(7번 요청). */
+     같은 느낌으로 — 색 원 대신 흰 배경 안에 로고 이미지를 넣는다(7번 요청).
+     18차(2026-09-25): 2번 요청 — 이 마커만 아래 화살표(포인터 꼬리, .cmpx-marker-pin::after)가
+     안 보여서 대지 위치가 어디인지 구분이 안 됐던 버그 수정. 원인은 "overflow:hidden"이 로고
+     이미지가 원 밖으로 삐져나가지 않게 하려던 것이었는데, 화살표(::after)도 같은 부모 밑에서
+     원 아래로 튀어나오는 모양이라 같이 잘려 보이지 않았던 것 — 로고 이미지는 원(22px)보다 작아서
+     (15px) 애초에 overflow:hidden이 없어도 넘치지 않으므로, 이 속성을 그냥 제거해서 화살표가
+     다시 보이게 함. */
   .cmpx-marker-pin-brand{
-    background:#fff; border:2.5px solid var(--cmpx-color,#202a5d); overflow:hidden;
+    background:#fff; border:2.5px solid var(--cmpx-color,#202a5d);
   }
-  .cmpx-marker-pin-brand img{ display:block; width:15px; height:15px; pointer-events:none; }
+  .cmpx-marker-pin-brand img{ display:block; width:15px; height:15px; pointer-events:none; border-radius:50%; }
   /* 15차: 팝업(말풍선)이 요약으로 줄어든 대신, 클릭하면 우측에 상세정보가 열린다는 걸 안내하는 문구 */
   .sb-hint{ font-size:10px; color:#9c9184; text-align:center; margin-top:2px; }
   .mapboxgl-popup.cmpx-popup .mapboxgl-popup-content{
@@ -2494,6 +2503,29 @@
     }
   }
 
+  // 18차(2026-09-25): 4번+9번 요청 — "표에서 누르면 3D는 그 위치로 안 감" 버그와
+  // "3D에서 누르면 이상한 거리감(다른 마커) 표시됨" 버그는 같은 원인이었음: focusMarker/
+  // openComparePopup 둘 다 카카오 2D 지도(#map, 숨겨져 있어도 DOM에는 남아있음)만 이동시키고
+  // 있었고, openComparePopup의 "두 단지를 잇는 점선+거리 라벨" 강조 오버레이(updateComparePopupSpotlight)도
+  // 숨겨진 2D 지도 기준 화면좌표로 그려서 3D 화면 위에 유령처럼 겹쳐 보였던 것. 3D가 보이는
+  // 상태인지 확인해서, 3D일 땐 2D 전용 오버레이를 그리지 않고 대신 맵박스 카메라를 옮긴다.
+  function is3DModeVisible(){
+    var el = document.getElementById("map3d");
+    return !!(el && getComputedStyle(el).display !== "none" && window.__map3dInstance);
+  }
+  function flyMap3DTo(lat, lng){
+    if (!is3DModeVisible()) return;
+    try {
+      window.__map3dInstance.flyTo({ center: [lng, lat], zoom: Math.max(window.__map3dInstance.getZoom(), 15.5), pitch: 60, duration: 1400 });
+    } catch (e) {}
+  }
+  function fitMap3DBounds(lat1, lng1, lat2, lng2){
+    if (!is3DModeVisible()) return;
+    try {
+      window.__map3dInstance.fitBounds([[lng1, lat1], [lng2, lat2]], { padding: 90, pitch: 55, duration: 1400 });
+    } catch (e) {}
+  }
+
   // 검색 결과 선택 / 비교표 행 클릭 / 지도 마커 클릭이 공유하는 공통 동작:
   // 필터를 "전체"로 풀어서 항상 보이게 하고, 지도를 이동시키고, 상세 패널을 연다.
   function focusMarker(m){
@@ -2525,6 +2557,8 @@
       map.setLevel(4);
       map.setCenter(pos);
     }
+    // 18차: 4번 요청 — 3D가 보이는 상태면 맵박스 카메라도 같은 위치로 옮긴다(2D만 움직이던 버그 수정).
+    flyMap3DTo(pos.getLat(), pos.getLng());
 
     if (m.kind === "project") {
       openPanel(m.data, false);
@@ -2645,9 +2679,18 @@
       bounds.extend(pos2);
       map.setBounds(bounds, 70, 70, 70, 70);
 
-      // 두 마커(실제 핀 복제)·연결선·거리 라벨은 지도가 아니라 배경보다 위의 강조 레이어에 그림(위 설명 참고).
-      popupSpotlightState = { anchorMarker: anchorMarker, targetMarker: m, distText: distText };
-      updateComparePopupSpotlight();
+      // 18차(2026-09-25): 9번 요청 — 이 강조 오버레이(점선+거리라벨+마커 복제)는 숨겨진 2D
+      // 지도(#map)의 화면좌표를 기준으로 그리는 완전히 2D 전용 기능이라, 3D 화면이 보이는
+      // 상태에서 그리면 그 좌표가 엉뚱한 곳(딴 마커처럼 보이는 유령 표시)에 겹쳐 보였음.
+      // 3D가 보이는 상태면 이 오버레이는 그리지 않고, 대신 맵박스 카메라를 두 단지가 같이
+      // 보이도록 옮긴다(2D의 setBounds와 같은 역할).
+      if (is3DModeVisible()) {
+        fitMap3DBounds(pos1.getLat(), pos1.getLng(), pos2.getLat(), pos2.getLng());
+      } else {
+        // 두 마커(실제 핀 복제)·연결선·거리 라벨은 지도가 아니라 배경보다 위의 강조 레이어에 그림(위 설명 참고).
+        popupSpotlightState = { anchorMarker: anchorMarker, targetMarker: m, distText: distText };
+        updateComparePopupSpotlight();
+      }
     } else {
       distanceEl.innerHTML = m.data.name;
     }

@@ -24,7 +24,11 @@ window.initMap3D = function(){
 
   var VIEWS = {
     incheon: { center: [126.741, 37.544], zoom: 14.2, pitch: 62, bearing: -18 },
-    busan:   { center: [128.874, 35.121], zoom: 14.2, pitch: 62, bearing: -18 },
+    // 15차(2026-09-25): 6번 요청 — "부산에코델타는 우리 현장 뷰로" — 기존 좌표가 우리 현장(부산에코델타
+    // 시티2차 대방 엘리움, 부산 강서구 강동동 4840-5, migration.sql 기준 lat 35.0989/lng 128.8799)에서
+    // 몇 km 벗어나 있던 걸 정확히 그 현장 중심으로 보정. 인천의 VIEWS.incheon과 동일한 원칙(당사
+    // 현장 중심)으로 통일.
+    busan:   { center: [128.8799, 35.0989], zoom: 14.2, pitch: 62, bearing: -18 },
     korea:   { center: [127.9, 36.2],     zoom: 6.5,  pitch: 45, bearing: 0 }
   };
 
@@ -48,7 +52,11 @@ window.initMap3D = function(){
       { name: "계양 롯데캐슬 파크시티 (근사 매스, 미착공)", center: [126.70404, 37.53462], zoom: 15.5, pitch: 62, bearing: -160 }
     ],
     busan: [
-      { name: "예시 지점 A", center: [128.8790, 35.1240], zoom: 15.3, pitch: 66, bearing: -30 },
+      // 15차(2026-09-25): 6번 요청 — 인천 HOTSPOTS 1번 자리(당사 현장)와 같은 원칙으로, 첫 지점을
+      // 우리 현장(부산에코델타시티2차 대방 엘리움, migration.sql 기준 실제 좌표)으로 교체.
+      // 나머지 3곳은 브이월드 실제 건물 데이터가 아직 없어(5번 요청 관련, V-World API 키 확보 전까지
+      // 보류) 기존 예시 좌표를 그대로 둠 — 실제 비교단지 데이터가 준비되면 교체 예정.
+      { name: "부산에코델타시티2차 대방 엘리움 (당사 현장)", center: [128.8799, 35.0989], zoom: 15.3, pitch: 66, bearing: -30 },
       { name: "예시 지점 B", center: [128.8695, 35.1195], zoom: 15.3, pitch: 66, bearing: 60 },
       { name: "예시 지점 C", center: [128.8805, 35.1165], zoom: 15.3, pitch: 66, bearing: 150 },
       { name: "예시 지점 D", center: [128.8670, 35.1250], zoom: 15.3, pitch: 66, bearing: -110 }
@@ -815,13 +823,15 @@ window.initMap3D = function(){
     }
 
     // index.html의 ageBucket()과 동일한 규칙(2026 기준, 준공년도 null=준공예정).
+    // 15차(2026-09-25): openComparisonPanel(2D 전역 함수, 3D 마커 클릭시 그대로 재사용— 4번 요청)이
+    // age.textColor를 읽는데 기존엔 없었음 — 2D의 ageBucket()과 동일하게 항상 "#fff"로 채워줌.
     function ageBucket3D(buildYear){
-      if (buildYear === null || buildYear === undefined) return { key:"presale", label:"준공예정", color: AGE_COLORS_3D.presale };
+      if (buildYear === null || buildYear === undefined) return { key:"presale", label:"준공예정", color: AGE_COLORS_3D.presale, textColor:"#fff" };
       var age = 2026 - buildYear;
-      if (age < 1) return { key:"under1", label:"1년 미만", color: AGE_COLORS_3D.under1 };
-      if (age < 5) return { key:"1to5", label:"1~5년", color: AGE_COLORS_3D["1to5"] };
-      if (age <= 10) return { key:"5to10", label:"5~10년", color: AGE_COLORS_3D["5to10"] };
-      return { key:"over10", label:"10년 초과", color: AGE_COLORS_3D.over10 };
+      if (age < 1) return { key:"under1", label:"1년 미만", color: AGE_COLORS_3D.under1, textColor:"#fff" };
+      if (age < 5) return { key:"1to5", label:"1~5년", color: AGE_COLORS_3D["1to5"], textColor:"#fff" };
+      if (age <= 10) return { key:"5to10", label:"5~10년", color: AGE_COLORS_3D["5to10"], textColor:"#fff" };
+      return { key:"over10", label:"10년 초과", color: AGE_COLORS_3D.over10, textColor:"#fff" };
     }
 
     function pctChange3D(txAmt, txArea, baseAmt, baseArea){
@@ -879,6 +889,9 @@ window.initMap3D = function(){
     // 말풍선 팝업 내용 — 2D 우측 패널(openComparisonPanel)의 핵심 요약만 압축.
     // 13차(2026-09-25): age를 내부에서 다시 계산하지 않고 밖에서 넘겨받음 — 비교단지(role=comparison)는
     // 연식 배지, 경쟁현장(role=competitor)은 2D와 동일한 상태 배지(분양예정/입주1년미만 등)를 쓰기 때문.
+    // 15차(2026-09-25): 3번 요청("말풍선은 요약 정도로") — 세대/최고층/거래건수 통계 그리드와 주소
+    // 줄을 빼고 이름·배지·연식·최근 실거래 한 줄만 남김. 대신 4번 요청으로 클릭하면 우측에 상세정보가
+    // 열리므로, 그걸 안내하는 문구를 한 줄 추가함(요약 팝업 + 우측 상세패널 조합).
     function cmpxSpeechBubbleHtml(c, badge){
       var age = badge;
       var summary = computeEntitySummary3D(c);
@@ -890,7 +903,7 @@ window.initMap3D = function(){
         var pctText = !hasPct ? "비교불가" : ((summary.pct > 0 ? "+" : "") + summary.pct.toFixed(1) + "%");
         priceHtml = '<div class="sb-price">최근 실거래(' + escHtml3D(summary.dateLabel) + ') <b>' +
           Math.round(summary.pricePerPy).toLocaleString() + '만원/평</b><br>최초 분양가 대비 ' +
-          '<span class="' + pctCls + '">' + pctText + '</span> · 총 ' + summary.txCount + '건</div>';
+          '<span class="' + pctCls + '">' + pctText + '</span></div>';
       } else {
         priceHtml = '<div class="sb-price" style="color:#9c9184;">등록된 실거래 데이터 없음</div>';
       }
@@ -901,17 +914,24 @@ window.initMap3D = function(){
         '</div>' +
         '<div class="sb-body">' +
           '<div class="sb-sub">' + escHtml3D(sub) + '</div>' +
-          '<div class="sb-stats">' +
-            '<div class="sb-stat"><b>' + (c.units ? Number(c.units).toLocaleString() : "-") + '</b><span>세대</span></div>' +
-            '<div class="sb-stat"><b>' + (c.maxFloorObs || "-") + '</b><span>관측 최고층</span></div>' +
-            '<div class="sb-stat"><b>' + ((c.txHistory || []).length) + '</b><span>실거래 건수</span></div>' +
-          '</div>' +
           priceHtml +
-          '<div class="sb-addr">' + escHtml3D(c.address || "") + '</div>' +
+          '<div class="sb-hint">클릭하면 오른쪽에 상세정보가 표시됩니다</div>' +
         '</div>';
     }
 
     var comparisonComplexMarkers = [];
+
+    // 15차(2026-09-25): 말풍선(팝업)을 ESC 키로도 닫을 수 있게. Mapbox Popup은 자체적으로
+    // ESC 닫기를 지원하지 않아서, 지금 열려있는 팝업을 직접 추적해뒀다가 ESC 입력 시 닫아준다.
+    var currentOpenCmpxPopup = null;
+    if (!document.__cmpxEscBound) {
+      document.__cmpxEscBound = true;
+      document.addEventListener("keydown", function(e){
+        if (e.key === "Escape" && currentOpenCmpxPopup) {
+          currentOpenCmpxPopup.remove();
+        }
+      });
+    }
 
     // 14차(2026-09-25): 줌 정도에 따라 마커 크기를 0.45~1배 사이로 선형 보간.
     // zoom 15 이상(단지 단위로 확대) = 원래 크기, zoom 10 이하(인천 전체가 보일 정도로 축소) = 45% 크기.
@@ -934,9 +954,16 @@ window.initMap3D = function(){
     }
 
     // 13차(2026-09-25): 마커를 실제로 만드는 부분을 분리 — 좌표가 어디서 왔든(지오코딩/앵커) 똑같이 호출됨.
-    function createComparisonMarker3D(c, badge, lng, lat){
-      var floors = c.maxFloorObs || 15;
+    // 15차(2026-09-25):
+    //  - maxFloorObs(고도 계산용)를 별도 인자로 받음 — entity가 이제 2D와 완전히 동일한 c/p 모양이라
+    //    p(당사/타사 현장) 쪽엔 maxFloorObs 필드가 없기 때문(2D PROJECTS에도 없는 필드라 굳이 안 넣음).
+    //  - role을 받아서: (a) 당사 현장(own_upcoming)이면 대방산업개발 D로고 마커로(7번 요청),
+    //    (b) 클릭 시 2D와 동일한 전역 openPanel/openComparisonPanel을 호출해 우측 상세패널을 연다(4번 요청).
+    //  - 팝업 open/close 이벤트로 currentOpenCmpxPopup을 갱신 — 2번 요청(ESC로 닫기)이 실제로 동작하게.
+    function createComparisonMarker3D(entity, badge, lng, lat, maxFloorObs, role){
+      var floors = maxFloorObs || 15;
       var altitude = floors * 3 + 6; // buildTowersGeoJSON과 같은 "층당 3m" 기준 + 여유 6m 위에 마커가 뜸
+      var isBrand = role === "own_upcoming";
 
       var wrap = document.createElement("div");
       wrap.className = "cmpx-marker-wrap";
@@ -948,13 +975,21 @@ window.initMap3D = function(){
       scaleWrap.className = "cmpx-marker-scale";
       wrap.appendChild(scaleWrap);
       var pin = document.createElement("div");
-      pin.className = "cmpx-marker-pin";
+      pin.className = "cmpx-marker-pin" + (isBrand ? " cmpx-marker-pin-brand" : "");
       pin.style.setProperty("--cmpx-color", badge.color);
+      if (isBrand && typeof BRAND_ICON_DATA !== "undefined" && BRAND_ICON_DATA) {
+        var brandImg = document.createElement("img");
+        brandImg.src = BRAND_ICON_DATA;
+        brandImg.alt = "";
+        pin.appendChild(brandImg);
+      }
       scaleWrap.appendChild(pin);
 
       // 12차: 마커 크기 축소에 맞춰 팝업 offset도 축소(30 -> 22)
       var popup = new mapboxgl.Popup({ offset: 22, closeButton: true, className: "cmpx-popup", maxWidth: "250px" })
-        .setHTML(cmpxSpeechBubbleHtml(c, badge));
+        .setHTML(cmpxSpeechBubbleHtml(entity, badge));
+      popup.on("open", function(){ currentOpenCmpxPopup = popup; });
+      popup.on("close", function(){ if (currentOpenCmpxPopup === popup) currentOpenCmpxPopup = null; });
 
       // 12차: pitchAlignment을 "map"(지면에 눕는 정렬)에서 "viewport"(항상 카메라를 보고 세워짐)로 변경
       var marker = new mapboxgl.Marker({
@@ -962,20 +997,38 @@ window.initMap3D = function(){
         pitchAlignment: "viewport", rotationAlignment: "viewport"
       }).setLngLat([lng, lat]).setPopup(popup).addTo(map);
 
+      // 15차: 클릭하면 말풍선(요약)뿐 아니라 2D와 똑같은 우측 상세패널도 연다.
+      wrap.addEventListener("click", function(){
+        if (role === "comparison") {
+          if (typeof openComparisonPanel === "function") openComparisonPanel(entity);
+        } else {
+          if (typeof openPanel === "function") openPanel(entity, false);
+        }
+      });
+
       comparisonComplexMarkers.push(marker);
       // 14차: 비동기 로딩 중간에 사용자가 이미 줌을 바꿔놨을 수 있으니, 새로 뜨는 마커도 바로 현재 줌 기준 크기로.
       scaleWrap.style.transform = "scale(" + markerScaleForZoom(map.getZoom()) + ")";
     }
 
     function loadIncheonComparisonMarkers(){
-      var complexCols = ["id","name","role","address","build_year","units","landmark","max_floor_obs",
-        "baseline_amt","baseline_area","presale_is_proxy","map_status","status_label","date_label"].join(",");
+      // 15차(2026-09-25): 4번 요청("3D 클릭 → 우측 상세패널") 대응 — 2D의 loadDataFromSupabase()와
+      // 완전히 동일한 컬럼 목록으로 확장. 이래야 여기서 만드는 c/p 객체가 2D의 COMPARISON_COMPLEXES/
+      // PROJECTS 항목과 100% 같은 모양이 되고, 2D 전역 openPanel/openComparisonPanel을 그대로 호출해도
+      // 필드 누락 없이 똑같이 렌더링된다(중복 구현 없이 기존 함수 재사용).
+      var complexCols = ["id","role","name","short_label","address","lat","lng","build_year","units",
+        "type_info","presale_price_note","current_price_note","competition_rate_note","unsold_status_note",
+        "status_label","panel_note","block","date_label","max_floor_obs","map_status","landmark",
+        "baseline_amt","baseline_area","presale_is_proxy","floor_gap_note",
+        "avg_competition_rate","had_unsold_history","unsold_resolved","sale_stage",
+        "recruit_notice_date","subscription_period_text","source_url"].join(",");
       var txCols = "id,complex_id,transaction_type,area_sqm,floor,price_man,contract_date";
-      var unitTypeCols = "id,complex_id,type_name,area_sqm,units_count,price_amt,note";
+      var unitTypeCols = "id,complex_id,type_name,area_sqm,units_count,price_amt,room_count,structure_type,has_alpha_room,floor_plan_url,note";
 
       Promise.all([
         // 12차(2026-09-24): 준공예정이라 그동안 제외됐던 경쟁현장(role=competitor)도 함께 포함
         // 14차(2026-09-25): 당사 현장(role=own_upcoming, 예: 엘리움)도 포함 — "우리 엘리움 단지도 표기해주고" 요청 반영
+        // (5번 요청: 지역 필터가 없어 인천·부산 데이터가 이 한 함수로 함께 로드됨 — 이름은 "인천"이지만 전국 공용)
         supabaseFetchAll3D("complexes", complexCols, "&role=in.(comparison,competitor,own_upcoming)", "name"),
         supabaseFetchAll3D("transactions", txCols, "", "id"),
         supabaseFetchAll3D("complex_unit_types", unitTypeCols, "", "type_name").catch(function(){ return []; })
@@ -989,7 +1042,12 @@ window.initMap3D = function(){
           (unitTypesByComplex[u.complex_id] = unitTypesByComplex[u.complex_id] || []).push({
             typeName: u.type_name,
             areaSqm: (u.area_sqm === null || u.area_sqm === undefined) ? null : Number(u.area_sqm),
+            unitsCount: (u.units_count === null || u.units_count === undefined) ? null : Number(u.units_count),
             priceAmt: (u.price_amt === null || u.price_amt === undefined) ? null : Number(u.price_amt),
+            roomCount: (u.room_count === null || u.room_count === undefined) ? null : Number(u.room_count),
+            structureType: u.structure_type || null,
+            hasAlphaRoom: (u.has_alpha_room === null || u.has_alpha_room === undefined) ? null : !!u.has_alpha_room,
+            floorPlanUrl: u.floor_plan_url || null,
             note: u.note || null
           });
         });
@@ -1000,15 +1058,44 @@ window.initMap3D = function(){
         complexRows.forEach(function(row){
           if (INCHEON_MARKER_SKIP_NAMES[row.name]) return;
 
+          var rawTx = txByComplex[row.id] || [];
+          var txs = rawTx.map(function(t){
+            var parts = (t.contract_date || "").split("-");
+            return {
+              f: t.floor,
+              amt: (t.price_man === null || t.price_man === undefined) ? null : Number(t.price_man),
+              area: (t.area_sqm === null || t.area_sqm === undefined) ? null : Number(t.area_sqm),
+              y: parts[0] ? parseInt(parts[0], 10) : null,
+              m: parts[1] ? parseInt(parts[1], 10) : null,
+              d: parts[2] ? parseInt(parts[2], 10) : null,
+              type: t.transaction_type
+            };
+          });
+
           // 13차: 2D와 마커 색이 다르게 보이던 문제 수정 — 2D와 완전히 같은 규칙으로 배지(연식/상태)를 계산.
           // role=comparison만 "연식" 기준(ageBucket3D)을 쓰고, role=competitor(타사 경쟁현장)는
           // 2D의 PROJECTS와 동일하게 map_status(없으면 "competitor" 기본값) 기준 상태 배지를 씀 —
           // 그래서 준공년도가 비어있는(null) 경쟁현장이 전부 "준공예정"(보라) 하나로 뭉뚱그려지지 않음.
-          var badge;
+          var badge, entity;
           if (row.role === "comparison") {
             badge = ageBucket3D(row.build_year);
             // 12차(2026-09-24): "10년초과" 단지는 마커 표시 대상에서 제외
             if (badge.key === "over10") { return; }
+            // 15차: 2D COMPARISON_COMPLEXES와 동일한 모양(c) — openComparisonPanel이 그대로 쓸 수 있음.
+            entity = {
+              id: row.id, name: row.name, address: row.address, buildYear: row.build_year,
+              units: row.units, landmark: row.landmark || "",
+              presalePrice: row.presale_price_note || null,
+              currentPrice: row.current_price_note || null,
+              maxFloorObs: row.max_floor_obs || null,
+              baselineAmt: (row.baseline_amt === null || row.baseline_amt === undefined) ? null : Number(row.baseline_amt),
+              baselineArea: (row.baseline_area === null || row.baseline_area === undefined) ? null : Number(row.baseline_area),
+              presaleIsProxy: !!row.presale_is_proxy,
+              floorGapNote: row.floor_gap_note || null,
+              unitTypes: unitTypesByComplex[row.id] || [],
+              txHistory: txs
+            };
+            entity.age = badge; // ageBucket3D가 이제 textColor까지 포함 — openComparisonPanel(c.age.color/.textColor) 그대로 호환
           } else {
             // 14차: 2D의 `status: row.map_status || (row.role === "own_upcoming" ? "upcoming" : "competitor")`와 동일하게
             var st = row.map_status || (row.role === "own_upcoming" ? "upcoming" : "competitor");
@@ -1017,29 +1104,27 @@ window.initMap3D = function(){
               label: row.status_label || STATUS_LABEL_3D[st] || st,
               color: STATUS_COLOR_3D[st] || STATUS_COLOR_3D.competitor
             };
-          }
-
-          var rawTx = txByComplex[row.id] || [];
-          var txs = rawTx.map(function(t){
-            var parts = (t.contract_date || "").split("-");
-            return {
-              amt: (t.price_man === null || t.price_man === undefined) ? null : Number(t.price_man),
-              area: (t.area_sqm === null || t.area_sqm === undefined) ? null : Number(t.area_sqm),
-              y: parts[0] ? parseInt(parts[0], 10) : null,
-              m: parts[1] ? parseInt(parts[1], 10) : null,
-              d: parts[2] ? parseInt(parts[2], 10) : null
+            // 15차: 2D PROJECTS와 동일한 모양(p) — openPanel이 그대로 쓸 수 있음(시뮬레이터·타입별 정보 포함).
+            entity = {
+              id: row.id, name: row.name, role: row.role,
+              shortLabel: row.short_label, block: row.block, address: row.address,
+              fallbackLatLng: (row.lat !== null && row.lat !== undefined && row.lng !== null && row.lng !== undefined)
+                ? [Number(row.lat), Number(row.lng)] : null,
+              status: st, statusLabel: row.status_label,
+              units: row.units, dateLabel: row.date_label, typeInfo: row.type_info,
+              presalePrice: row.presale_price_note || null,
+              competitionRate: row.competition_rate_note || null,
+              unsoldStatus: row.unsold_status_note || null,
+              panelNote: row.panel_note || null,
+              floorGapNote: row.floor_gap_note || null,
+              successClassification: (typeof computeSuccessClassification === "function") ? computeSuccessClassification(row) : null,
+              recruitNoticeDate: row.recruit_notice_date || null,
+              subscriptionPeriodText: row.subscription_period_text || null,
+              sourceUrl: row.source_url || null,
+              unitTypes: unitTypesByComplex[row.id] || [],
+              txHistory: txs
             };
-          });
-          var c = {
-            id: row.id, name: row.name, address: row.address, buildYear: row.build_year,
-            dateLabel: row.date_label || null,
-            units: row.units, landmark: row.landmark || "", maxFloorObs: row.max_floor_obs || null,
-            baselineAmt: (row.baseline_amt === null || row.baseline_amt === undefined) ? null : Number(row.baseline_amt),
-            baselineArea: (row.baseline_area === null || row.baseline_area === undefined) ? null : Number(row.baseline_area),
-            presaleIsProxy: !!row.presale_is_proxy,
-            unitTypes: unitTypesByComplex[row.id] || [],
-            txHistory: txs
-          };
+          }
 
           // 13차: 2D와 마커 위치가 다르게 찍히던 문제 수정 — 하드코딩된 좌표 사전 대신, 2D와 똑같이
           // 카카오 지오코더로 주소를 실시간 변환(2D의 초기화 코드에서 만든 전역 geocoder를 그대로 재사용).
@@ -1047,13 +1132,13 @@ window.initMap3D = function(){
           function placeWithFallback(){
             var anchor = INCHEON_MARKER_ANCHORS[row.name];
             if (!anchor) { skippedNoCoord.push(row.name); return; }
-            createComparisonMarker3D(c, badge, anchor[0], anchor[1]);
+            createComparisonMarker3D(entity, badge, anchor[0], anchor[1], row.max_floor_obs, row.role);
             placed++;
           }
           if (typeof geocoder !== "undefined" && geocoder && row.address) {
             geocoder.addressSearch(row.address, function(result, status){
               if (status === kakao.maps.services.Status.OK) {
-                createComparisonMarker3D(c, badge, parseFloat(result[0].x), parseFloat(result[0].y));
+                createComparisonMarker3D(entity, badge, parseFloat(result[0].x), parseFloat(result[0].y), row.max_floor_obs, row.role);
                 placed++;
               } else {
                 placeWithFallback();

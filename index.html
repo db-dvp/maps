@@ -457,6 +457,10 @@
   .compare-spotlight-clone .marker-dot-brand{
     transform:scale(1.45);
   }
+  /* 20차: 3D 마커(.cmpx-marker-pin)를 복제했을 때도 2D와 동일하게 살짝 키워서 눈에 띄게 함 */
+  .compare-spotlight-clone .cmpx-marker-pin{
+    transform:scale(1.3);
+  }
   .compare-spotlight-tag{
     position:absolute;transform:translate(-50%,-50%);
     background:var(--paper-raised);color:var(--ink);font-size:12px;font-weight:700;
@@ -785,6 +789,7 @@
             <button type="button" id="m3dAutoRotateBtn">자동회전</button>
           </div>
           <div class="m3d-control-group">
+            <span class="m3d-group-label">비행</span>
             <button type="button" id="m3dDroneBtn">▶ 드론비행</button>
           </div>
         </div>
@@ -1133,7 +1138,7 @@
 
   var COMPARISON_COMPLEXES = []; // Supabase complexes(role=comparison) + transactions에서 런타임에 채워짐 (loadDataFromSupabase 참고)
 
-  var map, geocoder, markers = [], activeFilters = new Set(["all"]);
+  var map, geocoder, places, markers = [], activeFilters = new Set(["all"]);
   var currentComplex = null, txFloorFilter = "all", txAreaFilter = "all";
   // ⑥-1(2026.09.20): 당사 현장(엘리움) 패널을 열면, 그 현장을 위해 등록해둔 비교단지·참고단지만
   // 비교표에 남기고 나머지는 숨긴다(SIMULATOR_CONFIG의 baselineComplexNames/referenceGroups 재사용).
@@ -1977,25 +1982,89 @@
 
     if (kakao.maps.services) {
       geocoder = new kakao.maps.services.Geocoder();
+      // 20차: 전역(top-level var)으로 선언해둬서 map3d.js(다른 <script>지만 같은 전역 스코프)에서도
+      // geocoder처럼 그대로 재사용 가능 — 3D 쪽 지오코딩 폴백(키워드 검색)에도 같이 씀.
+      places = new kakao.maps.services.Places();
     }
 
     // 19차(2026-09-25): 5번 요청 — "일광한신더휴센트럴포레1단지가 표/지도에 안 올라왔다"는 지적을
-    // 조사한 결과, 이 단지 자체의 데이터(주소·연식 등)는 문제가 없었고 카카오 지오코더로 주소를
-    // 단독으로 테스트해도 정상적으로 좌표가 나왔음 — 그런데 페이지 로드 시 PROJECTS+COMPARISON_COMPLEXES
-    // 약 50개 단지의 지오코딩 요청을 반복문(forEach)으로 거의 동시에(같은 틱에) 전부 쏘고 있었던 것을
-    // 확인함. 카카오 지오코더(REST 기반)는 짧은 시간에 너무 많은 요청이 몰리면 그중 일부만 간헐적으로
-    // 요청 제한(rate limit)에 걸려 실패할 수 있는데, 실패하면 이 비교단지는 조용히 "표시 안 함"으로
-    // 빠지고 사용자에게 아무 안내도 없었음(콘솔 로그만 남음) — 매번 정확히 재현되지는 않고 요청이
-    // 몰리는 순간의 타이밍에 따라 달라지는 간헐적 버그였을 가능성이 높아 지금까지 원인을 못 찾았던 것으로
-    // 보임. 요청을 한꺼번에 쏘지 않고 소수씩(동시 3개) 순차적으로 내보내고, 실패하면 짧게 재시도하는
-    // 방식으로 바꿔서 순간 동시요청 수를 크게 줄임.
+    // 조사해서 재시도+순차큐(동시 3개)로 바꿨었는데, 20차에서 세영님이 "아직도 안 뜬다"고 다시
+    // 지적하셔서 실제 카카오 SDK로 전체 큐(45개 단지)를 그대로 재현해본 결과 두 가지를 새로 확인함.
+    // ① 이 단지 자체는 지오코딩이 항상 성공하지만(재현 10회 전부 성공), 동시 3개 제한 큐의 맨
+    //    뒤쪽(45개 중 43번째)이라 페이지 로드 후 뜨기까지 약 15~16초나 걸렸음 — 19차가 걱정했던
+    //    "요청제한 때문에 실패"가 아니라 "너무 늦게 떠서 안 보인다고 오해"한 것에 가까웠음(15차에도
+    //    같은 종류의 착시가 있었음). ② 동시성을 3→45(사실상 무제한)까지 올려봐도 실패하는 단지
+    //    개수·목록이 전혀 안 바뀌었음(늘 같은 4곳만 실패) — 즉 카카오 쪽 순간 요청제한은 이 규모
+    //    에서는 실제로 감지되지 않았고, 소수씩 순차 처리하던 건 오히려 불필요한 지연만 만들고
+    //    있었던 것으로 판단됨. 그래서 동시성을 대폭 올리고(3→12) 대기시간도 줄여서 전체 큐가
+    //    4~5초 안에 끝나도록 하고, 늘 같은 4곳이 실패하는 건 주소 자체 문제(아래 keywordSearch
+    //    보강 참고)로 다뤄 정면 대응함. 페이지를 새로고침할 때마다 매번 새로 지오코딩하지 않도록
+    //    localStorage에 주소→좌표 캐시도 추가해서, 두 번째 방문부터는 사실상 즉시 뜨게 함.
+    var GEOCODE_CACHE_KEY = "geocodeCacheV1";
+    var geocodeCache = (function(){
+      try { return JSON.parse(localStorage.getItem(GEOCODE_CACHE_KEY) || "{}"); } catch (e) { return {}; }
+    })();
+    var geocodeCacheDirty = false;
+    function saveGeocodeCacheSoon(){
+      if (geocodeCacheDirty) return;
+      geocodeCacheDirty = true;
+      setTimeout(function(){
+        geocodeCacheDirty = false;
+        try { localStorage.setItem(GEOCODE_CACHE_KEY, JSON.stringify(geocodeCache)); } catch (e) {}
+      }, 500);
+    }
     function geocodeWithRetry(address, onDone, attemptsLeft){
       if (attemptsLeft === undefined) attemptsLeft = 3;
       geocoder.addressSearch(address, function(result, status){
         if (status === kakao.maps.services.Status.OK || attemptsLeft <= 1) {
           onDone(result, status);
         } else {
-          setTimeout(function(){ geocodeWithRetry(address, onDone, attemptsLeft - 1); }, 400);
+          setTimeout(function(){ geocodeWithRetry(address, onDone, attemptsLeft - 1); }, 250);
+        }
+      });
+    }
+    // 20차: 주소검색이 재시도까지 다 실패하면, 단지명으로 "장소(키워드) 검색"을 한 번 더 시도한다.
+    // 브라운스톤계양스카이처럼 등록된 지번이 실제로는 검색이 안 되는(옛 지번이거나 재정리된 경우)
+    // 단지도, 실제 건물명으로 찾으면 나오는 경우가 있다는 걸 이번에 직접 확인함(20차 조사). 다만
+    // 키워드 검색은 이름이 전혀 다른 엉뚱한 건물을 1등으로 돌려주는 경우도 있었음(예: "인천 작전
+    // 한라비발디"로 검색하면 이름이 전혀 다른 "인천작전에피트아파트"가 나옴) — 잘못된 위치에
+    // 잘못된 이름으로 마커가 찍히는 건 아예 안 뜨는 것보다 더 나쁘므로, 단지명과 장소명이 서로
+    // 포함 관계일 때만(namesLikelyMatch) 결과를 받아들이고, 아니면 안전하게 실패 처리함.
+    function namesLikelyMatch(entityName, placeName){
+      if (!entityName || !placeName) return false;
+      var a = entityName.replace(/\s+/g, "");
+      var b = placeName.replace(/\s+/g, "");
+      return a.indexOf(b) !== -1 || b.indexOf(a) !== -1;
+    }
+    function geocodeWithFallback(name, address, onDone){
+      if (geocodeCache[address]) {
+        var c = geocodeCache[address];
+        onDone([{ y: String(c.lat), x: String(c.lng) }], kakao.maps.services.Status.OK);
+        return;
+      }
+      geocodeWithRetry(address, function(result, status){
+        if (status === kakao.maps.services.Status.OK) {
+          geocodeCache[address] = { lat: result[0].y, lng: result[0].x };
+          saveGeocodeCacheSoon();
+          onDone(result, status);
+          return;
+        }
+        if (places && name) {
+          places.keywordSearch(name, function(placeResult, placeStatus){
+            var top = (placeStatus === kakao.maps.services.Status.OK && placeResult)
+              ? placeResult.find(function(pr){ return namesLikelyMatch(name, pr.place_name); })
+              : null;
+            if (top) {
+              geocodeCache[address] = { lat: top.y, lng: top.x };
+              saveGeocodeCacheSoon();
+              console.log("[지오코딩] 주소검색 실패 → 장소검색으로 대체 성공: " + name + " → " + top.place_name);
+              onDone([{ y: top.y, x: top.x }], kakao.maps.services.Status.OK);
+            } else {
+              onDone(result, status);
+            }
+          });
+        } else {
+          onDone(result, status);
         }
       });
     }
@@ -2004,7 +2073,7 @@
       function runNext(){
         if (i >= jobs.length) return;
         var job = jobs[i++];
-        job(function(){ setTimeout(runNext, 90); });
+        job(function(){ setTimeout(runNext, 20); });
       }
       for (var k = 0; k < concurrency; k++) runNext();
     }
@@ -2013,7 +2082,7 @@
     PROJECTS.forEach(function(p){
       if (geocoder) {
         geocodeJobs.push(function(next){
-          geocodeWithRetry(p.address, function(result, status){
+          geocodeWithFallback(p.name, p.address, function(result, status){
             if (status === kakao.maps.services.Status.OK) {
               placeMarker(p, parseFloat(result[0].y), parseFloat(result[0].x));
             } else {
@@ -2030,17 +2099,18 @@
     COMPARISON_COMPLEXES.forEach(function(c){
       if (geocoder) {
         geocodeJobs.push(function(next){
-          geocodeWithRetry(c.address, function(result, status){
+          geocodeWithFallback(c.name, c.address, function(result, status){
             if (status === kakao.maps.services.Status.OK) {
               placeComparisonMarker(c, parseFloat(result[0].y), parseFloat(result[0].x));
+            } else {
+              console.warn("[지오코딩] 주소·장소검색 모두 실패해 표시하지 않음: " + c.name + " (" + c.address + ")");
             }
-            // 재시도까지 다 실패한 경우에만 좌표를 알 수 없어 표시하지 않음(잘못된 위치 표기 방지)
             next();
           });
         });
       }
     });
-    runGeocodeQueue(geocodeJobs, 3);
+    runGeocodeQueue(geocodeJobs, 12);
 
     document.querySelectorAll(".maptype-toggle button").forEach(function(btn){
       btn.addEventListener("click", function(){
@@ -2095,6 +2165,14 @@
             window.initMap3D();
             map3dScriptsLoaded = true;
             loadingEl.classList.remove("visible");
+            // 20차(2026-09-25): 9번 요청 — 비교 팝업의 연결선+거리라벨 오버레이가 3D 카메라
+            // 회전·이동·확대에 맞춰 계속 따라오도록, 맵박스의 "move" 이벤트마다 다시 그려준다
+            // (2D는 카카오 "idle" 이벤트로 이미 처리 중 — 위 kakao.maps.event.addListener 참고).
+            if (window.__map3dInstance) {
+              window.__map3dInstance.on("move", function(){
+                if (typeof updateComparePopupSpotlight === "function") updateComparePopupSpotlight();
+              });
+            }
           })
           .catch(function(err){
             loadingEl.textContent = "3D 지도를 불러오지 못했습니다 — 인터넷 연결을 확인해주세요.";
@@ -2106,6 +2184,11 @@
 
       function applyMode(wants3d){
         mode3dActive = wants3d;
+        // 20차(2026-09-25): 9번 요청 — 비교 팝업이 열려있는 채로 2D/3D를 전환하면, 다음 카메라
+        // 이동/idle 이벤트를 기다리지 않고 바로 새 화면 기준으로 오버레이를 다시 그려준다.
+        if (typeof updateComparePopupSpotlight === "function") {
+          setTimeout(updateComparePopupSpotlight, 0);
+        }
         if (mode3dActive) {
           try { if (typeof map !== "undefined" && map) savedKakaoCenter = map.getCenter(); } catch (e) {}
           map2dEl.style.display = "none";
@@ -2576,6 +2659,18 @@
     var el = document.getElementById("map3d");
     return !!(el && getComputedStyle(el).display !== "none" && window.__map3dInstance);
   }
+  // 20차(2026-09-25): 9번 요청 — "2D처럼 3D에서도 동작해달라"(연결선+거리 라벨)에 대응.
+  // 2D 화면좌표 계산(projectLatLngToScreen)과 똑같은 역할을 맵박스 3D 카메라 기준으로 계산.
+  // map3d 컨테이너가 없거나 3D 인스턴스가 아직 없으면 null을 돌려주고, 호출 쪽에서 그리기를 건너뛴다.
+  function projectLatLngToScreen3D(lat, lng){
+    if (!window.__map3dInstance) return null;
+    var el = document.getElementById("map3d");
+    if (!el) return null;
+    var pt;
+    try { pt = window.__map3dInstance.project([lng, lat]); } catch (e) { return null; }
+    var rect = el.getBoundingClientRect();
+    return { x: rect.left + pt.x, y: rect.top + pt.y };
+  }
   function flyMap3DTo(lat, lng){
     if (!is3DModeVisible()) return;
     try {
@@ -2685,19 +2780,44 @@
     if (!root) return;
     if (!popupSpotlightState) { root.innerHTML = ""; return; }
     var s = popupSpotlightState;
-    var p1 = projectLatLngToScreen(s.anchorMarker.overlay.getPosition());
-    var p2 = projectLatLngToScreen(s.targetMarker.overlay.getPosition());
+    // 20차(2026-09-25): 9번 요청 — "3D일 때 동작이 안 된다, 2D처럼 구현해달라"는 요청 반영.
+    // 18차에서는 3D가 보이면 이 오버레이를 아예 안 그렸는데(2D 전용 화면좌표 기준이라 3D에선
+    // 엉뚱한 곳에 그려졌었기 때문), 이번엔 3D 화면좌표(맵박스 project())로 다시 계산해서
+    // 3D에서도 똑같이 연결선+거리라벨+마커 강조가 보이도록 함. 3D 카메라가 회전/이동할 때마다
+    // 값이 바뀌므로, 맵박스 "move" 이벤트에 이 함수를 반복 호출하도록 별도로 연결해둠(아래
+    // ensureMap3DLoaded 참고) — 2D는 기존처럼 kakao "idle" 이벤트로 충분(고정 시점이라 자주
+    // 안 바뀜).
+    var use3D = is3DModeVisible();
+    var p1, p2, el1, el2;
+    if (use3D) {
+      p1 = projectLatLngToScreen3D(s.anchorLatLng.lat, s.anchorLatLng.lng);
+      p2 = projectLatLngToScreen3D(s.targetLatLng.lat, s.targetLatLng.lng);
+      var reg = window.__map3dMarkersByName || {};
+      var m1 = reg[s.anchorName], m2 = reg[s.targetName];
+      el1 = m1 && m1.el;
+      el2 = m2 && m2.el;
+    } else {
+      p1 = projectLatLngToScreen(s.anchorMarker.overlay.getPosition());
+      p2 = projectLatLngToScreen(s.targetMarker.overlay.getPosition());
+      el1 = s.anchorMarker.overlay.getContent();
+      el2 = s.targetMarker.overlay.getContent();
+    }
+    if (!p1 || !p2) { root.innerHTML = ""; return; }
     var midX = (p1.x + p2.x) / 2, midY = (p1.y + p2.y) / 2;
     root.innerHTML =
       '<svg><line x1="' + p1.x + '" y1="' + p1.y + '" x2="' + p2.x + '" y2="' + p2.y +
         '" stroke="#9aa1ac" stroke-width="2" stroke-dasharray="7 6" stroke-opacity="0.85"/></svg>' +
       '<div class="compare-spotlight-tag" style="left:' + midX + 'px;top:' + midY + 'px;">' + s.distText + '</div>';
 
-    [ [s.anchorMarker, p1], [s.targetMarker, p2] ].forEach(function(pair){
-      var srcEl = pair[0].overlay.getContent();
+    [ [el1, p1], [el2, p2] ].forEach(function(pair){
+      var srcEl = pair[0];
       if (!srcEl || !srcEl.cloneNode) return;
       var clone = srcEl.cloneNode(true);
       clone.classList.add("compare-spotlight-clone");
+      // 3D 마커(.cmpx-marker-wrap)는 맵박스가 위치 이동용 인라인 transform을 이미 걸어둔 상태라,
+      // 클래스로 주는 translate(-50%,-50%)가 인라인 스타일에 밀려 무시됨 — 복제본에서는 명시적으로
+      // 덮어써서 항상 (left,top) 기준 정중앙에 오도록 함(2D는 원래 인라인 transform이 없어 무해함).
+      clone.style.transform = "translate(-50%,-50%)";
       clone.style.left = pair[1].x + "px";
       clone.style.top = pair[1].y + "px";
       root.appendChild(clone);
@@ -2742,18 +2862,24 @@
       bounds.extend(pos2);
       map.setBounds(bounds, 70, 70, 70, 70);
 
-      // 18차(2026-09-25): 9번 요청 — 이 강조 오버레이(점선+거리라벨+마커 복제)는 숨겨진 2D
-      // 지도(#map)의 화면좌표를 기준으로 그리는 완전히 2D 전용 기능이라, 3D 화면이 보이는
-      // 상태에서 그리면 그 좌표가 엉뚱한 곳(딴 마커처럼 보이는 유령 표시)에 겹쳐 보였음.
-      // 3D가 보이는 상태면 이 오버레이는 그리지 않고, 대신 맵박스 카메라를 두 단지가 같이
-      // 보이도록 옮긴다(2D의 setBounds와 같은 역할).
+      // 18차(2026-09-25)에서는 이 강조 오버레이(점선+거리라벨+마커 복제)가 숨겨진 2D 지도(#map)의
+      // 화면좌표만 기준으로 그리는 2D 전용 기능이라, 3D 화면이 보이는 상태에서는 아예 안 그리고
+      // 카메라만 옮겼음(엉뚱한 곳에 겹쳐 보이는 유령 표시 방지). 20차(2026-09-25): 9번 요청 —
+      // "3D에서도 2D처럼 동작해달라"는 요청으로, updateComparePopupSpotlight()가 3D 화면좌표
+      // (맵박스 project())도 계산할 수 있도록 확장했으므로, 이제 3D가 보일 때도 그대로 오버레이를
+      // 그림(둘 다 setState 이후 무조건 호출) — 3D는 카메라 이동도 같이 함(fitMap3DBounds).
       if (is3DModeVisible()) {
         fitMap3DBounds(pos1.getLat(), pos1.getLng(), pos2.getLat(), pos2.getLng());
-      } else {
-        // 두 마커(실제 핀 복제)·연결선·거리 라벨은 지도가 아니라 배경보다 위의 강조 레이어에 그림(위 설명 참고).
-        popupSpotlightState = { anchorMarker: anchorMarker, targetMarker: m, distText: distText };
-        updateComparePopupSpotlight();
       }
+      // 두 마커(실제 핀 복제)·연결선·거리 라벨은 지도가 아니라 배경보다 위의 강조 레이어에 그림(위 설명 참고).
+      popupSpotlightState = {
+        anchorMarker: anchorMarker, targetMarker: m,
+        anchorName: anchorMarker.data.name, targetName: m.data.name,
+        anchorLatLng: { lat: pos1.getLat(), lng: pos1.getLng() },
+        targetLatLng: { lat: pos2.getLat(), lng: pos2.getLng() },
+        distText: distText
+      };
+      updateComparePopupSpotlight();
     } else {
       distanceEl.innerHTML = m.data.name;
     }

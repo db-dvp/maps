@@ -591,13 +591,16 @@
   }
   .map3d-mode-toggle button.active{background:var(--indigo);color:#fff;}
   /* 18차(2026-09-25): 3번 요청 — 하단 전체폭 바 대신, 2D의 "일반/위성" 지도유형 버튼과 같은
-     좌상단 자리로 옮김(3D일 땐 그 버튼이 숨어있어서 자리가 비어있음). 가로로 길게 늘어놓던
-     묶음을 세로로 쌓는 작은 패널 형태로 바꿔서 좁은 좌상단 공간에 자연스럽게 들어가게 함. */
+     좌상단 자리로 옮김(3D일 땐 그 버튼이 숨어있어서 자리가 비어있음).
+     19차(2026-09-25): 12번 요청 — 18차에서 세로로 쌓는 작은 패널 형태로 바꿨더니 "안 예쁘다"는
+     피드백을 받아, 위치는 좌상단 그대로 유지하되 묶음을 다시 가로로 나란히 배치하는 형태로 되돌림
+     (16~17차의 하단 가로 바와 비슷한 느낌이지만 자리만 좌상단 컴팩트 패널). 폭이 좁을 땐
+     flex-wrap으로 자연스럽게 다음 줄로 넘어감. */
   #map3dControls{
     position:absolute;top:14px;left:14px;z-index:10;
     background:var(--paper-raised);border:1px solid var(--line);border-radius:12px;
-    box-shadow:var(--shadow);padding:9px 11px;max-width:200px;
-    display:none;flex-direction:column;gap:7px;align-items:flex-start;
+    box-shadow:var(--shadow);padding:9px 12px;max-width:calc(100% - 28px);
+    display:none;flex-direction:row;gap:14px;align-items:center;flex-wrap:wrap;
   }
   #map3dControls.visible{display:flex;}
   .m3d-control-group{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
@@ -654,8 +657,15 @@
     font-size:10px; line-height:1; transition:transform .15s ease;
   }
   .cmpx-marker-wrap:hover .cmpx-marker-pin{ transform:scale(1.15); }
+  /* 19차(2026-09-25): 10번 요청 — 화살표(포인터 꼬리)가 살짝 삐뚤어 보이던 버그 수정.
+     원인: 페이지 전체에 *{box-sizing:border-box;}가 걸려 있어서, .cmpx-marker-pin의 width:22px는
+     테두리(border)를 포함한 값이 됨 — 즉 화살표(::after)의 기준이 되는 안쪽 영역은 22px가 아니라
+     "22px - 테두리 두께*2"로 더 좁음. 기존 left:6px는 테두리가 없다고 가정하고 계산한 값(22-10)/2=6이라
+     일반 마커(테두리 2px, 실제 안쪽 18px)에서는 약 2px, 브랜드 마커(엘리움, 테두리 2.5px, 안쪽 17px)에서는
+     더 크게 오른쪽으로 치우쳐 보였음 — 테두리 두께와 무관하게 항상 정확히 가운데 오도록
+     left:50%; margin-left:-5px(화살표 폭 10px의 절반)로 교체.  */
   .cmpx-marker-pin::after{
-    content:""; position:absolute; top:20px; left:6px; width:0; height:0;
+    content:""; position:absolute; top:20px; left:50%; margin-left:-5px; width:0; height:0;
     border-left:5px solid transparent; border-right:5px solid transparent;
     border-top:10px solid var(--cmpx-color,#c1440e);
     filter:drop-shadow(0 2px 1px rgba(0,0,0,.2));
@@ -1969,14 +1979,48 @@
       geocoder = new kakao.maps.services.Geocoder();
     }
 
+    // 19차(2026-09-25): 5번 요청 — "일광한신더휴센트럴포레1단지가 표/지도에 안 올라왔다"는 지적을
+    // 조사한 결과, 이 단지 자체의 데이터(주소·연식 등)는 문제가 없었고 카카오 지오코더로 주소를
+    // 단독으로 테스트해도 정상적으로 좌표가 나왔음 — 그런데 페이지 로드 시 PROJECTS+COMPARISON_COMPLEXES
+    // 약 50개 단지의 지오코딩 요청을 반복문(forEach)으로 거의 동시에(같은 틱에) 전부 쏘고 있었던 것을
+    // 확인함. 카카오 지오코더(REST 기반)는 짧은 시간에 너무 많은 요청이 몰리면 그중 일부만 간헐적으로
+    // 요청 제한(rate limit)에 걸려 실패할 수 있는데, 실패하면 이 비교단지는 조용히 "표시 안 함"으로
+    // 빠지고 사용자에게 아무 안내도 없었음(콘솔 로그만 남음) — 매번 정확히 재현되지는 않고 요청이
+    // 몰리는 순간의 타이밍에 따라 달라지는 간헐적 버그였을 가능성이 높아 지금까지 원인을 못 찾았던 것으로
+    // 보임. 요청을 한꺼번에 쏘지 않고 소수씩(동시 3개) 순차적으로 내보내고, 실패하면 짧게 재시도하는
+    // 방식으로 바꿔서 순간 동시요청 수를 크게 줄임.
+    function geocodeWithRetry(address, onDone, attemptsLeft){
+      if (attemptsLeft === undefined) attemptsLeft = 3;
+      geocoder.addressSearch(address, function(result, status){
+        if (status === kakao.maps.services.Status.OK || attemptsLeft <= 1) {
+          onDone(result, status);
+        } else {
+          setTimeout(function(){ geocodeWithRetry(address, onDone, attemptsLeft - 1); }, 400);
+        }
+      });
+    }
+    function runGeocodeQueue(jobs, concurrency){
+      var i = 0;
+      function runNext(){
+        if (i >= jobs.length) return;
+        var job = jobs[i++];
+        job(function(){ setTimeout(runNext, 90); });
+      }
+      for (var k = 0; k < concurrency; k++) runNext();
+    }
+
+    var geocodeJobs = [];
     PROJECTS.forEach(function(p){
       if (geocoder) {
-        geocoder.addressSearch(p.address, function(result, status){
-          if (status === kakao.maps.services.Status.OK) {
-            placeMarker(p, parseFloat(result[0].y), parseFloat(result[0].x));
-          } else {
-            placeMarker(p, p.fallbackLatLng[0], p.fallbackLatLng[1], true);
-          }
+        geocodeJobs.push(function(next){
+          geocodeWithRetry(p.address, function(result, status){
+            if (status === kakao.maps.services.Status.OK) {
+              placeMarker(p, parseFloat(result[0].y), parseFloat(result[0].x));
+            } else {
+              placeMarker(p, p.fallbackLatLng[0], p.fallbackLatLng[1], true);
+            }
+            next();
+          });
         });
       } else {
         placeMarker(p, p.fallbackLatLng[0], p.fallbackLatLng[1], false);
@@ -1985,14 +2029,18 @@
 
     COMPARISON_COMPLEXES.forEach(function(c){
       if (geocoder) {
-        geocoder.addressSearch(c.address, function(result, status){
-          if (status === kakao.maps.services.Status.OK) {
-            placeComparisonMarker(c, parseFloat(result[0].y), parseFloat(result[0].x));
-          }
-          // 지오코딩 실패 시 좌표를 알 수 없으므로 해당 비교단지는 표시하지 않음(잘못된 위치 표기 방지)
+        geocodeJobs.push(function(next){
+          geocodeWithRetry(c.address, function(result, status){
+            if (status === kakao.maps.services.Status.OK) {
+              placeComparisonMarker(c, parseFloat(result[0].y), parseFloat(result[0].x));
+            }
+            // 재시도까지 다 실패한 경우에만 좌표를 알 수 없어 표시하지 않음(잘못된 위치 표기 방지)
+            next();
+          });
         });
       }
     });
+    runGeocodeQueue(geocodeJobs, 3);
 
     document.querySelectorAll(".maptype-toggle button").forEach(function(btn){
       btn.addEventListener("click", function(){
@@ -2163,6 +2211,15 @@
     // setTimeout으로 한 번 더 확정 리사이즈를 걸어서, rAF가 지연되더라도 최종 크기가
     // 반드시 맞춰지도록 이중 안전장치를 둠. 평소(탭이 활성 상태)에는 rAF 루프가 정상적으로
     // 매 프레임 돌면서 부드럽게 리사이즈되고, 이 보강 장치는 그 위에 안전망으로만 작동.
+    // 19차(2026-09-25): 11번 요청 — "3D 지도가 자꾸 표 펼쳤다 지도 펼쳤다 하면 잘리는" 버그 재확인.
+    // 원인 추정: 지도 카드를 접을 때(.map-card.collapsed{flex:0 0 0;})는 카드 폭이 트랜지션 도중
+    // 실제로 0px까지 줄어드는데, 이때도 #map3d 자체의 display는 안 바뀌므로(카드만 접힘) is3dVisible이
+    // 계속 true라서 매 프레임 m3d.resize()가 호출됨 — 즉 맵박스에 "폭 0"인 상태로 resize()를 먹이는
+    // 순간이 트랜지션마다 반드시 한 번은 생김. 맵박스 GL은 캔버스를 0크기로 리사이즈했다가 다시
+    // 키우는 과정에서 내부 뷰포트/프레임버퍼가 온전히 재계산되지 않는 경우가 있어(브라우저별로
+    // 다를 수 있음), 카드가 다시 펼쳐진 뒤에도 지도가 작은 영역에만 그려지고 나머지는 잘린 것처럼
+    // 보이는 현상으로 이어질 수 있음 — 컨테이너 크기가 0(또는 사실상 0)인 순간에는 resize() 호출을
+    // 건너뛰어서, 맵박스가 유효하지 않은 크기를 먹지 않도록 방어.
     function animateMapResize(durationMs){
       var map3dEl = document.getElementById("map3d");
       var is3dVisible = !!(map3dEl && map3dEl.style.display !== "none");
@@ -2171,7 +2228,7 @@
       var savedCenter = map ? map.getCenter() : null;
       function resizeOnce(){
         if (map) { map.relayout(); map.setCenter(savedCenter); }
-        if (m3d) { m3d.resize(); }
+        if (m3d && map3dEl && map3dEl.offsetWidth > 0 && map3dEl.offsetHeight > 0) { m3d.resize(); }
       }
       var start = (window.performance && performance.now) ? performance.now() : Date.now();
       function step(){
@@ -2184,6 +2241,9 @@
       resizeOnce();
       requestAnimationFrame(step);
       setTimeout(resizeOnce, durationMs + 60);
+      // 트랜지션이 끝나고도 한 번 더(약간 더 늦게) 확정 리사이즈 — rAF/타임아웃 경합으로
+      // 혹시 0폭 상태 직후의 리사이즈가 누락됐더라도 이 마지막 호출이 최종 크기를 다시 맞춰줌.
+      setTimeout(resizeOnce, durationMs + 220);
     }
 
     var mapCard = document.getElementById("mapCard");
@@ -2238,7 +2298,10 @@
           if (map) { map.relayout(); }
           var map3dEl = document.getElementById("map3d");
           var is3dVisible = !!(map3dEl && map3dEl.style.display !== "none");
-          if (is3dVisible && window.__map3dInstance) { window.__map3dInstance.resize(); }
+          // 19차: 위 animateMapResize와 동일한 이유로 0크기일 때는 resize() 건너뜀(방어적 조치).
+          if (is3dVisible && window.__map3dInstance && map3dEl.offsetWidth > 0 && map3dEl.offsetHeight > 0) {
+            window.__map3dInstance.resize();
+          }
         }
         function scheduleResize(){
           if (rafPending) return;

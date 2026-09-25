@@ -282,6 +282,21 @@ var COMPARISON_TOWERS_RAW = [[15,[[126.73668,37.56668],[126.73732,37.56668],[126
   // 뜻이므로(맵박스 공식 예제는 전부 "Standard" 스타일 기준), 다음 라운드에선 브라우저 콘솔(F12)에
   // 에러가 찍히는지 캡처해서 알려주시면 원인을 바로 좁힐 수 있음.
   var ROAD_FLOAT_LIFT_M = 35;
+  // 19차(2026-09-25): 8번 요청 -- "떠있기는 하는데 두께감이 없어서 의미가 없다"는 피드백 대응.
+  // 조사 결과, 라인을 진짜 입체(fill-extrusion, 옆면이 보이는 두꺼운 판)로 바꾸는 방법은 맵박스
+  // 공식 문서 기준 fill-extrusion-base/height가 "절대 고도(해발)"를 지정하는 옵션이 없고, 항상
+  // 맵박스 자신이 그 자리에서 실시간으로 읽어들이는 원본(raw) 지형 표고를 기준으로만 붙일 수 있음
+  // (선 레이어의 line-elevation-reference:"sea"에 대응하는 기능이 fill-extrusion엔 없음) -- 그래서
+  // 그대로 적용하면 우리가 애써 매끈하게(쌍선형보간으로) 다듬은 높이 대신 다시 원본 지형의 잔 굴곡을
+  // 그대로 타게 돼서, "울퉁불퉁함"이 얇은 선 대신 두꺼운 판으로 더 도드라져 보이는 역효과가 날 위험이
+  // 큼(직접 라이브로 확인이 불가능한 상태라 이 위험을 감수하고 밀어붙이기보다 안전한 대안을 택함).
+  // 대신 지금 쓰는 안전한 방식(line-elevation-reference:"sea" + 우리가 계산한 매끈한 표고) 안에서
+  // "두께감"을 시각적으로 흉내내는 방법을 적용함: 원래 도로선 바로 아래(THICKNESS만큼 낮은 높이)에
+  // 더 어둡고 살짝 더 두꺼운 "밑면(케이싱)" 선을 하나 더 깔아서, 옆에서 비스듬히 볼 때 위 선과 밑면
+  // 선 사이에 단(段)이 지는 것처럼 보이게 함 -- 진짜 입체 슬래브만큼 강한 효과는 아니지만, 순수 라인
+  // 레이어만으로 구현 가능해 지금까지 검증된 방식(매끈한 표고) 위에서 안전하게 추가할 수 있음.
+  // 고속도로(등급 0)에만 적용 -- 참고사진이 고가도로였고, 데이터량도 관리 가능한 수준으로 유지하기 위함.
+  var ROAD_CASING_THICKNESS_M = 3;
 
   function buildRoadsGeoJSON(raw, elevGrid){
     return {
@@ -291,9 +306,12 @@ var COMPARISON_TOWERS_RAW = [[15,[[126.73668,37.56668],[126.73732,37.56668],[126
         var elevation = coords.map(function(c){
           return bilinearElevation(elevGrid, c[0], c[1]) + ROAD_FLOAT_LIFT_M;
         });
+        var elevationShadow = coords.map(function(c){
+          return bilinearElevation(elevGrid, c[0], c[1]) + ROAD_FLOAT_LIFT_M - ROAD_CASING_THICKNESS_M;
+        });
         return {
           type: "Feature",
-          properties: { cls: item[0], elevation: elevation },
+          properties: { cls: item[0], elevation: elevation, elevationShadow: elevationShadow },
           geometry: { type: "LineString", coordinates: coords }
         };
       })
@@ -526,6 +544,27 @@ var COMPARISON_TOWERS_RAW = [[15,[[126.73668,37.56668],[126.73732,37.56668],[126
           map.addSource("incheon-roads", { type: "geojson", lineMetrics: true, data: incheonRoadsData });
           console.log("[도로 띄우기] incheon-roads 표고 샘플(첫 도로 첫 정점):", incheonRoadsData.features[0] && incheonRoadsData.features[0].properties.elevation[0]);
         }
+        // 19차(2026-09-25): 8번 요청 -- 고속도로(등급 0)에 "두께감"을 흉내내는 밑면(케이싱) 레이어.
+        // 반드시 본선(incheon-roads)보다 먼저 추가해야 본선이 그 위에 그려짐(칠하는 순서 = 쌓이는 순서).
+        if (!map.getLayer("incheon-roads-casing")) {
+          map.addLayer({
+            id: "incheon-roads-casing",
+            source: "incheon-roads",
+            type: "line",
+            filter: ["==", ["get", "cls"], 0],
+            layout: {
+              "line-join": "round",
+              "line-cap": "round",
+              "line-elevation-reference": "sea",
+              "line-z-offset": ["at-interpolated", ["*", ["line-progress"], ["-", ["length", ["get", "elevationShadow"]], 1]], ["get", "elevationShadow"]]
+            },
+            paint: {
+              "line-color": "#3a2712",
+              "line-width": ["interpolate", ["linear"], ["zoom"], 10, 3, 16, 9],
+              "line-opacity": 0.85
+            }
+          }, labelLayerId || undefined);
+        }
         if (!map.getLayer("incheon-roads")) {
           map.addLayer({
             id: "incheon-roads",
@@ -552,6 +591,25 @@ var COMPARISON_TOWERS_RAW = [[15,[[126.73668,37.56668],[126.73732,37.56668],[126
           var busanRoadsData = buildRoadsGeoJSON(BUSAN_ROADS_RAW, ELEV_GRID_BUSAN);
           map.addSource("busan-roads", { type: "geojson", lineMetrics: true, data: busanRoadsData });
           console.log("[도로 띄우기] busan-roads 표고 샘플(첫 도로 첫 정점):", busanRoadsData.features[0] && busanRoadsData.features[0].properties.elevation[0]);
+        }
+        if (!map.getLayer("busan-roads-casing")) {
+          map.addLayer({
+            id: "busan-roads-casing",
+            source: "busan-roads",
+            type: "line",
+            filter: ["==", ["get", "cls"], 0],
+            layout: {
+              "line-join": "round",
+              "line-cap": "round",
+              "line-elevation-reference": "sea",
+              "line-z-offset": ["at-interpolated", ["*", ["line-progress"], ["-", ["length", ["get", "elevationShadow"]], 1]], ["get", "elevationShadow"]]
+            },
+            paint: {
+              "line-color": "#3a2712",
+              "line-width": ["interpolate", ["linear"], ["zoom"], 10, 3, 16, 9],
+              "line-opacity": 0.85
+            }
+          }, labelLayerId || undefined);
         }
         if (!map.getLayer("busan-roads")) {
           map.addLayer({
@@ -1159,6 +1217,12 @@ var COMPARISON_TOWERS_RAW = [[15,[[126.73668,37.56668],[126.73732,37.56668],[126
 
       var wrap = document.createElement("div");
       wrap.className = "cmpx-marker-wrap";
+      // 19차(2026-09-25): 13번 요청 -- 2D는 대방 엘리움(role=own_upcoming) 마커가 다른 마커와 겹쳐도
+      // 항상 맨 위로 올라오게 하는 z-index 규칙(markerZIndex(), index.html 전역 함수)이 이미 있었는데
+      // 3D 마커에는 이 규칙이 없어서 다른 마커에 가려질 수 있었음 -- 3D도 같은 badge.key 기준으로
+      // 동일한 markerZIndex() 함수를 그대로 재사용(2D와 3D가 다른 값을 쓰면 나중에 또 헷갈리므로
+      // 값을 중복 정의하지 않고 index.html의 전역 함수를 그대로 부름).
+      if (typeof markerZIndex === "function") { wrap.style.zIndex = String(markerZIndex(badge.key)); }
       // 14차(2026-09-25): "멀어지면(줌아웃하면) 마커 작아지게" 요청 — Mapbox는 wrap 자체의 transform을
       // 위치 이동(translate)에 이미 쓰고 있어서 wrap에 직접 scale을 주면 위치가 깨짐. 그래서 그 사이에
       // 스케일 전용 래퍼를 하나 더 두고(updateComparisonMarkerScale()가 여기만 건드림), pin의
@@ -1246,7 +1310,31 @@ var COMPARISON_TOWERS_RAW = [[15,[[126.73668,37.56668],[126.73732,37.56668],[126
         var txByComplex = {};
         txRows.forEach(function(t){ (txByComplex[t.complex_id] = txByComplex[t.complex_id] || []).push(t); });
 
+        // 19차(2026-09-25): 5번 요청 -- index.html(2D)과 동일한 원인으로 진단됨: 이 forEach가
+        // 복수의 단지 지오코딩 요청을 한꺼번에(같은 틱에) 쏘고 있어서, 카카오 지오코더가 간헐적으로
+        // 일부 요청만 요청 제한(rate limit)에 걸려 실패시킬 수 있었음(실패하면 이 마커는 조용히 생략됨).
+        // 2D와 동일하게 재시도 + 순차 큐(동시 3개)로 바꿔서 순간 동시요청 수를 줄임.
         var placed = 0, skippedNoCoord = [];
+        var geocodeJobs3D = [];
+        function geocodeWithRetry3D(address, onDone, attemptsLeft){
+          if (attemptsLeft === undefined) attemptsLeft = 3;
+          geocoder.addressSearch(address, function(result, status){
+            if (status === kakao.maps.services.Status.OK || attemptsLeft <= 1) {
+              onDone(result, status);
+            } else {
+              setTimeout(function(){ geocodeWithRetry3D(address, onDone, attemptsLeft - 1); }, 400);
+            }
+          });
+        }
+        function runGeocodeQueue3D(jobs, concurrency){
+          var i = 0;
+          function runNext(){
+            if (i >= jobs.length) return;
+            var job = jobs[i++];
+            job(function(){ setTimeout(runNext, 90); });
+          }
+          for (var k = 0; k < concurrency; k++) runNext();
+        }
         complexRows.forEach(function(row){
           if (INCHEON_MARKER_SKIP_NAMES[row.name]) return;
 
@@ -1328,22 +1416,26 @@ var COMPARISON_TOWERS_RAW = [[15,[[126.73668,37.56668],[126.73732,37.56668],[126
             placed++;
           }
           if (typeof geocoder !== "undefined" && geocoder && row.address) {
-            geocoder.addressSearch(row.address, function(result, status){
-              if (status === kakao.maps.services.Status.OK) {
-                createComparisonMarker3D(entity, badge, parseFloat(result[0].x), parseFloat(result[0].y), row.max_floor_obs, row.role);
-                placed++;
-              } else {
-                placeWithFallback();
-              }
+            geocodeJobs3D.push(function(next){
+              geocodeWithRetry3D(row.address, function(result, status){
+                if (status === kakao.maps.services.Status.OK) {
+                  createComparisonMarker3D(entity, badge, parseFloat(result[0].x), parseFloat(result[0].y), row.max_floor_obs, row.role);
+                  placed++;
+                } else {
+                  placeWithFallback();
+                }
+                next();
+              });
             });
           } else {
             placeWithFallback();
           }
         });
+        runGeocodeQueue3D(geocodeJobs3D, 3);
 
         setTimeout(function(){
           console.log("[비교단지 마커] 배치 시도 완료(지오코딩은 비동기라 최종 개수는 잠시 후 확정). 좌표 전혀 없어 생략: " + (skippedNoCoord.join(", ") || "없음"));
-        }, 3000);
+        }, 6000);
       }).catch(function(err){
         console.error("인천 비교단지 마커 로딩 실패:", err);
       });

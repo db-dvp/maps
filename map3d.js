@@ -1263,6 +1263,11 @@ var COMPARISON_TOWERS_RAW = [[15,[[126.73668,37.56668],[126.73732,37.56668],[126
       });
 
       comparisonComplexMarkers.push(marker);
+      // 20차(2026-09-25): 9번 요청 — "3D도 2D처럼 비교 연결선+거리라벨" 대응. index.html의
+      // updateComparePopupSpotlight()가 3D 마커의 실제 DOM(el)을 복제해서 강조 표시하려면
+      // 이름으로 마커를 다시 찾을 수 있어야 해서, 전역 레지스트리에 등록해둠.
+      window.__map3dMarkersByName = window.__map3dMarkersByName || {};
+      window.__map3dMarkersByName[entity.name] = { marker: marker, el: wrap, lng: lng, lat: lat };
       // 14차: 비동기 로딩 중간에 사용자가 이미 줌을 바꿔놨을 수 있으니, 새로 뜨는 마커도 바로 현재 줌 기준 크기로.
       scaleWrap.style.transform = "scale(" + markerScaleForZoom(map.getZoom()) + ")";
     }
@@ -1310,10 +1315,29 @@ var COMPARISON_TOWERS_RAW = [[15,[[126.73668,37.56668],[126.73732,37.56668],[126
         var txByComplex = {};
         txRows.forEach(function(t){ (txByComplex[t.complex_id] = txByComplex[t.complex_id] || []).push(t); });
 
-        // 19차(2026-09-25): 5번 요청 -- index.html(2D)과 동일한 원인으로 진단됨: 이 forEach가
-        // 복수의 단지 지오코딩 요청을 한꺼번에(같은 틱에) 쏘고 있어서, 카카오 지오코더가 간헐적으로
-        // 일부 요청만 요청 제한(rate limit)에 걸려 실패시킬 수 있었음(실패하면 이 마커는 조용히 생략됨).
-        // 2D와 동일하게 재시도 + 순차 큐(동시 3개)로 바꿔서 순간 동시요청 수를 줄임.
+        // 19차(2026-09-25)에서는 이 forEach가 지오코딩 요청을 한꺼번에 쏴서 카카오 요청제한에
+        // 걸릴 수 있다고 보고 재시도+순차큐(동시 3개)로 바꿨는데, 20차(2026-09-25)에서 세영님이
+        // "아직도 안 뜬다"고 재차 지적하셔서 실제로 45개 전체 큐를 재현해본 결과 -- 문제의 단지는
+        // 항상 지오코딩에 성공하지만 동시 3개 제한 큐의 뒤쪽 순번이라 15초 넘게 걸려서 늦게 떴을
+        // 뿐이었고, 동시성을 크게 올려도(3→최대 45) 실패하는 단지 수·목록은 전혀 안 바뀌었음(2D와
+        // 동일한 진단, index.html 쪽 20차 주석 참고). 동시성을 3→12로 올리고 대기시간도 줄여 전체
+        // 큐가 훨씬 빨리 끝나게 하고, 주소검색이 끝내 실패하면 단지명으로 장소검색(키워드검색)도
+        // 한 번 더 시도하도록 보강함(2D의 places 전역 재사용) — 옛 지번이라 주소검색으로 못 찾는
+        // 경우도 실제 건물명으로는 찾아지는 경우가 있음을 확인함. localStorage 캐시도 2D와 같은
+        // 키(geocodeCacheV1)로 공유해서, 한 번 좌표를 찾은 주소는 다음 방문부터 즉시 반영됨.
+        var GEOCODE_CACHE_KEY_3D = "geocodeCacheV1";
+        var geocodeCache3D = (function(){
+          try { return JSON.parse(localStorage.getItem(GEOCODE_CACHE_KEY_3D) || "{}"); } catch (e) { return {}; }
+        })();
+        var geocodeCache3DDirty = false;
+        function saveGeocodeCache3DSoon(){
+          if (geocodeCache3DDirty) return;
+          geocodeCache3DDirty = true;
+          setTimeout(function(){
+            geocodeCache3DDirty = false;
+            try { localStorage.setItem(GEOCODE_CACHE_KEY_3D, JSON.stringify(geocodeCache3D)); } catch (e) {}
+          }, 500);
+        }
         var placed = 0, skippedNoCoord = [];
         var geocodeJobs3D = [];
         function geocodeWithRetry3D(address, onDone, attemptsLeft){
@@ -1322,7 +1346,47 @@ var COMPARISON_TOWERS_RAW = [[15,[[126.73668,37.56668],[126.73732,37.56668],[126
             if (status === kakao.maps.services.Status.OK || attemptsLeft <= 1) {
               onDone(result, status);
             } else {
-              setTimeout(function(){ geocodeWithRetry3D(address, onDone, attemptsLeft - 1); }, 400);
+              setTimeout(function(){ geocodeWithRetry3D(address, onDone, attemptsLeft - 1); }, 250);
+            }
+          });
+        }
+        // 20차: 2D와 동일하게(index.html 쪽 20차 주석 참고), 키워드 검색 결과가 요청한 단지와
+        // 이름이 전혀 다른 엉뚱한 건물일 수 있어서(예: "한라비발디" 검색 → "에피트" 결과) 서로
+        // 이름이 포함 관계일 때만 받아들이는 안전장치(namesLikelyMatch)를 둠.
+        function namesLikelyMatch3D(entityName, placeName){
+          if (!entityName || !placeName) return false;
+          var a = entityName.replace(/\s+/g, "");
+          var b = placeName.replace(/\s+/g, "");
+          return a.indexOf(b) !== -1 || b.indexOf(a) !== -1;
+        }
+        function geocodeWithFallback3D(name, address, onDone){
+          if (geocodeCache3D[address]) {
+            var c = geocodeCache3D[address];
+            onDone([{ y: String(c.lat), x: String(c.lng) }], kakao.maps.services.Status.OK);
+            return;
+          }
+          geocodeWithRetry3D(address, function(result, status){
+            if (status === kakao.maps.services.Status.OK) {
+              geocodeCache3D[address] = { lat: result[0].y, lng: result[0].x };
+              saveGeocodeCache3DSoon();
+              onDone(result, status);
+              return;
+            }
+            if (typeof places !== "undefined" && places && name) {
+              places.keywordSearch(name, function(placeResult, placeStatus){
+                var top = (placeStatus === kakao.maps.services.Status.OK && placeResult)
+                  ? placeResult.find(function(pr){ return namesLikelyMatch3D(name, pr.place_name); })
+                  : null;
+                if (top) {
+                  geocodeCache3D[address] = { lat: top.y, lng: top.x };
+                  saveGeocodeCache3DSoon();
+                  onDone([{ y: top.y, x: top.x }], kakao.maps.services.Status.OK);
+                } else {
+                  onDone(result, status);
+                }
+              });
+            } else {
+              onDone(result, status);
             }
           });
         }
@@ -1331,7 +1395,7 @@ var COMPARISON_TOWERS_RAW = [[15,[[126.73668,37.56668],[126.73732,37.56668],[126
           function runNext(){
             if (i >= jobs.length) return;
             var job = jobs[i++];
-            job(function(){ setTimeout(runNext, 90); });
+            job(function(){ setTimeout(runNext, 20); });
           }
           for (var k = 0; k < concurrency; k++) runNext();
         }
@@ -1417,7 +1481,7 @@ var COMPARISON_TOWERS_RAW = [[15,[[126.73668,37.56668],[126.73732,37.56668],[126
           }
           if (typeof geocoder !== "undefined" && geocoder && row.address) {
             geocodeJobs3D.push(function(next){
-              geocodeWithRetry3D(row.address, function(result, status){
+              geocodeWithFallback3D(row.name, row.address, function(result, status){
                 if (status === kakao.maps.services.Status.OK) {
                   createComparisonMarker3D(entity, badge, parseFloat(result[0].x), parseFloat(result[0].y), row.max_floor_obs, row.role);
                   placed++;
@@ -1431,7 +1495,7 @@ var COMPARISON_TOWERS_RAW = [[15,[[126.73668,37.56668],[126.73732,37.56668],[126
             placeWithFallback();
           }
         });
-        runGeocodeQueue3D(geocodeJobs3D, 3);
+        runGeocodeQueue3D(geocodeJobs3D, 12);
 
         setTimeout(function(){
           console.log("[비교단지 마커] 배치 시도 완료(지오코딩은 비동기라 최종 개수는 잠시 후 확정). 좌표 전혀 없어 생략: " + (skippedNoCoord.join(", ") || "없음"));

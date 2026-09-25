@@ -101,10 +101,12 @@
   }
   .filterbar .age-filters .filter-btn{width:auto;justify-content:center;}
   /* 2026.09.21: 두 버튼 다 margin-left:auto를 줘서 필터바 오른쪽 끝에 "표 접기"+"지도 접기"가
-     서로 붙어서 나오게 한다(flex에서는 한 줄에 auto 마진이 여러 개면 먼저 나온 것만 남는 공간을
-     흡수하고, 그 다음 것들은 자연스럽게 그 뒤에 붙는다 — 즉 둘이 나란히 오른쪽 끝에 붙음). */
-  .map-collapse-btn{margin-left:auto;flex-shrink:0;}
-  .compare-collapse-btn{margin-left:auto;flex-shrink:0;}
+     서로 붙어서 나오게 하려 했으나, 화면이 넓어지면 auto 마진이 "여러 개"가 되면서 남는 공간이
+     둘로 쪼개져 버튼 사이에 큰 틈이 생기는 문제가 있었음(2026.09.25 세영님 지적으로 발견).
+     15차(2026-09-25): 두 버튼을 하나의 그룹(.collapse-btn-group)으로 묶고, auto 마진은 그
+     그룹 전체에 딱 하나만 줘서 — 화면이 아무리 넓어져도 버튼 두 개는 항상 서로 붙어 있고,
+     그 묶음 전체만 필터바 오른쪽 끝으로 붙는다. */
+  .collapse-btn-group{display:flex;align-items:center;gap:8px;margin-left:auto;flex-shrink:0;}
 
   .map-card{
     position:relative;flex:0 1 42%;min-width:220px;height:100%;
@@ -666,6 +668,14 @@
     border-top:10px solid var(--cmpx-color,#c1440e);
     filter:drop-shadow(0 2px 1px rgba(0,0,0,.2));
   }
+  /* 15차(2026-09-25): 당사 현장(role=own_upcoming) 3D 마커를 2D의 "대방산업개발 D 로고" 마커와
+     같은 느낌으로 — 색 원 대신 흰 배경 안에 로고 이미지를 넣는다(7번 요청). */
+  .cmpx-marker-pin-brand{
+    background:#fff; border:2.5px solid var(--cmpx-color,#202a5d); overflow:hidden;
+  }
+  .cmpx-marker-pin-brand img{ display:block; width:15px; height:15px; pointer-events:none; }
+  /* 15차: 팝업(말풍선)이 요약으로 줄어든 대신, 클릭하면 우측에 상세정보가 열린다는 걸 안내하는 문구 */
+  .sb-hint{ font-size:10px; color:#9c9184; text-align:center; margin-top:2px; }
   .mapboxgl-popup.cmpx-popup .mapboxgl-popup-content{
     padding:0; border-radius:16px; overflow:hidden;
     border:3px solid #2a2118; box-shadow:0 10px 26px rgba(0,0,0,.32);
@@ -727,8 +737,10 @@
       <button class="filter-btn" data-filter="5to10"><span class="filter-dot" style="background:var(--age-5to10)"></span>5~10년</button>
       <!-- "10년 초과" 필터는 2026.09.20부로 제거: 해당 단지들을 화면에서 전부 제외해서 항상 결과가 0개였음 -->
     </div>
-    <button type="button" class="filter-btn compare-collapse-btn" id="compareCollapseBtn">표 접기</button>
-    <button type="button" class="filter-btn map-collapse-btn" id="mapCollapseBtn">지도 접기</button>
+    <div class="collapse-btn-group">
+      <button type="button" class="filter-btn compare-collapse-btn" id="compareCollapseBtn">표 접기</button>
+      <button type="button" class="filter-btn map-collapse-btn" id="mapCollapseBtn">지도 접기</button>
+    </div>
   </div>
 
   <div class="setup-banner" id="setupBanner">

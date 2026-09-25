@@ -109,7 +109,8 @@
   .collapse-btn-group{display:flex;align-items:center;gap:8px;margin-left:auto;flex-shrink:0;}
 
   .map-card{
-    position:relative;flex:0 1 42%;min-width:220px;height:100%;
+    /* 17차(2026-09-25): 11번 요청 — 지도 기본 비율을 더 크게(42% -> 60%, 리사이저 허용범위 20~70% 안쪽). */
+    position:relative;flex:0 1 60%;min-width:220px;height:100%;
     padding:16px;box-sizing:border-box;
     transition:flex-basis .25s ease, opacity .2s ease, padding .25s ease;
   }
@@ -589,18 +590,6 @@
     font-weight:700;color:var(--ink-soft);cursor:pointer;
   }
   .map3d-mode-toggle button.active{background:var(--indigo);color:#fff;}
-  #map3dInfoBar{
-    position:absolute;top:58px;right:14px;z-index:11;max-width:320px;
-    background:rgba(32,42,93,.92);color:#fff;padding:9px 30px 9px 14px;
-    border-radius:10px;font-size:.7rem;line-height:1.55;box-shadow:var(--shadow);
-    display:none;
-  }
-  #map3dInfoBar.visible{display:block;}
-  #map3dInfoClose{
-    position:absolute;top:4px;right:6px;background:none;border:none;
-    color:#fff;font-size:14px;line-height:1;cursor:pointer;opacity:.75;padding:4px;
-  }
-  #map3dInfoClose:hover{opacity:1;}
   #map3dControls{
     position:absolute;bottom:14px;left:14px;right:14px;z-index:10;
     background:var(--paper-raised);border:1px solid var(--line);border-radius:12px;
@@ -761,38 +750,19 @@
         <!-- 10차(2026-09-24): 3D 보기(맵박스) — 같은 화면 안에서 2D/3D 토글 -->
         <div id="map3d"></div>
         <div class="map3d-mode-toggle" id="map3dModeToggle">
-          <button type="button" data-mode="2d" class="active">2D</button>
-          <button type="button" data-mode="3d">3D</button>
+          <button type="button" data-mode="2d">2D</button>
+          <button type="button" data-mode="3d" class="active">3D</button>
         </div>
         <div id="map3dLoading">3D 지도를 불러오는 중입니다…</div>
-        <div id="map3dInfoBar">
-          <button type="button" id="map3dInfoClose">×</button>
-          <b>3D 보기</b>: 휠버튼(가운데) 드래그로 회전 · Shift+휠버튼 드래그로 이동. 색깔 핀은 인천계양 비교단지
-          마커(Supabase 실거래 실시간 연동)이며 클릭하면 정보 말풍선이 뜹니다. 아직 건물 자체를 클릭한 팝업은 지원하지 않습니다.
-        </div>
         <div id="map3dControls">
           <div class="m3d-control-group">
             <span class="m3d-group-label">위치</span>
-            <button type="button" class="view-btn active" data-view="incheon">인천계양</button>
+            <button type="button" class="view-btn" data-view="incheon">인천계양</button>
             <button type="button" class="view-btn" data-view="busan">부산에코델타</button>
-            <button type="button" class="view-btn" data-view="korea">전국</button>
-          </div>
-          <div class="m3d-control-group">
-            <span class="m3d-group-label">시점</span>
-            <button type="button" id="m3dFlatBtn">평면</button>
-            <button type="button" id="m3dTiltBtn" class="active">입체</button>
-          </div>
-          <div class="m3d-control-group">
-            <span class="m3d-group-label">지형강조</span>
-            <button type="button" class="exag-btn" data-exag="1.0">약</button>
-            <button type="button" class="exag-btn active" data-exag="1.8">중</button>
-            <button type="button" class="exag-btn" data-exag="2.8">강</button>
+            <button type="button" class="view-btn active" data-view="korea">전국</button>
           </div>
           <div class="m3d-control-group">
             <span class="m3d-group-label">회전</span>
-            <button type="button" id="m3dRotateLeftBtn">↺</button>
-            <button type="button" id="m3dRotateRightBtn">↻</button>
-            <button type="button" id="m3dNorthBtn">⇧북쪽</button>
             <button type="button" id="m3dAutoRotateBtn">자동회전</button>
           </div>
           <div class="m3d-control-group">
@@ -2033,21 +2003,14 @@
     // — map3d.js 안에는 인천·부산 건물 좌표 데이터가 많아서 파일이 큼, 평소엔 안 받아옴).
     // ------------------------------------------------------------
     (function(){
-      var mode3dActive = false;
+      // 17차(2026-09-25): 11번 요청 — 3D를 기본 지도로 변경. 페이지 로드시 곧바로 3D 모드로 시작.
+      var mode3dActive = true;
       var map3dScriptsLoaded = false;
-      var infoBarEl = document.getElementById("map3dInfoBar");
-      var infoCloseBtn = document.getElementById("map3dInfoClose");
       var loadingEl = document.getElementById("map3dLoading");
       var map2dEl = document.getElementById("map");
       var map3dEl = document.getElementById("map3d");
       var maptypeToggleEl = document.getElementById("maptypeToggle");
       var controlsEl = document.getElementById("map3dControls");
-
-      if (infoCloseBtn) {
-        infoCloseBtn.addEventListener("click", function(){
-          infoBarEl.classList.remove("visible");
-        });
-      }
 
       function loadScriptOnce(src){
         return new Promise(function(resolve, reject){
@@ -2082,6 +2045,35 @@
           });
       }
 
+      var savedKakaoCenter = null;
+
+      function applyMode(wants3d){
+        mode3dActive = wants3d;
+        if (mode3dActive) {
+          try { if (typeof map !== "undefined" && map) savedKakaoCenter = map.getCenter(); } catch (e) {}
+          map2dEl.style.display = "none";
+          if (maptypeToggleEl) maptypeToggleEl.style.display = "none";
+          map3dEl.style.display = "block";
+          controlsEl.classList.add("visible");
+          ensureMap3DLoaded().then(function(){
+            if (window.__map3dInstance) window.__map3dInstance.resize();
+          });
+        } else {
+          map3dEl.style.display = "none";
+          controlsEl.classList.remove("visible");
+          map2dEl.style.display = "";
+          if (maptypeToggleEl) maptypeToggleEl.style.display = "";
+          // 17차: 3D가 기본이 되면서 카카오 2D 지도가 "숨겨진 채로" 초기화될 수 있어,
+          // 2D로 전환할 때마다 relayout으로 크기를 다시 맞춰준다(안 하면 회색으로 깨져 보일 수 있음).
+          if (typeof map !== "undefined" && map) {
+            setTimeout(function(){
+              map.relayout();
+              if (savedKakaoCenter) map.setCenter(savedKakaoCenter);
+            }, 0);
+          }
+        }
+      }
+
       document.querySelectorAll(".map3d-mode-toggle button").forEach(function(btn){
         btn.addEventListener("click", function(){
           var wantsMode = btn.getAttribute("data-mode");
@@ -2089,26 +2081,12 @@
           if (wants3d === mode3dActive) return;
           document.querySelectorAll(".map3d-mode-toggle button").forEach(function(b){ b.classList.remove("active"); });
           btn.classList.add("active");
-          mode3dActive = wants3d;
-
-          if (mode3dActive) {
-            map2dEl.style.display = "none";
-            if (maptypeToggleEl) maptypeToggleEl.style.display = "none";
-            map3dEl.style.display = "block";
-            infoBarEl.classList.add("visible");
-            controlsEl.classList.add("visible");
-            ensureMap3DLoaded().then(function(){
-              if (window.__map3dInstance) window.__map3dInstance.resize();
-            });
-          } else {
-            map3dEl.style.display = "none";
-            infoBarEl.classList.remove("visible");
-            controlsEl.classList.remove("visible");
-            map2dEl.style.display = "";
-            if (maptypeToggleEl) maptypeToggleEl.style.display = "";
-          }
+          applyMode(wants3d);
         });
       });
+
+      // 17차: 페이지 로드시 곧바로 3D로 시작(위 mode3dActive 초기값과 맞춤).
+      applyMode(true);
     })();
 
     var searchInputEl = document.getElementById("searchInput");

@@ -128,6 +128,30 @@
      .stage의 남은 공간을 전부 차지한다(flex:1 1 auto인 map-card가 이제 유일한 flex 아이템). */
   .compare-card.collapsed{flex:0 0 0;min-width:0;padding:0;opacity:0;overflow:hidden;pointer-events:none;}
   .map-card.full-width{flex:1 1 auto;padding-right:16px;}
+  /* 14차(2026-09-25): 표 펼치기/지도 접기 버튼 없이도 가운데를 드래그해서 폭을 조절하는 리사이저 */
+  .stage-resizer{
+    position:relative;flex:0 0 10px;width:10px;height:100%;
+    cursor:col-resize;box-sizing:border-box;z-index:5;
+  }
+  .stage-resizer::before{
+    content:"";position:absolute;left:50%;top:50%;
+    width:3px;height:44px;transform:translate(-50%,-50%);
+    background:var(--line-strong);border-radius:999px;
+    transition:background .15s ease, height .15s ease;
+  }
+  .stage-resizer:hover::before,
+  .stage-resizer.dragging::before{
+    background:var(--indigo-mid);height:64px;
+  }
+  .stage-resizer.dragging{cursor:col-resize;}
+  body.stage-resizing{cursor:col-resize;user-select:none;}
+  body.stage-resizing .map-card,
+  body.stage-resizing .compare-card{transition:none;}
+  .map-card.collapsed ~ .stage-resizer,
+  .stage-resizer.hidden{display:none;}
+  @media (max-width:900px){
+    .stage-resizer{display:none;}
+  }
   .compare-card-inner{
     flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;
     background:var(--paper-raised);border:1px solid var(--line);
@@ -626,6 +650,8 @@
   /* ---- 인천 비교단지 마커(건물에 떠 있는 핀) + 말풍선 팝업 ---- */
   /* 12차(2026-09-24): 마커 크기 축소(30x44 -> 22x32) */
   .cmpx-marker-wrap{ position:relative; width:22px; height:32px; cursor:pointer; }
+  /* 14차(2026-09-25): 줌아웃하면 마커가 작아지는 효과용 스케일 전용 래퍼(map3d.js가 transform만 바꿈) */
+  .cmpx-marker-scale{ width:100%; height:100%; transform-origin:bottom center; }
   .cmpx-marker-pin{
     position:absolute; top:0; left:0; width:22px; height:22px; border-radius:50%;
     background:var(--cmpx-color,#c1440e); border:2px solid #fff;
@@ -767,6 +793,9 @@
         </div>
       </div>
     </div>
+
+    <!-- 14차(2026-09-25): 표/지도 접기 버튼 없이도 가운데를 드래그해서 폭을 조절할 수 있는 리사이저 -->
+    <div class="stage-resizer" id="stageResizer" title="드래그해서 지도·표 크기 조절"></div>
 
     <div class="compare-card" id="compareCard">
       <div class="compare-card-inner">
@@ -2125,14 +2154,21 @@
     // 그래서 CSS 트랜지션과 같은 시간 동안 매 프레임마다 relayout()+setCenter()를 반복 호출해서,
     // 카드 폭이 변하는 동안 지도(한반도 등)가 계속 화면 가운데를 유지하며 같이 스무스하게
     // 넓어지거나 좁아지도록 한다.
+    // 13차(2026-09-25): 표 펼치기/지도 접기 시 3D(Mapbox)가 안 따라 늘어나던 문제 수정.
+    // 2D(카카오)만 알던 이 함수에 3D 인스턴스도 같이 넣어서, 지금 3D 화면을 보고 있을 때는
+    // 트랜지션 내내 매 프레임 resize()도 같이 호출한다(Mapbox는 resize()가 중심 좌표를
+    // 그대로 유지해주므로 카카오처럼 setCenter()를 별도로 다시 불러줄 필요는 없음).
     function animateMapResize(durationMs){
-      if (!map) return;
-      var savedCenter = map.getCenter();
+      var map3dEl = document.getElementById("map3d");
+      var is3dVisible = !!(map3dEl && map3dEl.style.display !== "none");
+      var m3d = is3dVisible ? window.__map3dInstance : null;
+      if (!map && !m3d) return;
+      var savedCenter = map ? map.getCenter() : null;
       var start = (window.performance && performance.now) ? performance.now() : Date.now();
       function step(){
         var now = (window.performance && performance.now) ? performance.now() : Date.now();
-        map.relayout();
-        map.setCenter(savedCenter);
+        if (map) { map.relayout(); map.setCenter(savedCenter); }
+        if (m3d) { m3d.resize(); }
         if (now - start < durationMs) {
           requestAnimationFrame(step);
         }
@@ -2166,6 +2202,71 @@
       }
       animateMapResize(320);
     });
+
+    // 14차(2026-09-25): 표/지도 접기 버튼 없이도 가운데 리사이저를 드래그해서 폭을 조절.
+    // 접힌 카드가 하나라도 있으면(둘 중 하나가 전체폭을 차지) 리사이저는 의미가 없으므로 숨긴다.
+    var stageEl = document.querySelector(".stage");
+    var stageResizer = document.getElementById("stageResizer");
+
+    function updateStageResizerVisibility(){
+      if (!stageResizer) return;
+      var anyCollapsed = mapCard.classList.contains("collapsed") || compareCard.classList.contains("collapsed");
+      stageResizer.classList.toggle("hidden", anyCollapsed);
+    }
+    updateStageResizerVisibility();
+
+    mapCollapseBtn.addEventListener("click", updateStageResizerVisibility);
+    compareCollapseBtn.addEventListener("click", updateStageResizerVisibility);
+
+    if (stageResizer && stageEl) {
+      (function(){
+        var dragging = false;
+        var rafPending = false;
+
+        function resizeMapsNow(){
+          rafPending = false;
+          if (map) { map.relayout(); }
+          var map3dEl = document.getElementById("map3d");
+          var is3dVisible = !!(map3dEl && map3dEl.style.display !== "none");
+          if (is3dVisible && window.__map3dInstance) { window.__map3dInstance.resize(); }
+        }
+        function scheduleResize(){
+          if (rafPending) return;
+          rafPending = true;
+          requestAnimationFrame(resizeMapsNow);
+        }
+
+        function onPointerMove(e){
+          if (!dragging) return;
+          var rect = stageEl.getBoundingClientRect();
+          var pct = ((e.clientX - rect.left) / rect.width) * 100;
+          pct = Math.max(20, Math.min(70, pct));
+          mapCard.style.flexBasis = pct + "%";
+          scheduleResize();
+        }
+        function endDrag(){
+          if (!dragging) return;
+          dragging = false;
+          stageResizer.classList.remove("dragging");
+          document.body.classList.remove("stage-resizing");
+          document.removeEventListener("pointermove", onPointerMove);
+          document.removeEventListener("pointerup", endDrag);
+          document.removeEventListener("pointercancel", endDrag);
+          // 트랜지션을 잠깐 꺼둔 채로 드래그했으니, 놓은 뒤 지도/3D 최종 위치를 한 번 더 정확히 맞춘다.
+          resizeMapsNow();
+        }
+        stageResizer.addEventListener("pointerdown", function(e){
+          if (mapCard.classList.contains("collapsed") || compareCard.classList.contains("collapsed")) return;
+          dragging = true;
+          stageResizer.classList.add("dragging");
+          document.body.classList.add("stage-resizing");
+          document.addEventListener("pointermove", onPointerMove);
+          document.addEventListener("pointerup", endDrag);
+          document.addEventListener("pointercancel", endDrag);
+          e.preventDefault();
+        });
+      })();
+    }
 
     // 비교표 내 검색 / 정렬
     document.getElementById("compareSearch").addEventListener("input", renderCompareTable);

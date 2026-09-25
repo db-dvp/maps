@@ -2158,22 +2158,33 @@
     // 2D(카카오)만 알던 이 함수에 3D 인스턴스도 같이 넣어서, 지금 3D 화면을 보고 있을 때는
     // 트랜지션 내내 매 프레임 resize()도 같이 호출한다(Mapbox는 resize()가 중심 좌표를
     // 그대로 유지해주므로 카카오처럼 setCenter()를 별도로 다시 불러줄 필요는 없음).
+    // 14차(2026-09-25) 보강: 브라우저 탭이 비활성/백그라운드 상태거나 절전 모드일 때
+    // requestAnimationFrame 콜백 자체가 크게 지연되거나 아예 실행되지 않는 경우가 있어서,
+    // rAF 루프만 믿지 않고 (1) 호출 즉시 한 번 강제로 리사이즈 (2) 트랜지션 종료 시점에
+    // setTimeout으로 한 번 더 확정 리사이즈를 걸어서, rAF가 지연되더라도 최종 크기가
+    // 반드시 맞춰지도록 이중 안전장치를 둠. 평소(탭이 활성 상태)에는 rAF 루프가 정상적으로
+    // 매 프레임 돌면서 부드럽게 리사이즈되고, 이 보강 장치는 그 위에 안전망으로만 작동.
     function animateMapResize(durationMs){
       var map3dEl = document.getElementById("map3d");
       var is3dVisible = !!(map3dEl && map3dEl.style.display !== "none");
       var m3d = is3dVisible ? window.__map3dInstance : null;
       if (!map && !m3d) return;
       var savedCenter = map ? map.getCenter() : null;
+      function resizeOnce(){
+        if (map) { map.relayout(); map.setCenter(savedCenter); }
+        if (m3d) { m3d.resize(); }
+      }
       var start = (window.performance && performance.now) ? performance.now() : Date.now();
       function step(){
         var now = (window.performance && performance.now) ? performance.now() : Date.now();
-        if (map) { map.relayout(); map.setCenter(savedCenter); }
-        if (m3d) { m3d.resize(); }
+        resizeOnce();
         if (now - start < durationMs) {
           requestAnimationFrame(step);
         }
       }
+      resizeOnce();
       requestAnimationFrame(step);
+      setTimeout(resizeOnce, durationMs + 60);
     }
 
     var mapCard = document.getElementById("mapCard");

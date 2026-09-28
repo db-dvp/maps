@@ -22,10 +22,17 @@
   .panel li.ref i{background:#9aa0ad}
   .panel li span{color:var(--ink-soft);font-size:12px;margin-left:auto}
   .island{cursor:pointer;display:flex;flex-direction:column;align-items:center}
-  .island .in{display:flex;flex-direction:column;align-items:center;transform-origin:50% 100%;transition:transform .18s ease,opacity .3s ease}
-  .island:hover .in{transform:scale(1.05)}
-  .island img{width:var(--w,170px);height:auto;display:block;position:relative;z-index:1}
-  .island .sh{display:block;width:calc(var(--w,170px)*.9);height:calc(var(--w,170px)*.16);margin-top:calc(var(--w,170px)*-.1);border-radius:50%;background:radial-gradient(closest-side,rgba(40,34,20,.32),rgba(40,34,20,0))}
+  .island .in{display:flex;flex-direction:column;align-items:center;transition:opacity .3s ease}
+  .island .lift{display:flex;flex-direction:column;align-items:center;transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+  .island:hover .lift{transform:translateY(-8px)}
+  .island img{width:var(--w,170px);height:auto;display:block;position:relative;z-index:1;pointer-events:none}
+  .island .sh{display:block;width:calc(var(--w,170px)*.86);height:calc(var(--w,170px)*.13);margin-top:calc(var(--w,170px)*-.085);border-radius:50%;background:radial-gradient(closest-side,rgba(40,34,20,.30),rgba(40,34,20,0));transition:transform .25s ease,opacity .25s ease}
+  .island:hover .sh{transform:scale(.9);opacity:.75}
+  #links{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;transition:opacity .25s ease}
+  #links path{fill:none;stroke:#1b2f5c;stroke-width:1.4;stroke-opacity:.45;stroke-linecap:round}
+  #links circle{fill:#1b2f5c;stroke:#fff;stroke-width:1.5}
+  #links circle.ref{fill:#8a8272}
+  body.flying #links{opacity:0}
   body.flying .island .in{opacity:0;pointer-events:none}
   body.flying .panel,body.flying .note{opacity:0;pointer-events:none}
   .panel,.note{transition:opacity .3s ease}
@@ -36,17 +43,23 @@
   #loader i{width:14px;height:14px;border-radius:50%;border:2px solid #cfd5e2;border-top-color:var(--navy);animation:spin .8s linear infinite}
   #loader a{color:var(--navy);pointer-events:auto}
   @keyframes spin{to{transform:rotate(360deg)}}
-  .cap{order:-1;position:relative;z-index:1;margin-bottom:4px;background:var(--navy);color:#fff;border-radius:8px;padding:5px 10px 6px;text-align:center;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.15)}
-  .cap b{display:block;font-size:13.5px}
-  .cap small{font-size:11px;color:#cdd6ea}
-  .island.ref .cap{background:#fbfaf6;color:var(--ink);border:1px solid #cfc8b8}
+  .cap{position:relative;z-index:2;margin-bottom:10px;background:var(--navy);color:#fff;border-radius:10px;padding:7px 12px 8px;text-align:center;white-space:nowrap;box-shadow:0 6px 16px rgba(27,47,92,.22)}
+  .cap::after{content:"";position:absolute;left:50%;bottom:-5px;width:10px;height:10px;background:inherit;transform:translateX(-50%) rotate(45deg);border-radius:2px}
+  .cap b{display:block;font-size:13.5px;letter-spacing:-.2px}
+  .cap small{display:block;margin-top:1px;font-size:11px;color:#c9d2e6}
+  .cap em{display:block;max-height:0;overflow:hidden;font-style:normal;font-size:11px;font-weight:600;color:#fff;opacity:0;transition:max-height .2s ease,opacity .2s ease,margin .2s ease}
+  .island:hover .cap em{max-height:16px;opacity:.95;margin-top:3px}
+  .island.ref .cap{background:#fbfaf6;color:var(--ink);box-shadow:0 6px 16px rgba(40,34,20,.14);border:1px solid #e3ddd0}
+  .island.ref .cap::after{border-right:1px solid #e3ddd0;border-bottom:1px solid #e3ddd0}
   .island.ref .cap small{color:#6b665c}
+  .island.ref .cap em{color:var(--navy)}
   .note{position:absolute;right:14px;bottom:30px;z-index:5;font-size:11.5px;color:#6b665c;background:rgba(251,250,247,.85);padding:6px 10px;border-radius:8px;line-height:1.5;text-align:right}
   @media (max-width:640px){ .panel{max-width:none;right:16px} :root{--w:120px!important} .note{display:none} }
 </style>
 </head>
 <body>
 <div id="map"></div>
+<svg id="links" aria-hidden="true"></svg>
 <div class="panel">
   <h1>현장 3D 콘타모형</h1>
   <p>섬을 누르면 해당 현장의 콘타모형(국토지리정보원 1:5,000 연속수치지형도)으로 들어갑니다.</p>
@@ -58,9 +71,9 @@
 // ===== 설정 =====
 const SITES = [
   // site: 현장 위치(점), center/ext: 콘타모형 범위의 중심·한 변 길이(m) → 들어갈 때 지도를 모형과 같은 범위로 맞춤
-  { id:'gy', name:'인천계양 A21', sub:'대방 엘리움 · 비교단지 20곳', own:true,  site:[126.75265,37.54733], center:[126.73148,37.54751], ext:7740, island:[124.75,36.85], img:'island_gy.png', href:'gy.html' },
-  { id:'bs', name:'부산에코델타시티 2차', sub:'대방 엘리움(29BL) · 비교단지 14곳', own:true, site:[128.922713,35.146939], center:[128.90651,35.11901], ext:8080, island:[128.25,33.95], img:'island_bs.png', href:'bs.html' },
-  { id:'il', name:'일광신도시', sub:'비교단지 10곳 (부산 참고)', own:false, site:[129.2240,35.2652], center:[129.21900,35.26550], ext:4620, island:[130.45,35.55], img:'island_il.png', href:'il.html' },
+  { id:'gy', name:'인천계양 A21', sub:'대방 엘리움 · 비교단지 20곳', own:true,  site:[126.75265,37.54733], center:[126.73148,37.54751], ext:7740, island:[124.75,36.85], img:'island2_gy.webp', href:'gy.html' },
+  { id:'bs', name:'부산에코델타시티 2차', sub:'대방 엘리움(29BL) · 비교단지 14곳', own:true, site:[128.922713,35.146939], center:[128.90651,35.11901], ext:8080, island:[128.25,33.95], img:'island2_bs.webp', href:'bs.html' },
+  { id:'il', name:'일광신도시', sub:'비교단지 10곳 (부산 참고)', own:false, site:[129.2240,35.2652], center:[129.21900,35.26550], ext:4620, island:[130.45,35.55], img:'island2_il.webp', href:'il.html' },
 ];
 const KOREA = [[124.1,33.3],[131.0,38.7]];   // 한반도 남쪽 + 섬 3개가 다 들어오는 범위
 const HOME_PITCH = 18;                       // 너무 눕지 않게(예전 46°)
@@ -92,7 +105,8 @@ try{
   if(!m) throw new Error('token');
   mapboxgl.accessToken=m[1];
 }catch(e){ document.getElementById('loader').innerHTML='<span>지도를 불러오지 못했어요(토큰)</span>'; document.getElementById('loader').classList.add('on'); return; }
-const map = window.map = new mapboxgl.Map({ container:'map', style:'mapbox://styles/mapbox/light-v11', center:[127.6,36.0], zoom:6.2, pitch:HOME_PITCH, bearing:0, antialias:true, attributionControl:true, language:'ko' });
+const map = window.map = new mapboxgl.Map({ container:'map', style:'mapbox://styles/mapbox/light-v11', center:[127.6,36.0], zoom:6.2, pitch:HOME_PITCH, bearing:0, antialias:true, attributionControl:true, language:'ko',
+  projection:'mercator', renderWorldCopies:false, maxZoom:14, maxBounds:[[116,29],[139,44]] });
 map.addControl(new mapboxgl.NavigationControl({visualizePitch:true}),'bottom-right');
 
 map.on('style.load', () => {
@@ -117,25 +131,35 @@ map.on('style.load', () => {
   map.addSource('mask',{type:'geojson',data:'korea_mask.geojson'});
   map.addLayer({id:'mask',type:'fill',source:'mask',paint:{'fill-color':'#dcd8cf','fill-opacity':0.78}});
   // 현장 점 + 섬 연결선
-  map.addSource('links',{type:'geojson',data:{type:'FeatureCollection',features:SITES.map(s=>({type:'Feature',properties:{own:s.own},geometry:{type:'LineString',coordinates:[s.site,s.island]}}))}});
-  map.addLayer({id:'links',type:'line',source:'links',paint:{'line-color':'#1b2f5c','line-width':1.6,'line-opacity':0.55,'line-dasharray':[2,1.5]}});
-  map.addSource('sites',{type:'geojson',data:{type:'FeatureCollection',features:SITES.map(s=>({type:'Feature',properties:{own:s.own},geometry:{type:'Point',coordinates:s.site}}))}});
-  map.addLayer({id:'site-halo',type:'circle',source:'sites',paint:{'circle-radius':9,'circle-color':'#1b2f5c','circle-opacity':0.18}});
-  map.addLayer({id:'site-dot',type:'circle',source:'sites',paint:{'circle-radius':4,'circle-color':['case',['get','own'],'#1b2f5c','#8a8272'],'circle-stroke-color':'#fff','circle-stroke-width':1.5}});
 });
 
 // 섬 마커
 const list = document.getElementById('list');
 for (const s of SITES) {
   const el = document.createElement('div'); el.className='island'+(s.own?'':' ref');
-  el.innerHTML = `<div class="in"><div class="cap"><b>${s.name}</b><small>${s.sub}</small></div><img src="${s.img}" alt="${s.name} 콘타모형 섬"><i class="sh"></i></div>`;
+  el.innerHTML = `<div class="in"><div class="lift"><div class="cap"><b>${s.name}</b><small>${s.sub}</small><em>들어가기 →</em></div><img src="${s.img}" alt="${s.name} 콘타모형 섬" onerror="this.onerror=null;this.src='island_${s.id}.png'"></div><i class="sh"></i></div>`;
+  s.el = el;
   el.addEventListener('click', ()=>enter(s));
   el.addEventListener('pointerenter', ()=>prefetch(s));
   new mapboxgl.Marker({element:el, anchor:'bottom'}).setLngLat(s.island).addTo(map);
   const li=document.createElement('li'); if(!s.own) li.className='ref';
   li.innerHTML=`<i></i>${s.name}<span>들어가기 →</span>`; li.onclick=()=>enter(s); li.onpointerenter=()=>prefetch(s); list.appendChild(li);
 }
-function sizeIslands(){ if(state!=='home') return; const z=map.getZoom(); const w=Math.round(Math.max(130,Math.min(300,130+(z-5)*80))); document.documentElement.style.setProperty('--w',w+'px'); }
+// 현장 점 → 섬 받침 아래 중앙까지 부드러운 곡선 (지도 움직일 때마다 다시 그림)
+const svg=document.getElementById('links'); map.getCanvasContainer().insertBefore(svg, map.getCanvas().nextSibling);   // 섬 그림보다 아래에 깔리도록
+svg.innerHTML=SITES.map(s=>`<path id="lk-${s.id}"/><circle id="dt-${s.id}" r="4.5" class="${s.own?'':'ref'}"/>`).join('');
+function drawLinks(){
+  const W=innerWidth,H=innerHeight;
+  for (const s of SITES){
+    const a=map.project(s.site), img=s.el.querySelector('img').getBoundingClientRect();
+    const b={x:img.left+img.width/2, y:img.top+img.height*0.5};   // 섬 가운데(섬 그림 밑으로 들어가서 가장자리에서 나오는 것처럼 보임)
+    const mx=(a.x+b.x)/2, my=Math.min(a.y,b.y)-Math.abs(a.x-b.x)*0.12;
+    document.getElementById('lk-'+s.id).setAttribute('d',`M${a.x.toFixed(1)},${a.y.toFixed(1)} Q${mx.toFixed(1)},${my.toFixed(1)} ${b.x.toFixed(1)},${b.y.toFixed(1)}`);
+    const d=document.getElementById('dt-'+s.id); d.setAttribute('cx',a.x.toFixed(1)); d.setAttribute('cy',a.y.toFixed(1));
+  }
+}
+map.on('render',drawLinks);
+function sizeIslands(){ if(state!=='home') return; const z=map.getZoom(); const w=Math.round(Math.max(150,Math.min(320,150+(z-5.5)*85))); document.documentElement.style.setProperty('--w',w+'px'); }
 map.on('zoomend',sizeIslands);
 
 // ===== 들어가기 / 나오기 (한 페이지 안에서 지도 → 모형으로 이어지게) =====
@@ -213,7 +237,10 @@ map.once('load', ()=>{
   const s=SITES.find(x=>x.id===location.hash.slice(1));
   if (s) enter(s, {push:false, jump:true});            // 주소에 #gy 등이 붙어 있으면 바로 모형으로
   else { map.jumpTo(homeCam()); sizeIslands(); }
+  setZoomLimit(); addEventListener('resize', setZoomLimit);
 });
+// 한반도 전체가 보이는 정도보다 더 멀리는 축소되지 않게
+function setZoomLimit(){ map.setMinZoom(Math.max(3, homeCam().zoom - 0.6)); }
 })();
 </script>
 </body>

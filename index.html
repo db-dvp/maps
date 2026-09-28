@@ -594,6 +594,9 @@
     font-weight:700;color:var(--ink-soft);cursor:pointer;
   }
   .map3d-mode-toggle button.active{background:var(--indigo);color:#fff;}
+  /* 2026-09-29: 국토지리정보원 연속수치지형도 콘타모형(3d/)으로 가는 버튼 */
+  .map3d-mode-toggle a{display:flex;align-items:center;border-left:1px solid var(--line);padding:8px 14px;font-size:.78rem;font-weight:700;color:var(--indigo);text-decoration:none;white-space:nowrap;}
+  .map3d-mode-toggle a:hover{background:#eef0f5;}
   /* 18차(2026-09-25): 3번 요청 — 하단 전체폭 바 대신, 2D의 "일반/위성" 지도유형 버튼과 같은
      좌상단 자리로 옮김(3D일 땐 그 버튼이 숨어있어서 자리가 비어있음).
      19차(2026-09-25): 12번 요청 — 18차에서 세로로 쌓는 작은 패널 형태로 바꿨더니 "안 예쁘다"는
@@ -775,6 +778,7 @@
         <div class="map3d-mode-toggle" id="map3dModeToggle">
           <button type="button" data-mode="2d">2D</button>
           <button type="button" data-mode="3d" class="active">3D</button>
+          <a href="3d/" title="국토지리정보원 1:5,000 연속수치지형도로 만든 현장 콘타모형">콘타모형</a>
         </div>
         <div id="map3dLoading">3D 지도를 불러오는 중입니다…</div>
         <div id="map3dControls">

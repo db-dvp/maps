@@ -14,6 +14,8 @@
   #map{position:absolute;inset:0}
   .panel{position:absolute;left:16px;top:16px;z-index:5;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;max-width:300px;box-shadow:0 4px 14px rgba(0,0,0,.08)}
   .panel h1{margin:0;font-size:18px;letter-spacing:-.3px}
+  .panel a.home{display:inline-block;margin-bottom:6px;font-size:12px;color:var(--navy);text-decoration:none}
+  .panel a.home:hover{text-decoration:underline}
   .panel p{margin:6px 0 0;font-size:12.5px;color:var(--ink-soft);line-height:1.5}
   .panel ul{list-style:none;margin:10px 0 0;padding:0}
   .panel li{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;cursor:pointer;font-size:13.5px}
@@ -61,6 +63,7 @@
 <div id="map"></div>
 <svg id="links" aria-hidden="true"></svg>
 <div class="panel">
+  <a class="home" href="../">← 분양가 지도</a>
   <h1>현장 3D 콘타모형</h1>
   <p>섬을 누르면 해당 현장의 콘타모형(국토지리정보원 1:5,000 연속수치지형도)으로 들어갑니다.</p>
   <ul id="list"></ul>

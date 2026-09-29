@@ -311,7 +311,7 @@ for (const L of meta.labels){
   o.position.set(L.x, gy+(L.k==='site'?120:L.k==='mtn'?25:L.k==='cx'?(L.h||40)+12:8), L.z);
   if(L.k==='cx'){ o.userData.cx=true; el.style.setProperty('--cxc', LEG[L.key]||'#7d5ba6'); if(L.fp){ el.textContent=L.t+(['presale','scheduled'].includes(L.key)?' (계획)':''); } else if(L.plan){ el.classList.add('plan'); el.textContent=L.t+' (배치 추정)'; } else if(L.unbuilt){ el.classList.add('unbuilt'); el.textContent=L.t+(L.nomap&&!['scheduled','upcoming'].includes(L.key)?' (지형도 미반영)':' (공사 전·중)'); } }
   o.userData.name=L.t; o.userData.k=L.k;
-  if (EMBED && L.k==='cx'){ el.style.pointerEvents='auto'; el.style.cursor='pointer'; el.addEventListener('click',()=>toTop({t:'cx-click',name:L.t,site:SITE})); }
+  if (EMBED && L.k==='cx'){ el.style.pointerEvents='auto'; el.style.cursor='pointer'; el.addEventListener('click',()=>{ const r=el.getBoundingClientRect(); toTop({t:'cx-click',name:L.t,site:SITE,x:Math.round(r.left+r.width/2),y:Math.round(r.top)}); }); }
   scene.add(o); labelObjs.push(o);
 }
 // 엘리움 표시봉
@@ -405,7 +405,7 @@ window.__focusName=(name)=>{ const o=labelObjs.find(x=>x.userData.name===name); 
   const p=o.position, gy=hSmooth(p.x,p.z); pose([p.x+380,gy+300,p.z+520],[p.x,gy+20,p.z],false,1300); return true; };
 window.__rotate=(on)=>{ controls.autoRotate=!!on; controls.autoRotateSpeed=0.7; };
 if (EMBED){
-  const st=document.createElement('style'); st.textContent='#back3d{display:none!important} .panel{top:64px!important} @media (max-width:900px){.panel{top:104px!important}}'; document.head.appendChild(st);
+  const st=document.createElement('style'); st.textContent='#back3d{display:none!important} .panel{display:none!important}'; document.head.appendChild(st);
   window.addEventListener('message',(e)=>{ const d=e.data||{}; if(d.t==='focus') window.__focusName(d.name); else if(d.t==='view') window.__goView(d.v); else if(d.t==='rotate') window.__rotate(d.on); });
   toTop({t:'model-ready',site:SITE});
 }

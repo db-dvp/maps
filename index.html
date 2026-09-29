@@ -2296,6 +2296,16 @@
           if (t) t.textContent = "드론 비행 · " + (d.i + 1) + "/" + d.n + " · " + d.text;
           if (dots) { dots.innerHTML = ""; for (var k = 0; k < d.n; k++) { var s = document.createElement("span"); s.className = "m3d-drone-dot" + (k === d.i ? " active" : ""); dots.appendChild(s); } }
           if (ov) ov.classList.add("visible");
+        } else if (d.t === "model-ready") {
+          sendContFilter();
+        } else if (d.t === "link-ack") {
+          if (!d.ok && popupSpotlightState && popupSpotlightState.cont) { popupSpotlightState = null; updateComparePopupSpotlight(); }
+        } else if (d.t === "link-pos") {
+          if (popupSpotlightState && popupSpotlightState.cont) {
+            if (d.off) { popupSpotlightState.pa = popupSpotlightState.pb = null; }
+            else { popupSpotlightState.pa = d.a; popupSpotlightState.pb = d.b; }
+            updateComparePopupSpotlight();
+          }
         } else if (d.t === "droneEnd") {
           resetContButtons();
         } else if (d.t === "site") {
@@ -2739,6 +2749,17 @@
       var visible = activeFilters.has("all") || activeFilters.has(key);
       m.overlay.setMap(visible ? map : null);
     });
+    sendContFilter();
+  }
+
+  // 콘타모형(3D)에도 같은 필터를 적용: 걸러진 단지는 이름표를 숨기고 건물을 회색으로 바꿈
+  function sendContFilter(){
+    if (!window.contPost) return;
+    var names = null;
+    if (!activeFilters.has("all")) {
+      names = markers.filter(function(m){ return activeFilters.has(markerFilterKey(m)); }).map(function(m){ return m.data.name; });
+    }
+    window.contPost({ t: "filter", names: names });
   }
 
   // 단지명 검색 — PROJECTS(당사/타사 현장) + COMPARISON_COMPLEXES(비교단지) 전체
@@ -2922,9 +2943,17 @@
     // 값이 바뀌므로, 맵박스 "move" 이벤트에 이 함수를 반복 호출하도록 별도로 연결해둠(아래
     // ensureMap3DLoaded 참고) — 2D는 기존처럼 kakao "idle" 이벤트로 충분(고정 시점이라 자주
     // 안 바뀜).
-    var use3D = is3DModeVisible();
+    var use3D = !s.cont && is3DModeVisible();
     var p1, p2, el1, el2;
-    if (use3D) {
+    if (s.cont) {
+      // 콘타모형: 모형 안에서 계산한 두 이름표의 화면 좌표(s.pa/s.pb)를 iframe 위치만큼 옮겨서 사용
+      if (!s.pa || !s.pb || !s.pa.vis || !s.pb.vis) { root.innerHTML = ""; return; }
+      var cr = document.getElementById("contWrap").getBoundingClientRect();
+      p1 = { x: cr.left + s.pa.x, y: cr.top + s.pa.y };
+      p2 = { x: cr.left + s.pb.x, y: cr.top + s.pb.y };
+      el1 = s.anchorMarker.overlay.getContent();
+      el2 = s.targetMarker.overlay.getContent();
+    } else if (use3D) {
       p1 = projectLatLngToScreen3D(s.anchorLatLng.lat, s.anchorLatLng.lng);
       p2 = projectLatLngToScreen3D(s.targetLatLng.lat, s.targetLatLng.lng);
       var reg = window.__map3dMarkersByName || {};
@@ -2960,6 +2989,7 @@
   }
 
   function clearComparePopupMapDecorations(){
+    if (popupSpotlightState && popupSpotlightState.cont && window.contPost) window.contPost({ t: "unlink" });
     popupSpotlightState = null;
     updateComparePopupSpotlight();
   }
@@ -3014,6 +3044,10 @@
         targetLatLng: { lat: pos2.getLat(), lng: pos2.getLng() },
         distText: distText
       };
+      if (window.__contMode && window.contPost) {
+        popupSpotlightState.cont = true;
+        window.contPost({ t: "link", a: anchorMarker.data.name, b: m.data.name });
+      }
       updateComparePopupSpotlight();
     } else {
       distanceEl.innerHTML = m.data.name;

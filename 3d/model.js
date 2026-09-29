@@ -284,7 +284,17 @@ function buildPlan(hFn){
     const y=base+f*3.1+1.0;
     b.prism([pts],()=>y,()=>base-1.5,top,wall);
   }
-  const m=b.mesh(new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.9,metalness:0,transparent:true,opacity:0.86}));
+  // 실제 배치(카카오맵에 그려진 동 모양): [단지번호, 층수, [x,z,x,z,...]]
+  for (const [ci,f,flat] of (meta.planfp||[])){
+    const key=(meta.complexes[ci-1]||{}).key, base_c=LEG[key]||'#7d5ba6';
+    const top=_mix(base_c,'#ffffff',0.35), wall=_mix(base_c,'#f3f0e9',0.3);
+    const pts=[]; for(let k=0;k<flat.length;k+=2) pts.push(new THREE.Vector2(flat[k],flat[k+1]));
+    if (pts.length<3) continue;
+    let base=Infinity; for(const p of pts) base=Math.min(base,hFn(p.x,p.y));
+    const y=base+f*3.1+1.0;
+    b.prism([pts],()=>y,()=>base-1.5,top,wall);
+  }
+  const m=b.mesh(new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.9,metalness:0,transparent:true,opacity:0.9}));
   return m;
 }
 const planStep=buildPlan(hStep), planSmooth=buildPlan(hSmooth);
@@ -297,7 +307,7 @@ for (const L of meta.labels){
   const o=new CSS2DObject(el);
   const gy=hSmooth(L.x,L.z);
   o.position.set(L.x, gy+(L.k==='site'?120:L.k==='mtn'?25:L.k==='cx'?(L.h||40)+12:8), L.z);
-  if(L.k==='cx'){ o.userData.cx=true; el.style.setProperty('--cxc', LEG[L.key]||'#7d5ba6'); if(L.plan){ el.classList.add('plan'); el.textContent=L.t+' (배치 추정)'; } else if(L.unbuilt){ el.classList.add('unbuilt'); el.textContent=L.t+(L.nomap&&!['scheduled','upcoming'].includes(L.key)?' (지형도 미반영)':' (공사 전·중)'); } }
+  if(L.k==='cx'){ o.userData.cx=true; el.style.setProperty('--cxc', LEG[L.key]||'#7d5ba6'); if(L.fp){ el.textContent=L.t+(['presale','scheduled'].includes(L.key)?' (계획)':''); } else if(L.plan){ el.classList.add('plan'); el.textContent=L.t+' (배치 추정)'; } else if(L.unbuilt){ el.classList.add('unbuilt'); el.textContent=L.t+(L.nomap&&!['scheduled','upcoming'].includes(L.key)?' (지형도 미반영)':' (공사 전·중)'); } }
   scene.add(o); labelObjs.push(o);
 }
 // 엘리움 표시봉

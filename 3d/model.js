@@ -257,7 +257,7 @@ pierMesh.castShadow=true; scene.add(pierMesh);
 // 단지 색 = 카카오맵 범례 색 계열(채도만 낮춤): [윗면, 옆면]
 const _mix=(a,b,k)=>new THREE.Color(a).lerp(new THREE.Color(b),k);
 const LEG={upcoming:'#202a5d',competitor:'#7d5ba6',presale:'#7d5ba6',scheduled:'#c23b7a',under1:'#e0a728','1to5':'#2f6fd6','5to10':'#12a39c',over10:'#9c6b3f'};
-const CXC={}; for(const [k,c] of Object.entries(LEG)) CXC[k]=[_mix(c,'#f3f0e9',0.38), _mix(c,'#e9e4da',0.52)];
+const CXC={}; for(const [k,c] of Object.entries(LEG)) CXC[k]=k==='over10'?[_mix(c,'#f3f0e9',0.42), _mix(c,'#e9e4da',0.55)]:[_mix(c,'#f3f0e9',0.38), _mix(c,'#e9e4da',0.52)]; // 10년 초과는 참고용이라 조금 옅게
 const CXBOX={}; // 단지별 실제 건물 범위(이름표 위치가 아니라 건물 덩어리 가운데로 카메라를 맞추기 위함)
 function _cxb(ci,x,z){ const b=CXBOX[ci]||(CXBOX[ci]=[1e9,1e9,-1e9,-1e9]); if(x<b[0])b[0]=x; if(z<b[1])b[1]=z; if(x>b[2])b[2]=x; if(z>b[3])b[3]=z; }
 function buildBuildings(hFn, flatBase){
@@ -418,7 +418,7 @@ window.__focusName=(name)=>{ const o=labelObjs.find(x=>x.userData.name===name); 
 // ---- 필터 연동: 메인 사이트에서 걸러진 단지는 이름표를 숨기고 건물을 회색으로 ----
 window.__filter=(names)=>{
   const vis=names?new Set(names):null; const G0=new THREE.Color('#dcd8cf'); const hid=new Set();
-  (meta.complexes||[]).forEach((c,i)=>{ if(vis && c.key!=='upcoming' && !vis.has(c.name)) hid.add(i+1); });
+  (meta.complexes||[]).forEach((c,i)=>{ if(vis && c.key!=='upcoming' && c.key!=='over10' && !vis.has(c.name)) hid.add(i+1); }); // 10년 초과는 목록에 없는 참고용이라 필터와 무관하게 항상 표시
   for(const m of [bldStep,bldSmooth,planStep,planSmooth]){
     const col=m.geometry.attributes.color; if(!m.userData.orig) m.userData.orig=col.array.slice();
     col.array.set(m.userData.orig);

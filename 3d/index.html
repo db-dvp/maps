@@ -277,6 +277,9 @@ window.addEventListener('message', async (e)=>{
   if (d.t==='goto'){ drone=null; await gotoSite(d.site); }
   else if (d.t==='focus'){ drone=null; const id=await siteOfName(d.name); if(!id) return; await gotoSite(id); const w=modelWin(); if(w && w.__focusName) setTimeout(()=>w.__focusName(d.name), 400); }
   else if (d.t==='view'){ const w=modelWin(); if(w&&w.__goView) w.__goView(d.v); }
+  else if (d.t==='filter'){ window.__filt=d.names; const w=modelWin(); if(w&&w.__filter) w.__filter(d.names); }
+  else if (d.t==='link'){ const w=modelWin(); const ok=!!(w&&w.__link&&w.__link(d.a,d.b)); toTop({t:'link-ack',ok}); }
+  else if (d.t==='unlink'){ const w=modelWin(); if(w&&w.__unlink) w.__unlink(); }
   else if (d.t==='rotate'){ const w=modelWin(); if(w&&w.__rotate) w.__rotate(d.on); window.__rot=d.on; }
   else if (d.t==='drone'){ if(d.on) droneTour(); else { drone=null; toTop({t:'droneEnd'}); } }
 });

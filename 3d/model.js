@@ -425,7 +425,10 @@ window.__filter=(names)=>{
 let linkPair=null, lastLink='';
 function linkObj(name){ let o=labelObjs.find(x=>x.userData.name===name); if(!o){ const ux=(meta.complexes||[]).find(c=>c.key==='upcoming'); if(ux&&ux.name===name) o=labelObjs.find(x=>x.userData.k==='site'); } return o; }
 window.__link=(a,b)=>{ const oa=linkObj(a), ob=linkObj(b); if(!oa||!ob){ linkPair=null; return false; }
-  linkPair=[oa,ob]; lastLink=''; const pa=oa.position, pb=ob.position; const cx=(pa.x+pb.x)/2, cz=(pa.z+pb.z)/2, d=Math.hypot(pa.x-pb.x,pa.z-pb.z), gy=hSmooth(cx,cz), R=Math.max(700,d*1.15);
+  linkPair=[oa,ob]; lastLink=''; const pa=oa.position, pb=ob.position; const cx=(pa.x+pb.x)/2, cz=(pa.z+pb.z)/2, d=Math.hypot(pa.x-pb.x,pa.z-pb.z), gy=hSmooth(cx,cz); let R=Math.max(700,d*1.15);
+  const tc=camera.clone(); const fitsAt=(r)=>{ tc.position.set(cx+r*0.35,gy+r*0.85,cz+r*0.75); tc.lookAt(cx,gy,cz); tc.updateMatrixWorld(true);
+    return [pa,pb].every(p=>{ const v=p.clone().project(tc); return Math.abs(v.x)<0.62&&Math.abs(v.y)<0.7&&v.z<1; }); };
+  for(let i=0;i<40&&!fitsAt(R);i++) R*=1.12;
   pose([cx+R*0.35,gy+R*0.85,cz+R*0.75],[cx,gy,cz],false,1200); return true; };
 window.__unlink=()=>{ linkPair=null; lastLink=''; toTop({t:'link-pos',off:true}); };
 function postLink(){ if(!linkPair||!EMBED) return; const w=innerWidth,h=innerHeight;

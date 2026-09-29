@@ -258,6 +258,8 @@ pierMesh.castShadow=true; scene.add(pierMesh);
 const _mix=(a,b,k)=>new THREE.Color(a).lerp(new THREE.Color(b),k);
 const LEG={upcoming:'#202a5d',competitor:'#7d5ba6',presale:'#7d5ba6',scheduled:'#c23b7a',under1:'#e0a728','1to5':'#2f6fd6','5to10':'#12a39c',over10:'#9c6b3f'};
 const CXC={}; for(const [k,c] of Object.entries(LEG)) CXC[k]=[_mix(c,'#f3f0e9',0.38), _mix(c,'#e9e4da',0.52)];
+const CXBOX={}; // 단지별 실제 건물 범위(이름표 위치가 아니라 건물 덩어리 가운데로 카메라를 맞추기 위함)
+function _cxb(ci,x,z){ const b=CXBOX[ci]||(CXBOX[ci]=[1e9,1e9,-1e9,-1e9]); if(x<b[0])b[0]=x; if(z<b[1])b[1]=z; if(x>b[2])b[2]=x; if(z>b[3])b[3]=z; }
 function buildBuildings(hFn, flatBase){
   const b=new Builder(); b.rng={}; const roof=C('#fbfaf6'), wall=C('#ecE8df'), tall=C('#f4f1ea');
   for (const [i,rings] of polys('bld')){
@@ -268,7 +270,7 @@ function buildBuildings(hFn, flatBase){
     else { base=Infinity; for (const v of rings[0]) base=Math.min(base,hFn(v.x,v.y)); }
     const y=base+h;
     const ci=D.bld_cx?D.bld_cx[i]:0;
-    if (ci){ const cc=CXC[meta.complexes[ci-1].key]||CXC.competitor; const s0=b.p.length/3; b.prism(rings,()=>y,()=>base-1.5, cc[0], cc[1]); (b.rng[ci]=b.rng[ci]||[]).push([s0,b.p.length/3]); }
+    if (ci){ for(const v of rings[0]) _cxb(ci,v.x,v.y); const cc=CXC[meta.complexes[ci-1].key]||CXC.competitor; const s0=b.p.length/3; b.prism(rings,()=>y,()=>base-1.5, cc[0], cc[1]); (b.rng[ci]=b.rng[ci]||[]).push([s0,b.p.length/3]); }
     else b.prism(rings,()=>y,()=>base-1.5, fl>=10?tall:roof, wall);
   }
   return b.mesh(vcMat(0.95));
@@ -292,6 +294,7 @@ function buildPlan(hFn){
     const nv=key==='upcoming', top=_mix(base_c,'#ffffff',nv?0.06:0.35), wall=_mix(base_c,'#f3f0e9',nv?0.04:0.3);
     const pts=[]; for(let k=0;k<flat.length;k+=2) pts.push(new THREE.Vector2(flat[k],flat[k+1]));
     if (pts.length<3) continue;
+    for(const p of pts) _cxb(ci,p.x,p.y);
     let base=Infinity; for(const p of pts) base=Math.min(base,hFn(p.x,p.y));
     const y=base+f*3.1+1.0;
     const s0=b.p.length/3; b.prism([pts],()=>y,()=>base-1.5,top,wall); (b.rng[ci]=b.rng[ci]||[]).push([s0,b.p.length/3]);
@@ -400,7 +403,7 @@ document.getElementById('stats').innerHTML=
 
 apply();
 document.getElementById('loading').hidden=true;
-function fit(){camera.aspect=innerWidth/innerHeight; if(innerWidth>900) camera.setViewOffset(innerWidth,innerHeight,-150,0,innerWidth,innerHeight); else camera.clearViewOffset(); camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);labelRenderer.setSize(innerWidth,innerHeight);}
+function fit(){camera.aspect=innerWidth/innerHeight; if(innerWidth>900 && window.parent===window.top) camera.setViewOffset(innerWidth,innerHeight,-150,0,innerWidth,innerHeight); else camera.clearViewOffset(); camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);labelRenderer.setSize(innerWidth,innerHeight);}
 addEventListener('resize',fit); fit();
 renderer.setAnimationLoop((now)=>{ if(anim) anim(now); controls.update(); renderer.render(scene,camera); labelRenderer.render(scene,camera); postLink(); });
 cxLOD(); window.__ready=true;
@@ -408,7 +411,10 @@ cxLOD(); window.__ready=true;
 window.__goView=(name)=>{ if(views[name]) go(name,false,1300); };
 window.__hasView=(name)=>!!views[name];
 window.__focusName=(name)=>{ const o=labelObjs.find(x=>x.userData.name===name); if(!o) return false;
-  const p=o.position, gy=hSmooth(p.x,p.z); pose([p.x+380,gy+300,p.z+520],[p.x,gy+20,p.z],false,1300); return true; };
+  const ci=(meta.complexes||[]).findIndex(c=>c.name===name)+1, bb=CXBOX[ci];
+  const p=o.position, cx=bb?(bb[0]+bb[2])/2:p.x, cz=bb?(bb[1]+bb[3])/2:p.z, gy=hSmooth(cx,cz);
+  const K=2.2; // 이전보다 멀리서(단지 전체가 여유 있게 보이도록)
+  pose([cx+380*K,gy+300*K,cz+520*K],[cx,gy+40,cz],false,1300); return true; };
 // ---- 필터 연동: 메인 사이트에서 걸러진 단지는 이름표를 숨기고 건물을 회색으로 ----
 window.__filter=(names)=>{
   const vis=names?new Set(names):null; const G0=new THREE.Color('#dcd8cf'); const hid=new Set();

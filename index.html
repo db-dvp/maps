@@ -155,8 +155,8 @@
   @media (max-width:900px){
     .stage-resizer{display:none;}
   }
-  /* 목록이 비어도(검색 결과 0개) 표 영역 폭이 줄어 지도가 넓어지지 않도록 표 카드의 최소 폭을 고정(넓은 화면만) */
-  @media (min-width:901px){ .compare-card-inner{min-width:632px;} }
+  /* 목록이 비어도(검색 결과 0개) 표 영역 폭이 줄어 지도가 넓어지지 않도록 표 카드(.compare-card) 자체의 최소 폭을 고정해 남는 공간은 지도가 줄어들어 맞추게 함(넓은 화면만) */
+  @media (min-width:901px){ .compare-card{min-width:648px;} }
   .compare-card-inner{
     flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;
     background:var(--paper-raised);border:1px solid var(--line);

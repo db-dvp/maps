@@ -2315,6 +2315,12 @@
         }
       });
 
+      try {
+        var __cw = document.getElementById("contWrap");
+        if (window.ResizeObserver) new ResizeObserver(function(){ if (popupSpotlightState && popupSpotlightState.cont) updateComparePopupSpotlight(); }).observe(__cw);
+        window.addEventListener("resize", function(){ if (popupSpotlightState && popupSpotlightState.cont) updateComparePopupSpotlight(); });
+      } catch (err) {}
+
       function applyMode(mode){
         var wants3d = (mode === "3d"), wantsCont = (mode === "cont");
         window.__contMode = wantsCont;
@@ -2973,6 +2979,17 @@
         '" stroke="#9aa1ac" stroke-width="2" stroke-dasharray="7 6" stroke-opacity="0.85"/></svg>' +
       '<div class="compare-spotlight-tag" style="left:' + midX + 'px;top:' + midY + 'px;">' + s.distText + '</div>';
 
+    if (s.cont) {
+      // 콘타모형: 이름표 위치(모형이 계산)에 작은 핀+이름표를 직접 그림 — 카카오 마커 복제는 크기·기준점이 달라 어긋남
+      [ [s.anchorName, p1, "#202a5d"], [s.targetName, p2, "#c0392b"] ].forEach(function(t){
+        var d = document.createElement("div");
+        d.style.cssText = "position:absolute;left:" + t[1].x + "px;top:" + t[1].y + "px;transform:translate(-50%,-50%);pointer-events:none;";
+        d.innerHTML = '<div style="width:16px;height:16px;border-radius:50%;background:' + t[2] + ';border:3px solid #fff;box-shadow:0 0 0 2px ' + t[2] + ',0 2px 8px rgba(0,0,0,.45);margin:0 auto;"></div>' +
+          '<div style="position:absolute;left:50%;bottom:24px;transform:translateX(-50%);white-space:nowrap;background:#fff;color:#222;font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;border:2px solid ' + t[2] + ';box-shadow:0 2px 6px rgba(0,0,0,.3);">' + String(t[0]).replace(/</g, "&lt;") + '</div>';
+        root.appendChild(d);
+      });
+      return;
+    }
     [ [el1, p1], [el2, p2] ].forEach(function(pair){
       var srcEl = pair[0];
       if (!srcEl || !srcEl.cloneNode) return;

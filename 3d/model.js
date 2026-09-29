@@ -5,7 +5,7 @@ import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer
 const SITE=window.SITE;
 const EMBED = (window.top!==window);   // 분양가 지도(메인 사이트) 안에 끼워 넣어진 경우
 const toTop = (o)=>{ try{ window.top.postMessage(o,'*'); }catch(e){} };
-{ const st=document.createElement('style'); st.textContent="\n  :root{\n    --table:#d9d6cf;          /* 모형 받침대 */\n    --panel:#fbfaf7;\n    --ink:#1c2433;\n    --ink-soft:#5b6272;\n    --line:#d4d0c6;\n    --navy:#1b2f5c;           /* 대방 네이비 */\n    --navy-soft:#e6eaf3;\n    --water:#6f93b0;\n    --warn:#b4552f;\n    color-scheme: light;\n  }\n  html,body{height:100%;}\n  body{\n    margin:0; background:var(--table); color:var(--ink);\n    font-family:\"IBM Plex Sans KR\",\"Apple SD Gothic Neo\",\"Malgun Gothic\",system-ui,sans-serif;\n    font-size:14px; overflow:hidden;\n  }\n  #stage{position:fixed; inset:0;}\n  #stage canvas{display:block;}\n  #labels{position:fixed; inset:0; pointer-events:none;}\n\n  .panel{\n    position:fixed; top:calc(16px + env(safe-area-inset-top,0px)); left:16px;\n    width:min(300px, calc(100vw - 32px));\n    background:var(--panel); border:1px solid var(--line); border-radius:10px;\n    box-shadow:0 6px 24px rgba(28,36,51,.12);\n    padding:16px; display:flex; flex-direction:column; gap:14px;\n  }\n  .panel h1{margin:0; font-size:18px; font-weight:600; letter-spacing:-.01em; text-wrap:balance;}\n  .panel .sub{margin:2px 0 0; color:var(--ink-soft); font-size:12px; line-height:1.5;}\n  .group{display:flex; flex-direction:column; gap:6px;}\n  .group > .lab{font-size:11px; color:var(--ink-soft); letter-spacing:.04em;}\n  .seg{display:grid; grid-template-columns:1fr 1fr; border:1px solid var(--line); border-radius:8px; overflow:hidden;}\n  .seg button{\n    border:0; background:transparent; padding:8px 6px; font:inherit; font-size:13px; color:var(--ink); cursor:pointer;\n  }\n  .seg button + button{border-left:1px solid var(--line);}\n  .seg button[aria-pressed=\"true\"]{background:var(--navy); color:#fff;}\n  .chips{display:flex; flex-wrap:wrap; gap:6px;}\n  .chip{\n    border:1px solid var(--line); background:#fff; color:var(--ink); border-radius:999px;\n    padding:5px 11px; font:inherit; font-size:12.5px; cursor:pointer;\n  }\n  .chip[aria-pressed=\"true\"]{background:var(--navy-soft); border-color:#b9c3dc; color:var(--navy);}\n  .chip:focus-visible,.seg button:focus-visible{outline:2px solid var(--navy); outline-offset:2px;}\n  .stats{\n    display:grid; grid-template-columns:auto 1fr; gap:3px 10px; font-size:12px; color:var(--ink-soft);\n    border-top:1px solid var(--line); padding-top:10px;\n  }\n  .stats b{font-family:\"IBM Plex Mono\",ui-monospace,monospace; font-weight:500; color:var(--ink); font-variant-numeric:tabular-nums; text-align:right;}\n  .hint{font-size:11.5px; color:var(--ink-soft); line-height:1.5;}\n\n  .src{\n    position:fixed; right:16px; bottom:calc(12px + env(safe-area-inset-bottom,0px));\n    max-width:calc(100vw - 32px);\n    font-size:11px; color:#4a4f58; background:rgba(251,250,247,.85); padding:5px 9px; border-radius:6px;\n  }\n  #loading[hidden]{display:none;}\n  #loading{\n    position:fixed; inset:0; display:grid; place-items:center; font-size:14px; color:var(--ink-soft);\n  }\n\n  /* 3D 라벨 */\n  .lbl{font-size:12px; white-space:nowrap; padding:2px 7px; border-radius:4px; transform:translateY(-4px);}\n  .lbl.mtn{color:#3d3a31; background:rgba(251,250,247,.82);}\n  .lbl.river{color:#2d5677; font-style:italic; background:rgba(235,242,248,.78);}\n  .lbl.site{\n    color:#fff; background:var(--navy); font-weight:600; font-size:13px; padding:5px 10px; border-radius:6px;\n    box-shadow:0 3px 10px rgba(27,47,92,.35);\n  }\n  .lbl.cx{font-size:11px;color:#fff;background:var(--cxc,#7d5ba6);opacity:.92;padding:1px 6px;}\n  .lbl.cx.unbuilt{background:rgba(251,250,247,.9);color:#5b6272;border:1px dashed #9aa0ad;}\n  .lbl.cx.plan{outline:1px dashed rgba(255,255,255,.85);outline-offset:-3px;}\n  .lbl.hide{display:none;}\n\n  @media (max-width:520px){\n    .panel{padding:12px; gap:10px;}\n    .stats,.hint{display:none;}\n  }\n  @media (prefers-reduced-motion: reduce){ *{transition:none!important;} }\n"; document.head.appendChild(st);
+{ const st=document.createElement('style'); st.textContent="\n  :root{\n    --table:#d9d6cf;          /* 모형 받침대 */\n    --panel:#fbfaf7;\n    --ink:#1c2433;\n    --ink-soft:#5b6272;\n    --line:#d4d0c6;\n    --navy:#1b2f5c;           /* 대방 네이비 */\n    --navy-soft:#e6eaf3;\n    --water:#6f93b0;\n    --warn:#b4552f;\n    color-scheme: light;\n  }\n  html,body{height:100%;}\n  body{\n    margin:0; background:var(--table); color:var(--ink);\n    font-family:\"IBM Plex Sans KR\",\"Apple SD Gothic Neo\",\"Malgun Gothic\",system-ui,sans-serif;\n    font-size:14px; overflow:hidden;\n  }\n  #stage{position:fixed; inset:0;}\n  #stage canvas{display:block;}\n  #labels{position:fixed; inset:0; pointer-events:none;}\n\n  .panel{\n    position:fixed; top:calc(16px + env(safe-area-inset-top,0px)); left:16px;\n    width:min(300px, calc(100vw - 32px));\n    background:var(--panel); border:1px solid var(--line); border-radius:10px;\n    box-shadow:0 6px 24px rgba(28,36,51,.12);\n    padding:16px; display:flex; flex-direction:column; gap:14px;\n  }\n  .panel h1{margin:0; font-size:18px; font-weight:600; letter-spacing:-.01em; text-wrap:balance;}\n  .panel .sub{margin:2px 0 0; color:var(--ink-soft); font-size:12px; line-height:1.5;}\n  .group{display:flex; flex-direction:column; gap:6px;}\n  .group > .lab{font-size:11px; color:var(--ink-soft); letter-spacing:.04em;}\n  .seg{display:grid; grid-template-columns:1fr 1fr; border:1px solid var(--line); border-radius:8px; overflow:hidden;}\n  .seg button{\n    border:0; background:transparent; padding:8px 6px; font:inherit; font-size:13px; color:var(--ink); cursor:pointer;\n  }\n  .seg button + button{border-left:1px solid var(--line);}\n  .seg button[aria-pressed=\"true\"]{background:var(--navy); color:#fff;}\n  .chips{display:flex; flex-wrap:wrap; gap:6px;}\n  .chip{\n    border:1px solid var(--line); background:#fff; color:var(--ink); border-radius:999px;\n    padding:5px 11px; font:inherit; font-size:12.5px; cursor:pointer;\n  }\n  .chip[aria-pressed=\"true\"]{background:var(--navy-soft); border-color:#b9c3dc; color:var(--navy);}\n  .chip:focus-visible,.seg button:focus-visible{outline:2px solid var(--navy); outline-offset:2px;}\n  .stats{\n    display:grid; grid-template-columns:auto 1fr; gap:3px 10px; font-size:12px; color:var(--ink-soft);\n    border-top:1px solid var(--line); padding-top:10px;\n  }\n  .stats b{font-family:\"IBM Plex Mono\",ui-monospace,monospace; font-weight:500; color:var(--ink); font-variant-numeric:tabular-nums; text-align:right;}\n  .hint{font-size:11.5px; color:var(--ink-soft); line-height:1.5;}\n\n  .src{\n    position:fixed; right:16px; bottom:calc(12px + env(safe-area-inset-bottom,0px));\n    max-width:calc(100vw - 32px);\n    font-size:11px; color:#4a4f58; background:rgba(251,250,247,.85); padding:5px 9px; border-radius:6px;\n  }\n  #loading[hidden]{display:none;}\n  #loading{\n    position:fixed; inset:0; display:grid; place-items:center; font-size:14px; color:var(--ink-soft);\n  }\n\n  /* 3D 라벨 */\n  .lbl{font-size:12px; white-space:nowrap; padding:2px 7px; border-radius:4px; transform:translateY(-4px);}\n  .lbl.mtn{color:#3d3a31; background:rgba(251,250,247,.82);}\n  .lbl.river{color:#2d5677; font-style:italic; background:rgba(235,242,248,.78);}\n  .lbl.site{\n    color:#fff; background:var(--navy); font-weight:600; font-size:13px; padding:5px 10px; border-radius:6px;\n    box-shadow:0 3px 10px rgba(27,47,92,.35);\n  }\n  .lbl.cx{font-size:11px;color:#fff;background:var(--cxc,#7d5ba6);opacity:.92;padding:1px 6px;}\n  .lbl.cx.unbuilt{background:rgba(251,250,247,.9);color:#5b6272;border:1px dashed #9aa0ad;}\n  .lbl.cx.plan{outline:1px dashed rgba(255,255,255,.85);outline-offset:-3px;}\n  .lbl.hide,.lbl.fhide{display:none;}\n\n  @media (max-width:520px){\n    .panel{padding:12px; gap:10px;}\n    .stats,.hint{display:none;}\n  }\n  @media (prefers-reduced-motion: reduce){ *{transition:none!important;} }\n"; document.head.appendChild(st);
   document.body.insertAdjacentHTML('afterbegin',"<div id=\"stage\"></div>\n<div id=\"labels\"></div>\n<div id=\"loading\">모형 데이터를 불러오는 중…</div>\n\n<aside class=\"panel\" aria-label=\"모형 조작\">\n  <div>\n    <a id=\"back3d\" href=\"index.html\" hidden style=\"display:inline-block;font-size:12px;color:#1b2f5c;text-decoration:none;margin-bottom:6px\">← 전체 현장</a>\n    <h1 id=\"ttl\">콘타모형</h1>\n    <p class=\"sub\" id=\"sub\"></p>\n  </div>\n  <div class=\"group\">\n    <span class=\"lab\">지형 표현</span>\n    <div class=\"seg\" role=\"group\" aria-label=\"지형 표현\">\n      <button type=\"button\" id=\"modeSmooth\" aria-pressed=\"true\">매끈형 + 등고선</button>\n      <button type=\"button\" id=\"modeStep\" aria-pressed=\"false\">계단형 콘타</button>\n    </div>\n  </div>\n  <div class=\"group\">\n    <span class=\"lab\">레이어</span>\n    <div class=\"chips\">\n      <button type=\"button\" class=\"chip\" id=\"tBld\" aria-pressed=\"true\">건물</button>\n      <button type=\"button\" class=\"chip\" id=\"tRoad\" aria-pressed=\"true\">도로</button>\n      <button type=\"button\" class=\"chip\" id=\"tWater\" aria-pressed=\"true\">하천</button>\n      <button type=\"button\" class=\"chip\" id=\"tLbl\" aria-pressed=\"true\">지명</button>\n    </div>\n  </div>\n  <div class=\"group\">\n    <span class=\"lab\">시점</span>\n    <div class=\"chips\">\n      <button type=\"button\" class=\"chip\" id=\"vAll\" aria-pressed=\"false\">전체</button>\n      <button type=\"button\" class=\"chip\" id=\"vSite\" aria-pressed=\"false\">현장 주변</button>\n      <button type=\"button\" class=\"chip\" id=\"vMtn\" aria-pressed=\"false\" hidden>산 방향</button>\n      <button type=\"button\" class=\"chip\" id=\"vIC\" aria-pressed=\"false\" hidden>IC</button>\n    </div>\n  </div>\n  <div class=\"stats\" id=\"stats\"></div>\n  <div class=\"hint\">왼쪽 드래그 이동 · <b>휠버튼 드래그 회전</b> (Shift+휠버튼 이동) · 휠 확대/축소(커서 기준)<br>등고선 간격 5 m (굵은 선 25 m) · 높이 과장 없음(1:1)</div>\n</aside>\n\n<div class=\"src\">출처: 국토지리정보원 연속수치지형도(2024), 공공누리 제1유형 · 건물 높이는 층수 × 3.1 m 추정</div>"); }
 const [meta, buf] = await Promise.all([
   fetch(SITE+'_meta.json').then(r=>r.json()),
@@ -94,7 +94,7 @@ Builder.prototype.mesh=function(mat){
   g.setAttribute('position',new THREE.Float32BufferAttribute(this.p,3));
   g.setAttribute('color',new THREE.Float32BufferAttribute(this.c,3));
   g.computeVertexNormals();
-  const m=new THREE.Mesh(g,mat); m.castShadow=true; m.receiveShadow=true; return m;
+  const m=new THREE.Mesh(g,mat); m.castShadow=true; m.receiveShadow=true; m.userData.rng=this.rng||{}; return m;
 };
 
 // ---------- 장면 ----------
@@ -259,7 +259,7 @@ const _mix=(a,b,k)=>new THREE.Color(a).lerp(new THREE.Color(b),k);
 const LEG={upcoming:'#202a5d',competitor:'#7d5ba6',presale:'#7d5ba6',scheduled:'#c23b7a',under1:'#e0a728','1to5':'#2f6fd6','5to10':'#12a39c',over10:'#9c6b3f'};
 const CXC={}; for(const [k,c] of Object.entries(LEG)) CXC[k]=[_mix(c,'#f3f0e9',0.38), _mix(c,'#e9e4da',0.52)];
 function buildBuildings(hFn, flatBase){
-  const b=new Builder(); const roof=C('#fbfaf6'), wall=C('#ecE8df'), tall=C('#f4f1ea');
+  const b=new Builder(); b.rng={}; const roof=C('#fbfaf6'), wall=C('#ecE8df'), tall=C('#f4f1ea');
   for (const [i,rings] of polys('bld')){
     if (HIDE.has(i)) continue;
     const fl=D.bld_fl[i]; const h=fl*3.1+1.0;
@@ -268,7 +268,7 @@ function buildBuildings(hFn, flatBase){
     else { base=Infinity; for (const v of rings[0]) base=Math.min(base,hFn(v.x,v.y)); }
     const y=base+h;
     const ci=D.bld_cx?D.bld_cx[i]:0;
-    if (ci){ const cc=CXC[meta.complexes[ci-1].key]||CXC.competitor; b.prism(rings,()=>y,()=>base-1.5, cc[0], cc[1]); }
+    if (ci){ const cc=CXC[meta.complexes[ci-1].key]||CXC.competitor; const s0=b.p.length/3; b.prism(rings,()=>y,()=>base-1.5, cc[0], cc[1]); (b.rng[ci]=b.rng[ci]||[]).push([s0,b.p.length/3]); }
     else b.prism(rings,()=>y,()=>base-1.5, fl>=10?tall:roof, wall);
   }
   return b.mesh(vcMat(0.95));
@@ -277,7 +277,7 @@ const bldStep=buildBuildings(hStep,true), bldSmooth=buildBuildings(hSmooth,false
 scene.add(bldStep,bldSmooth);
 // --- 배치 추정 볼륨: 2024 지형도 이후 지어졌거나 공사·분양 중인 단지(공고문 동수·최고층 기준, 동 위치는 추정) ---
 function buildPlan(hFn){
-  const b=new Builder();
+  const b=new Builder(); b.rng={};
   for (const [x,z,w,d,a,f,ci] of []){
     const key=(meta.complexes[ci-1]||{}).key, base_c=LEG[key]||'#7d5ba6';
     const top=_mix(base_c,'#ffffff',0.5), wall=_mix(base_c,'#f3f0e9',0.4);
@@ -294,7 +294,7 @@ function buildPlan(hFn){
     if (pts.length<3) continue;
     let base=Infinity; for(const p of pts) base=Math.min(base,hFn(p.x,p.y));
     const y=base+f*3.1+1.0;
-    b.prism([pts],()=>y,()=>base-1.5,top,wall);
+    const s0=b.p.length/3; b.prism([pts],()=>y,()=>base-1.5,top,wall); (b.rng[ci]=b.rng[ci]||[]).push([s0,b.p.length/3]);
   }
   const m=b.mesh(new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.9,metalness:0,transparent:true,opacity:0.9}));
   return m;
@@ -402,13 +402,35 @@ apply();
 document.getElementById('loading').hidden=true;
 function fit(){camera.aspect=innerWidth/innerHeight; if(innerWidth>900) camera.setViewOffset(innerWidth,innerHeight,-150,0,innerWidth,innerHeight); else camera.clearViewOffset(); camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);labelRenderer.setSize(innerWidth,innerHeight);}
 addEventListener('resize',fit); fit();
-renderer.setAnimationLoop((now)=>{ if(anim) anim(now); controls.update(); renderer.render(scene,camera); labelRenderer.render(scene,camera); });
+renderer.setAnimationLoop((now)=>{ if(anim) anim(now); controls.update(); renderer.render(scene,camera); labelRenderer.render(scene,camera); postLink(); });
 cxLOD(); window.__ready=true;
 // ---------- 메인 사이트와 주고받기 ----------
 window.__goView=(name)=>{ if(views[name]) go(name,false,1300); };
 window.__hasView=(name)=>!!views[name];
 window.__focusName=(name)=>{ const o=labelObjs.find(x=>x.userData.name===name); if(!o) return false;
   const p=o.position, gy=hSmooth(p.x,p.z); pose([p.x+380,gy+300,p.z+520],[p.x,gy+20,p.z],false,1300); return true; };
+// ---- 필터 연동: 메인 사이트에서 걸러진 단지는 이름표를 숨기고 건물을 회색으로 ----
+window.__filter=(names)=>{
+  const vis=names?new Set(names):null; const G0=new THREE.Color('#dcd8cf'); const hid=new Set();
+  (meta.complexes||[]).forEach((c,i)=>{ if(vis && c.key!=='upcoming' && !vis.has(c.name)) hid.add(i+1); });
+  for(const m of [bldStep,bldSmooth,planStep,planSmooth]){
+    const col=m.geometry.attributes.color; if(!m.userData.orig) m.userData.orig=col.array.slice();
+    col.array.set(m.userData.orig);
+    for(const ci of hid) for(const [a,b] of (m.userData.rng[ci]||[])) for(let v=a;v<b;v++){ col.array[v*3]=G0.r; col.array[v*3+1]=G0.g; col.array[v*3+2]=G0.b; }
+    col.needsUpdate=true;
+  }
+  for(const o of labelObjs) if(o.userData.k==='cx') o.element.classList.toggle('fhide', !!vis && !vis.has(o.userData.name));
+};
+// ---- 비교 연결선: 두 단지 이름표의 화면 좌표를 메인 사이트로 보내 점선·거리 라벨을 그리게 함 ----
+let linkPair=null, lastLink='';
+function linkObj(name){ let o=labelObjs.find(x=>x.userData.name===name); if(!o){ const ux=(meta.complexes||[]).find(c=>c.key==='upcoming'); if(ux&&ux.name===name) o=labelObjs.find(x=>x.userData.k==='site'); } return o; }
+window.__link=(a,b)=>{ const oa=linkObj(a), ob=linkObj(b); if(!oa||!ob){ linkPair=null; return false; }
+  linkPair=[oa,ob]; lastLink=''; const pa=oa.position, pb=ob.position; const cx=(pa.x+pb.x)/2, cz=(pa.z+pb.z)/2, d=Math.hypot(pa.x-pb.x,pa.z-pb.z), gy=hSmooth(cx,cz), R=Math.max(700,d*1.15);
+  pose([cx+R*0.35,gy+R*0.85,cz+R*0.75],[cx,gy,cz],false,1200); return true; };
+window.__unlink=()=>{ linkPair=null; lastLink=''; toTop({t:'link-pos',off:true}); };
+function postLink(){ if(!linkPair||!EMBED) return; const w=innerWidth,h=innerHeight;
+  const pr=o=>{ const v=o.position.clone().project(camera); return {x:Math.round((v.x+1)/2*w),y:Math.round((1-v.y)/2*h),vis:v.z<1}; };
+  const a=pr(linkPair[0]), b=pr(linkPair[1]); const k=[a.x,a.y,b.x,b.y].join(','); if(k!==lastLink){ lastLink=k; toTop({t:'link-pos',a,b}); } }
 window.__rotate=(on)=>{ controls.autoRotate=!!on; controls.autoRotateSpeed=0.7; };
 if (EMBED){
   const st=document.createElement('style'); st.textContent='#back3d{display:none!important} .panel{display:none!important}'; document.head.appendChild(st);

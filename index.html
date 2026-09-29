@@ -63,6 +63,7 @@
   }
   .filter-btn.active{background:var(--indigo);color:#fff;border-color:var(--indigo);}
   .filter-dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
+  .legend-chip{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;font-weight:600;color:var(--ink-soft);padding:6px 12px;border:1px dashed var(--line-strong);border-radius:999px;white-space:nowrap;cursor:default;user-select:none;}
   .setup-banner{
     background:#fff3cd;border-bottom:1px solid #e2c465;color:#5c4a12;
     font-size:.82rem;padding:10px 20px;display:none;line-height:1.5;
@@ -757,6 +758,8 @@
       <button class="filter-btn" data-filter="1to5"><span class="filter-dot" style="background:var(--age-1to5)"></span>1~5년</button>
       <button class="filter-btn" data-filter="5to10"><span class="filter-dot" style="background:var(--age-5to10)"></span>5~10년</button>
       <!-- "10년 초과" 필터는 2026.09.20부로 제거: 해당 단지들을 화면에서 전부 제외해서 항상 결과가 0개였음 -->
+      <!-- 10년 초과는 목록·지도·KPI에서는 계속 제외하고, 3D 모형에서만 이름 없이 색으로 표시하므로 클릭 불가한 범례 칩만 둠 -->
+      <span class="legend-chip" title="10년 초과 노후단지는 3D 모형에 색으로만 표시됩니다(이름·목록 제외)"><span class="filter-dot" style="background:var(--age-over10)"></span>10년 초과 (3D 참고)</span>
     </div>
     <div class="collapse-btn-group">
       <button type="button" class="filter-btn compare-collapse-btn" id="compareCollapseBtn">표 접기</button>

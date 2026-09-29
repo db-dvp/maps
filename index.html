@@ -3023,6 +3023,8 @@
   function openComparePopup(m){
     popupCurrentEntity = m.data;
     popupTxFilter = { floor: "all", area: "all" };
+    // 3D(콘타) 화면의 요약 말풍선이 팝업 뒤에 남아 비쳐 보이지 않도록 비교 팝업을 열 때 자동으로 닫는다.
+    var __cb = document.getElementById("contBubble"); if (__cb) __cb.style.display = "none";
     clearComparePopupMapDecorations();
     resetComparePopupPosition(); // 새로 열 때마다 화면 가운데로(이전에 드래그해서 옮겨둔 위치는 초기화)
 

@@ -597,6 +597,8 @@
   /* 2026-09-29: 국토지리정보원 연속수치지형도 콘타모형(3d/)으로 가는 버튼 */
   .map3d-mode-toggle a{display:flex;align-items:center;border-left:1px solid var(--line);padding:8px 14px;font-size:.78rem;font-weight:700;color:var(--indigo);text-decoration:none;white-space:nowrap;}
   .map3d-mode-toggle a:hover{background:#eef0f5;}
+  #contWrap{position:absolute;inset:0;display:none;z-index:1;}
+  #contWrap iframe{width:100%;height:100%;border:0;background:#d9d6cf;}
   /* 18차(2026-09-25): 3번 요청 — 하단 전체폭 바 대신, 2D의 "일반/위성" 지도유형 버튼과 같은
      좌상단 자리로 옮김(3D일 땐 그 버튼이 숨어있어서 자리가 비어있음).
      19차(2026-09-25): 12번 요청 — 18차에서 세로로 쌓는 작은 패널 형태로 바꿨더니 "안 예쁘다"는
@@ -775,10 +777,11 @@
 
         <!-- 10차(2026-09-24): 3D 보기(맵박스) — 같은 화면 안에서 2D/3D 토글 -->
         <div id="map3d"></div>
+        <div id="contWrap"><iframe id="contFrame" title="현장 콘타모형" allow="fullscreen"></iframe></div>
         <div class="map3d-mode-toggle" id="map3dModeToggle">
           <button type="button" data-mode="2d">2D</button>
           <button type="button" data-mode="3d" class="active">3D</button>
-          <a href="3d/" title="국토지리정보원 1:5,000 연속수치지형도로 만든 현장 콘타모형">콘타모형</a>
+          <button type="button" data-mode="cont" title="국토지리정보원 1:5,000 연속수치지형도로 만든 현장 콘타모형">콘타모형</button>
         </div>
         <div id="map3dLoading">3D 지도를 불러오는 중입니다…</div>
         <div id="map3dControls">
@@ -2136,6 +2139,7 @@
     (function(){
       // 17차(2026-09-25): 11번 요청 — 3D를 기본 지도로 변경. 페이지 로드시 곧바로 3D 모드로 시작.
       var mode3dActive = true;
+      var curMode = "3d";
       var map3dScriptsLoaded = false;
       var loadingEl = document.getElementById("map3dLoading");
       var map2dEl = document.getElementById("map");
@@ -2186,7 +2190,66 @@
 
       var savedKakaoCenter = null;
 
-      function applyMode(wants3d){
+      // ---- 콘타모형(3d/ 폴더) 모드: 같은 화면 안에 iframe으로 끼워 넣고 postMessage로 주고받는다 ----
+      function ensureCont(){
+        var f = document.getElementById("contFrame");
+        if (f && !f.getAttribute("src")) f.setAttribute("src", "3d/index.html");
+      }
+      window.contPost = function(o){
+        var f = document.getElementById("contFrame");
+        try { if (f && f.contentWindow) f.contentWindow.postMessage(o, "*"); } catch (e) {}
+      };
+      function resetContButtons(){
+        var db = document.getElementById("m3dDroneBtn");
+        if (db && window.__contMode) { db.classList.remove("active"); db.textContent = "▶ 드론비행"; }
+        var ov = document.getElementById("m3dDroneOverlay");
+        if (ov) ov.classList.remove("visible");
+      }
+      controlsEl.addEventListener("click", function(e){
+        if (!window.__contMode) return;
+        var b = e.target && e.target.closest ? e.target.closest("button") : null;
+        if (!b) return;
+        e.stopPropagation(); e.preventDefault();
+        if (b.classList.contains("view-btn")) {
+          controlsEl.querySelectorAll(".view-btn").forEach(function(x){ x.classList.remove("active"); });
+          b.classList.add("active");
+          var v = b.getAttribute("data-view");
+          window.contPost({ t: "goto", site: v === "incheon" ? "gy" : (v === "busan" ? "bs" : "home") });
+        } else if (b.id === "m3dAutoRotateBtn") {
+          var on = !b.classList.contains("active");
+          b.classList.toggle("active", on);
+          window.contPost({ t: "rotate", on: on });
+        } else if (b.id === "m3dDroneBtn") {
+          var on2 = !b.classList.contains("active");
+          b.classList.toggle("active", on2);
+          b.textContent = on2 ? "■ 정지" : "▶ 드론비행";
+          if (!on2) { var ov = document.getElementById("m3dDroneOverlay"); if (ov) ov.classList.remove("visible"); }
+          window.contPost({ t: "drone", on: on2 });
+        }
+      }, true);
+      window.addEventListener("message", function(e){
+        if (e.origin !== location.origin) return;
+        var d = e.data || {};
+        if (d.t === "cx-click") {
+          var mk = (typeof markers !== "undefined") ? markers.filter(function(x){ return x.data && x.data.name === d.name; })[0] : null;
+          if (!mk) return;
+          if (mk.kind === "project") openPanel(mk.data, false); else openComparisonPanel(mk.data);
+        } else if (d.t === "droneText" && window.__contMode) {
+          var t = document.getElementById("m3dDroneOverlayText"), dots = document.getElementById("m3dDroneOverlayDots"), ov = document.getElementById("m3dDroneOverlay");
+          if (t) t.textContent = "드론 비행 · " + (d.i + 1) + "/" + d.n + " · " + d.text;
+          if (dots) { dots.innerHTML = ""; for (var k = 0; k < d.n; k++) { var s = document.createElement("span"); s.className = "m3d-drone-dot" + (k === d.i ? " active" : ""); dots.appendChild(s); } }
+          if (ov) ov.classList.add("visible");
+        } else if (d.t === "droneEnd") {
+          resetContButtons();
+        }
+      });
+
+      function applyMode(mode){
+        var wants3d = (mode === "3d"), wantsCont = (mode === "cont");
+        window.__contMode = wantsCont;
+        var cw = document.getElementById("contWrap");
+        if (cw) cw.style.display = wantsCont ? "block" : "none";
+        if (!wantsCont && window.contPost) window.contPost({ t: "drone", on: false });
         mode3dActive = wants3d;
         // 20차(2026-09-25): 9번 요청 — 비교 팝업이 열려있는 채로 2D/3D를 전환하면, 다음 카메라
         // 이동/idle 이벤트를 기다리지 않고 바로 새 화면 기준으로 오버레이를 다시 그려준다.
@@ -2202,6 +2265,12 @@
           ensureMap3DLoaded().then(function(){
             if (window.__map3dInstance) window.__map3dInstance.resize();
           });
+        } else if (wantsCont) {
+          map3dEl.style.display = "none";
+          map2dEl.style.display = "none";
+          if (maptypeToggleEl) maptypeToggleEl.style.display = "none";
+          controlsEl.classList.add("visible");
+          ensureCont();
         } else {
           map3dEl.style.display = "none";
           controlsEl.classList.remove("visible");
@@ -2221,16 +2290,16 @@
       document.querySelectorAll(".map3d-mode-toggle button").forEach(function(btn){
         btn.addEventListener("click", function(){
           var wantsMode = btn.getAttribute("data-mode");
-          var wants3d = (wantsMode === "3d");
-          if (wants3d === mode3dActive) return;
+          if (wantsMode === curMode) return;
+          curMode = wantsMode;
           document.querySelectorAll(".map3d-mode-toggle button").forEach(function(b){ b.classList.remove("active"); });
           btn.classList.add("active");
-          applyMode(wants3d);
+          applyMode(wantsMode);
         });
       });
 
       // 17차: 페이지 로드시 곧바로 3D로 시작(위 mode3dActive 초기값과 맞춤).
-      applyMode(true);
+      applyMode("3d");
     })();
 
     var searchInputEl = document.getElementById("searchInput");
@@ -2721,6 +2790,7 @@
     }
     // 18차: 4번 요청 — 3D가 보이는 상태면 맵박스 카메라도 같은 위치로 옮긴다(2D만 움직이던 버그 수정).
     flyMap3DTo(pos.getLat(), pos.getLng());
+    if (window.__contMode && window.contPost) window.contPost({ t: "focus", name: m.data.name });
 
     if (m.kind === "project") {
       openPanel(m.data, false);

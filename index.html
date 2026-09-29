@@ -1315,7 +1315,8 @@
             status: row.map_status || (row.role === "own_upcoming" ? "upcoming" : "competitor"),
             statusLabel: row.status_label,
             units: row.units,
-            dateLabel: row.date_label,
+            // 인천계양·부산에코델타 당사 현장은 분양예정 대신 M/H(모델하우스) 오픈일로 표기(2026.11 오픈 예정).
+            dateLabel: (row.role === "own_upcoming" && /인천계양|부산에코델타/.test(row.name || "")) ? "M/H 26.11 오픈예정" : row.date_label,
             typeInfo: row.type_info,
             presalePrice: row.presale_price_note || null,
             competitionRate: row.competition_rate_note || null,

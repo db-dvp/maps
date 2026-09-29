@@ -780,8 +780,7 @@
         <div id="contWrap"><iframe id="contFrame" title="현장 콘타모형" allow="fullscreen"></iframe></div>
         <div class="map3d-mode-toggle" id="map3dModeToggle">
           <button type="button" data-mode="2d">2D</button>
-          <button type="button" data-mode="3d" class="active">3D</button>
-          <button type="button" data-mode="cont" title="국토지리정보원 1:5,000 연속수치지형도로 만든 현장 콘타모형">콘타모형</button>
+          <button type="button" data-mode="cont" class="active" title="국토지리정보원 1:5,000 연속수치지형도로 만든 현장 3D 콘타모형">3D</button>
         </div>
         <div id="map3dLoading">3D 지도를 불러오는 중입니다…</div>
         <div id="map3dControls">
@@ -789,6 +788,7 @@
             <span class="m3d-group-label">위치</span>
             <button type="button" class="view-btn" data-view="incheon">인천계양</button>
             <button type="button" class="view-btn" data-view="busan">부산에코델타</button>
+            <button type="button" class="view-btn" data-view="ilgwang">일광</button>
             <button type="button" class="view-btn active" data-view="korea">전국</button>
           </div>
           <div class="m3d-control-group">
@@ -2139,7 +2139,7 @@
     (function(){
       // 17차(2026-09-25): 11번 요청 — 3D를 기본 지도로 변경. 페이지 로드시 곧바로 3D 모드로 시작.
       var mode3dActive = true;
-      var curMode = "3d";
+      var curMode = "cont";
       var map3dScriptsLoaded = false;
       var loadingEl = document.getElementById("map3dLoading");
       var map2dEl = document.getElementById("map");
@@ -2199,6 +2199,61 @@
         var f = document.getElementById("contFrame");
         try { if (f && f.contentWindow) f.contentWindow.postMessage(o, "*"); } catch (e) {}
       };
+      // ---- 단지 이름표를 눌렀을 때 뜨는 요약 말풍선(예전 Mapbox 3D 말풍선과 같은 내용) ----
+      function bubbleEsc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(ch){ return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[ch]; }); }
+      function bubbleSummary(c){
+        var txs = (c.txHistory || []).filter(function(t){ return t.amt && t.area; });
+        if (!txs.length) return null;
+        txs = txs.slice().sort(function(a, b){ return ((b.y||0)*400 + (b.m||0)*31 + (b.d||0)) - ((a.y||0)*400 + (a.m||0)*31 + (a.d||0)); });
+        var t = txs[0], pct = null;
+        if (c.baselineAmt && c.baselineArea) {
+          pct = (t.amt / t.area / (c.baselineAmt / c.baselineArea) - 1) * 100;
+        } else if (c.unitTypes && c.unitTypes.length) {
+          var cand = c.unitTypes.filter(function(u){ return u.areaSqm && u.priceAmt; });
+          if (cand.length) {
+            var md = Math.min.apply(null, cand.map(function(u){ return Math.abs(u.areaSqm - t.area); }));
+            if (md <= 5) {
+              var mt = cand.filter(function(u){ return Math.abs(u.areaSqm - t.area) - md < 0.05; });
+              var per = mt.reduce(function(a, u){ return a + u.priceAmt / u.areaSqm; }, 0) / mt.length;
+              pct = (t.amt / t.area / per - 1) * 100;
+            }
+          }
+        }
+        return { pricePerPy: t.amt / (t.area / 3.3058), pct: pct, dateLabel: t.y ? (t.y + "." + (t.m ? String(t.m).padStart(2, "0") : "?")) : "-" };
+      }
+      function closeContBubble(){ var b = document.getElementById("contBubble"); if (b) b.style.display = "none"; }
+      function showContBubble(mk, x, y){
+        var c = mk.data, badgeColor, badgeLabel;
+        if (mk.kind === "project") { badgeColor = STATUS_COLOR[c.status] || "#7d5ba6"; badgeLabel = c.statusLabel || ""; }
+        else { badgeColor = (c.age && c.age.color) || "#7d5ba6"; badgeLabel = (c.age && c.age.label) || ""; }
+        var sm = bubbleSummary(c), price;
+        if (sm) {
+          var has = sm.pct !== null && !isNaN(sm.pct);
+          var cls = !has ? "sb-pct-na" : (sm.pct > 0 ? "sb-pct-up" : (sm.pct < 0 ? "sb-pct-down" : "sb-pct-flat"));
+          price = '<div class="sb-price">최근 실거래(' + bubbleEsc(sm.dateLabel) + ') <b>' + Math.round(sm.pricePerPy).toLocaleString() + '만원/평</b><br>최초 분양가 대비 <span class="' + cls + '">' + (!has ? "비교불가" : ((sm.pct > 0 ? "+" : "") + sm.pct.toFixed(1) + "%")) + '</span></div>';
+        } else {
+          price = '<div class="sb-price" style="color:#9c9184;">등록된 실거래 데이터 없음</div>';
+        }
+        var sub = (c.buildYear ? (c.buildYear + "년 준공") : (c.dateLabel || "준공예정")) + (c.landmark ? (" · " + c.landmark) : "");
+        var b = document.getElementById("contBubble");
+        if (!b) {
+          b = document.createElement("div"); b.id = "contBubble";
+          b.style.cssText = "position:absolute;z-index:14;width:250px;border:3px solid #2a2118;border-radius:16px;overflow:hidden;box-shadow:0 10px 26px rgba(0,0,0,.32);background:#fffaf0;font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;";
+          document.getElementById("contWrap").parentNode.appendChild(b);
+        }
+        b.innerHTML = '<div class="sb-header" style="background:' + badgeColor + ';position:relative;"><span class="sb-name">' + bubbleEsc(c.name) + '</span><span class="sb-age">' + bubbleEsc(badgeLabel) + '</span>' +
+          '<button type="button" id="contBubbleClose" aria-label="닫기" style="position:absolute;right:6px;top:2px;border:0;background:transparent;color:#fff;font-size:20px;cursor:pointer;">&times;</button></div>' +
+          '<div class="sb-body"><div class="sb-sub">' + bubbleEsc(sub) + '</div>' + price + '<div class="sb-hint" style="font-size:10.5px;color:#9c9184;">오른쪽에 상세정보가 표시됩니다</div></div>';
+        var host = document.getElementById("contWrap").getBoundingClientRect(), W = host.width, H = host.height;
+        b.style.display = "block";
+        var bw = 250, bh = b.offsetHeight || 170;
+        var left = Math.min(Math.max(8, (x || W / 2) - bw / 2), Math.max(8, W - bw - 8));
+        var top = (y || H / 2) - bh - 14; if (top < 64) top = Math.min((y || H / 2) + 24, H - bh - 8);
+        b.style.left = left + "px"; b.style.top = top + "px";
+        document.getElementById("contBubbleClose").onclick = closeContBubble;
+      }
+      document.addEventListener("keydown", function(e){ if (e.key === "Escape") closeContBubble(); });
+
       function resetContButtons(){
         var db = document.getElementById("m3dDroneBtn");
         if (db && window.__contMode) { db.classList.remove("active"); db.textContent = "▶ 드론비행"; }
@@ -2214,7 +2269,7 @@
           controlsEl.querySelectorAll(".view-btn").forEach(function(x){ x.classList.remove("active"); });
           b.classList.add("active");
           var v = b.getAttribute("data-view");
-          window.contPost({ t: "goto", site: v === "incheon" ? "gy" : (v === "busan" ? "bs" : "home") });
+          window.contPost({ t: "goto", site: v === "incheon" ? "gy" : (v === "busan" ? "bs" : (v === "ilgwang" ? "il" : "home")) });
         } else if (b.id === "m3dAutoRotateBtn") {
           var on = !b.classList.contains("active");
           b.classList.toggle("active", on);
@@ -2233,6 +2288,7 @@
         if (d.t === "cx-click") {
           var mk = (typeof markers !== "undefined") ? markers.filter(function(x){ return x.data && x.data.name === d.name; })[0] : null;
           if (!mk) return;
+          showContBubble(mk, d.x, d.y);
           if (mk.kind === "project") openPanel(mk.data, false); else openComparisonPanel(mk.data);
         } else if (d.t === "droneText" && window.__contMode) {
           var t = document.getElementById("m3dDroneOverlayText"), dots = document.getElementById("m3dDroneOverlayDots"), ov = document.getElementById("m3dDroneOverlay");
@@ -2241,6 +2297,10 @@
           if (ov) ov.classList.add("visible");
         } else if (d.t === "droneEnd") {
           resetContButtons();
+        } else if (d.t === "site") {
+          var map_ = { gy: "incheon", bs: "busan", il: "ilgwang", home: "korea" };
+          controlsEl.querySelectorAll(".view-btn").forEach(function(x){ x.classList.toggle("active", x.getAttribute("data-view") === map_[d.id]); });
+          closeContBubble();
         }
       });
 
@@ -2299,7 +2359,7 @@
       });
 
       // 17차: 페이지 로드시 곧바로 3D로 시작(위 mode3dActive 초기값과 맞춤).
-      applyMode("3d");
+      applyMode("cont");
     })();
 
     var searchInputEl = document.getElementById("searchInput");

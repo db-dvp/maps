@@ -289,7 +289,7 @@ function buildPlan(hFn){
   // 실제 배치(카카오맵에 그려진 동 모양): [단지번호, 층수, [x,z,x,z,...]]
   for (const [ci,f,flat] of (meta.planfp||[])){
     const key=(meta.complexes[ci-1]||{}).key, base_c=LEG[key]||'#7d5ba6';
-    const top=_mix(base_c,'#ffffff',0.35), wall=_mix(base_c,'#f3f0e9',0.3);
+    const nv=key==='upcoming', top=_mix(base_c,'#ffffff',nv?0.06:0.35), wall=_mix(base_c,'#f3f0e9',nv?0.04:0.3);
     const pts=[]; for(let k=0;k<flat.length;k+=2) pts.push(new THREE.Vector2(flat[k],flat[k+1]));
     if (pts.length<3) continue;
     let base=Infinity; for(const p of pts) base=Math.min(base,hFn(p.x,p.y));

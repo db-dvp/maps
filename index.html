@@ -1754,11 +1754,13 @@
         res.skipped.push({ name: e.name, reason: reason });
         return;
       }
-      var cUnits = 0, cAmtUnits = 0;
-      ok.forEach(function(u){ cUnits += u.unitsCount; cAmtUnits += u.priceAmt * u.unitsCount; });
+      var cUnits = 0, cAmtUnits = 0, cAreaUnits = 0;
+      ok.forEach(function(u){ cUnits += u.unitsCount; cAmtUnits += u.priceAmt * u.unitsCount; cAreaUnits += (u.areaSqm || 0) * u.unitsCount; });
       res.items.push({
         name: e.name,
         dateLabel: e.dateLabel || "",
+        noticeDate: e.recruitNoticeDate || null,
+        pricePerPy: cAreaUnits > 0 ? (cAmtUnits / cAreaUnits) * 3.305785 : null,
         isPublic: e.name.indexOf("LH") !== -1,
         units: cUnits,
         avgAmt: cAmtUnits / cUnits,
@@ -1768,6 +1770,10 @@
       });
       sumAmtUnits += cAmtUnits;
       sumUnits += cUnits;
+    });
+    res.items.sort(function(a, b){
+      if (a.noticeDate && b.noticeDate) return a.noticeDate < b.noticeDate ? -1 : (a.noticeDate > b.noticeDate ? 1 : 0);
+      if (a.noticeDate) return -1; if (b.noticeDate) return 1; return 0;
     });
     if (res.items.length) {
       res.available = true;
@@ -1840,7 +1846,9 @@
     var html = sup.items.map(function(it){
       var pm = premium && premium.items ? premium.items.find(function(x){ return x.name === it.name; }) : null;
       var pmText = pm ? (' · 전매 프리미엄 ' + (pm.avgPct >= 0 ? '+' : '') + pm.avgPct.toFixed(1) + '%(' + pm.txCount + '건)') : '';
-      var dl = it.dateLabel ? ('<br><span>시점: ' + it.dateLabel + '</span>') : '';
+      var nd = it.noticeDate ? ('입주자모집공고 ' + String(it.noticeDate).slice(0, 10).replace(/-/g, '.')) : '공고일 미확인';
+      var py = it.pricePerPy ? (' · 평당 ' + Math.round(it.pricePerPy).toLocaleString() + '만원') : '';
+      var dl = '<br><span>' + nd + (it.dateLabel ? ' · ' + it.dateLabel : '') + py + '</span>';
       var tag = it.isPublic ? ' <span class="sim-est-tag">LH 공공분양</span>' : '';
       var types = it.types.map(function(t){
         return t.typeName + ' ' + t.units.toLocaleString() + '세대 ' + formatAmt(t.price) + (t.basis ? '(' + t.basis + ')' : '');

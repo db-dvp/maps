@@ -1842,9 +1842,9 @@
       '<div>단지별로 DB에 적힌 가격 기준(최고가/평균 등)이 달라 목록에 병기했습니다.</div></details>';
   }
 
-  function simTxLineHtml(title, s){
-    if (!s) return title + ': 해당 조건의 거래가 없습니다.';
-    return title + ' (' + s.txCount + '건 평균): <b>' + formatAmt(Math.round(s.weightedAvgAmt)) + '</b>';
+  function simTxLineHtml(title, scope, s){
+    if (!s) return title + '(참고 · ' + scope + '): 해당 조건의 거래가 없습니다.';
+    return title + '(참고 · ' + scope + ' · ' + s.txCount + '건 평균): <b>' + formatAmt(Math.round(s.weightedAvgAmt)) + '</b>';
   }
 
   // 당사 분양예정 현장(own_upcoming) 패널에 표시할 시뮬레이터 HTML.
@@ -1872,8 +1872,8 @@
     var txLines;
     if (mb) {
       txLines =
-        '<div class="sim-baseline">' + simTxLineHtml('기축 실거래 기준(참고 · ' + cfg.minYear + '년 이후 일반매매)', mb.regular) + '</div>' +
-        '<div class="sim-baseline">' + simTxLineHtml('분양권 전매 실거래 기준(참고 · ' + cfg.minYear + '년 이후)', mb.presale) + '</div>' +
+        '<div class="sim-baseline">' + simTxLineHtml('기축 실거래 기준', cfg.minYear + '년 이후 일반매매', mb.regular) + '</div>' +
+        '<div class="sim-baseline">' + simTxLineHtml('분양권 전매 실거래 기준', cfg.minYear + '년 이후', mb.presale) + '</div>' +
         '<div class="sim-baseline">기준 단지 ' + cfg.baselineComplexNames.length + '개 중 ' + mb.complexCount + '개 단지에서 ' + cfg.mainType.label + ' 실거래 ' + mb.txCount + '건 확인</div>';
     } else {
       txLines = '<div class="sim-baseline">기준 단지의 실거래 데이터가 부족해 기축·전매 실거래 기준을 계산할 수 없습니다.</div>';

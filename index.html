@@ -3477,7 +3477,7 @@
     var scheduledInfoHtml = buildScheduledInfoHtml(p);
     var unitTypesHtml = buildUnitTypesHtml(p);
     var chartId = containerId + "_floorChart";
-    var txId = containerId + "_txSection";
+    var txId = isPopup ? (containerId + "_txSection") : "txSectionRoot";
     document.getElementById(containerId).innerHTML =
       badge +
       '<h2>' + p.name + '</h2>' +
@@ -3534,7 +3534,7 @@
     var elapsedTxt = c.buildYear ? ((CURRENT_YEAR - c.buildYear) + "년") : "-";
     var unitsTxt = c.units ? (c.units + "세대") : "확인 안됨";
     var chartId = containerId + "_floorChart";
-    var txId = containerId + "_txSection";
+    var txId = isPopup ? (containerId + "_txSection") : "txSectionRoot";
     document.getElementById(containerId).innerHTML =
       badge +
       '<h2>' + c.name + '</h2>' +

@@ -1590,6 +1590,7 @@
       minYear: 2023,
       mainType: { label: "84형", areaMin: 80, areaMax: 89 },
       marketNote: "인근 일부 단지(부산에코델타시티디에트르더퍼스트 등)에서 마피·정가 매물이 다수 관찰됨(2026.09, 비공식 호가·미체결이라 숫자에는 반영하지 않음).",
+      nearbyLabel: true, // 신규 공급이 없어 인근 단지(강동동 12곳) 실거래를 상·중·하 판정 기준으로 사용(대표님 요청, 2026.10)
       referenceGroups: [
         {
           label: "명지 실거래 (참고 · 2016~2019년 준공 구축 포함)", shortLabel: "명지 실거래",
@@ -1844,6 +1845,10 @@
     if (sp.lh && cfg && cfg.lhMarkup && markupPct !== null && markupPct !== undefined && !isNaN(markupPct)) {
       return { amt: sp.lh.avgAmt * (1 + markupPct / 100), kind: "lh_markup", lhAmt: sp.lh.avgAmt, pct: markupPct };
     }
+    // 신규 공급이 전혀 없는 현장(부산): 인근 단지(기준 단지) 실거래 가중평균을 판정 기준으로 사용(cfg.nearbyLabel).
+    if (cfg && cfg.nearbyLabel && simCurrentMainBaseline && simCurrentMainBaseline.weightedAvgAmt) {
+      return { amt: simCurrentMainBaseline.weightedAvgAmt, kind: "nearby", count: simCurrentMainBaseline.complexCount, txCount: simCurrentMainBaseline.txCount };
+    }
     return null;
   }
 
@@ -2077,7 +2082,7 @@
         var eb = simEffectiveBaseline(simCurrentNewSupply, cfg, simReadMarkup());
         if (eb) {
           var gap = computeSimGapPct(mainAmt, eb.amt);
-          var gapTitle = eb.kind === "lh_markup" ? ('LH 기준+가산(' + eb.pct + '%) 대비 갭') : '민간 신규 공급 대비 갭';
+          var gapTitle = eb.kind === "nearby" ? ('인근 단지(' + eb.count + '곳) 실거래 대비 갭 · 전매 포함 시세') : eb.kind === "lh_markup" ? ('LH 기준+가산(' + eb.pct + '%) 대비 갭') : '민간 신규 공급 대비 갭';
           html += simResultRow(gapTitle, simGapText(gap) + simBadgeHtml(simCompetitivenessLabel(gap)));
         } else {
           html += simResultRow('신규 공급 대비 갭', '비교 기준 없음' + simBadgeHtml(null));

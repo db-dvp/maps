@@ -1866,6 +1866,46 @@
   var simCurrentNewSupply = null;     // 주력 타입 신규 공급 기준(라벨 기준)
   var simCurrentSold = null;          // 주력 타입 최근 분양 완료 단지 분양가(참고)
   var simCurrentPremium = null;
+  var simCurrentFloor = null;         // 층별 계수(중층 대비) — 기준 단지 실거래에서 계산
+
+  // 기준 단지 실거래에서 "중층 대비" 층별 가격 비율을 구한다(대표님 요청 2026.10: 예상 분양가는 중층 기준으로 입력).
+  // 단지마다 중층 평균 평당가를 1로 놓고 각 거래의 평당가를 나눈 비율을 모아서 평균 → 단지별 가격 수준 차이를 제거.
+  // 중층 표본이 3건 미만인 단지는 제외. 데이터가 부족하면 null(그럼 입력값을 전체 평균으로 취급).
+  function computeFloorFactors(cfg){
+    var all = COMPARISON_COMPLEXES.concat(PROJECTS);
+    var acc = { all: [], low: [], mid: [], high: [], first: [], top: [] };
+    var usedC = 0;
+    function pp(t){ return (t.amt / t.area) * PYEONG_SQM; }
+    function mean(a){ return a.reduce(function(x,y){ return x + y; }, 0) / a.length; }
+    (cfg.baselineComplexNames || []).forEach(function(name){
+      var e = all.find(function(x){ return x.name === name; });
+      if (!e || !e.txHistory) return;
+      var mf = computeMaxFloor(e);
+      if (!mf) return;
+      var txs = e.txHistory.filter(function(t){
+        if (!t.area || !t.amt || !t.y || !t.f) return false;
+        if (t.y < cfg.minYear) return false;
+        if (t.area < cfg.mainType.areaMin || t.area > cfg.mainType.areaMax) return false;
+        return t.type === "regular_sale" || t.type === "presale_resale";
+      });
+      var mids = txs.filter(function(t){ return floorBucketLabel(t.f, mf) === "중층"; }).map(pp);
+      if (mids.length < 3) return;
+      var midAvg = mean(mids);
+      usedC++;
+      txs.forEach(function(t){
+        var r = pp(t) / midAvg;
+        acc.all.push(r);
+        var tier = floorBucketLabel(t.f, mf);
+        if (tier === "저층") acc.low.push(r); else if (tier === "중층") acc.mid.push(r); else acc.high.push(r);
+        if (t.f === 1) acc.first.push(r);
+        if (mf > 5 && t.f >= mf - 1) acc.top.push(r);
+      });
+    });
+    if (usedC < 2 || acc.all.length < 20) return null;
+    function tierOf(a){ return a.length >= 3 ? { ratio: mean(a), n: a.length } : { ratio: null, n: a.length }; }
+    return { avgFactor: mean(acc.all), complexCount: usedC, txCount: acc.all.length,
+      low: tierOf(acc.low), mid: tierOf(acc.mid), high: tierOf(acc.high), first: tierOf(acc.first), top: tierOf(acc.top) };
+  }
   var simCurrentEstNewSupply = null;  // 추정 타입(114형) 신규 공급 기준(라벨 기준)
 
   function simGapText(gap){ return (gap >= 0 ? "+" : "") + gap.toFixed(1) + "%"; }
@@ -1934,12 +1974,13 @@
     var cfg = SIMULATOR_CONFIG[p.name];
     if (!cfg) {
       simCurrentCfg = null; simCurrentMainBaseline = null;
-      simCurrentNewSupply = null; simCurrentSold = null; simCurrentEstNewSupply = null; simCurrentPremium = null;
+      simCurrentNewSupply = null; simCurrentSold = null; simCurrentEstNewSupply = null; simCurrentPremium = null; simCurrentFloor = null;
       return "";
     }
     simCurrentCfg = cfg;
     simCurrentMainBaseline = computeMainTypeBaseline(cfg);
     var mb = simCurrentMainBaseline;
+    simCurrentFloor = computeFloorFactors(cfg);
     var rk = regionKeyOf(p.address);
     var rName = SIM_REGION_NAME[rk] || "해당 지역";
     simCurrentNewSupply = computeSupplyBaseline(rk, cfg.mainType.areaMin, cfg.mainType.areaMax, isNewSupplyStage);
@@ -1990,10 +2031,18 @@
         '<div class="sim-baseline">' + simSoldLineHtml(simCurrentSold, cfg.mainType.label, rName, simCurrentPremium) + '</div>' +
         excludedNote +
         '<div class="sim-row">' +
-          '<label>입력</label>' +
+          '<label>' + (simCurrentFloor ? '중층 기준 입력' : '입력') + '</label>' +
           '<input type="number" class="sim-input" data-sim="main" placeholder="예: 65000" />' +
           '<span class="sim-unit">만원</span>' +
         '</div>' +
+        (simCurrentFloor
+          ? ('<div class="sim-row" style="margin-top:2px;">' +
+               '<label style="min-width:auto;"><input type="checkbox" data-sim="garden" /> 1층 정원형(특화) 세대 있음</label>' +
+               '<input type="number" class="sim-input" style="max-width:62px;" data-sim="gardenPct" value="0" />' +
+               '<span class="sim-unit">% (중층 대비 · 직접 조정)</span>' +
+             '</div>')
+          : '') +
+        '<div class="sim-result" id="simFloorResult"></div>' +
         '<div class="sim-result" id="simMainResult"></div>' +
       '</div>';
 
@@ -2073,12 +2122,44 @@
       }
     }
 
+    var floorEl = document.getElementById("simFloorResult");
+    if (floorEl) {
+      var fm = document.querySelector('[data-sim="main"]');
+      var fv = fm ? parseFloat(fm.value) : NaN;
+      var ff = simCurrentFloor;
+      if (ff && !isNaN(fv) && fv > 0) {
+        var rows = "";
+        function fr(label, tier, note){
+          if (!tier || tier.ratio === null) return simResultRow(label, '표본 부족 (' + (tier ? tier.n : 0) + '건)');
+          return simResultRow(label, formatAmt(Math.round(fv * tier.ratio)) + ' <span style="color:var(--ink-soft);font-weight:400">(중층 대비 ' + ((tier.ratio - 1) * 100 >= 0 ? '+' : '') + ((tier.ratio - 1) * 100).toFixed(1) + '% · ' + tier.n + '건' + (note || '') + ')</span>');
+        }
+        rows += fr('저층(1~5층)', ff.low);
+        rows += simResultRow('중층', formatAmt(Math.round(fv)));
+        rows += fr('고층', ff.high);
+        rows += fr('1층 일반형 (참고)', ff.first);
+        rows += fr('최상층 (참고)', ff.top);
+        var gck = document.querySelector('[data-sim="garden"]');
+        if (gck && gck.checked) {
+          var gp = parseFloat((document.querySelector('[data-sim="gardenPct"]') || {}).value);
+          if (isNaN(gp)) gp = 0;
+          rows += simResultRow('1층 정원형', formatAmt(Math.round(fv * (1 + gp / 100))) + ' <span style="color:var(--ink-soft);font-weight:400">(중층 ' + (gp >= 0 ? '+' : '') + gp + '% · 사용자 지정값)</span>');
+        }
+        rows += '<div class="sim-baseline" style="font-size:.64rem;">층별 비율은 기준 단지 ' + ff.complexCount + '곳의 ' + cfg.mainType.label + ' 실거래 ' + ff.txCount + '건에서 계산(전매가 포함이라 실제 분양가 층 차이보다 클 수 있음). 중층 ' + formatAmt(Math.round(fv)) + ' → 전체 평균 ' + formatAmt(Math.round(fv * ff.avgFactor)) + '로 환산해 아래 비교에 사용했습니다.' +
+          ((gck && gck.checked) ? ' 정원형 1층은 근거 자료가 거의 없어 % 값을 직접 정해야 합니다(계양 효성해링턴 플레이스 1층 사례 1건만 확인).' : '') + '</div>';
+        floorEl.innerHTML = rows;
+      } else {
+        floorEl.innerHTML = "";
+      }
+    }
+
     var mainInput = document.querySelector('[data-sim="main"]');
     var mainResultEl = document.getElementById("simMainResult");
     if (mainInput && mainResultEl) {
       var mainAmt = parseFloat(mainInput.value);
       if (!isNaN(mainAmt) && mainAmt > 0) {
         var html = "";
+        var midInput = mainAmt;
+        if (simCurrentFloor) mainAmt = midInput * simCurrentFloor.avgFactor; // 중층 입력 → 전체 평균으로 환산해서 비교
         var eb = simEffectiveBaseline(simCurrentNewSupply, cfg, simReadMarkup());
         if (eb) {
           var gap = computeSimGapPct(mainAmt, eb.amt);

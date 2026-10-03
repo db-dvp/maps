@@ -1561,7 +1561,11 @@
       ],
       minYear: 2025,
       mainType: { label: "84형", areaMin: 80, areaMax: 89 },
-      estimatedType: { label: "114형", targetSqm: 114.64 } // 114A 114.6602㎡ · 114B 114.6268㎡ 평균(2026.09.14 확정 세대 정보 반영)
+      estimatedType: { label: "114형", targetSqm: 114.64 }, // 114A 114.6602㎡ · 114B 114.6268㎡ 평균(2026.09.14 확정 세대 정보 반영)
+      // LH 공공분양만 신규 공급으로 확인될 때, 민간 분양가를 "LH 최초분양가 × (1+가산율)"로 참고 계산(대표님 요청, 2026.10).
+      // 가산율 근거: 인천계양 2024년 LH A2(84형 평균 57,827만원) 대비 민간 롯데캐슬 1·2단지 84형 평균 +15.6~18.7%.
+      lhMarkup: { defaultPct: 16, lowPct: 15.6, highPct: 18.7,
+        note: "인천계양 2024년 LH A2(5억 7,827만원) 대비 민간 롯데캐슬 1·2단지 84형 분양가가 +15.6~18.7% 높았던 격차(같은 지구·같은 해)" }
     },
     // 부산에코델타시티2차(공동29블록) — 전 세대 84형(84A/84B/84C, 539세대)이라 114형 추정 로직은 불필요.
     // (2026.09.14 갱신) 최초엔 강동동(우리 사업지 동네) 실거래가 84형 기준 4건뿐이라 명지 준신축 2개 단지를
@@ -1817,6 +1821,32 @@
     return res;
   }
 
+
+  // 신규 공급 중 LH 공공분양과 민간을 나눠 세대수 가중평균을 낸다.
+  function splitNewSupply(ns){
+    var out = { lh: null, priv: null };
+    if (!ns || !ns.available) return out;
+    function agg(list){
+      if (!list.length) return null;
+      var u = 0, a = 0;
+      list.forEach(function(it){ u += it.units; a += it.avgAmt * it.units; });
+      return { units: u, avgAmt: a / u, count: list.length };
+    }
+    out.lh = agg(ns.items.filter(function(it){ return it.isPublic; }));
+    out.priv = agg(ns.items.filter(function(it){ return !it.isPublic; }));
+    return out;
+  }
+
+  // 가격경쟁력 라벨의 비교 기준: 민간 신규 공급이 있으면 그 평균, 없고 LH만 있으면 "LH × (1+가산율)", 둘 다 없으면 null(판정 불가).
+  function simEffectiveBaseline(ns, cfg, markupPct){
+    var sp = splitNewSupply(ns);
+    if (sp.priv) return { amt: sp.priv.avgAmt, kind: "private", count: sp.priv.count, units: sp.priv.units };
+    if (sp.lh && cfg && cfg.lhMarkup && markupPct !== null && markupPct !== undefined && !isNaN(markupPct)) {
+      return { amt: sp.lh.avgAmt * (1 + markupPct / 100), kind: "lh_markup", lhAmt: sp.lh.avgAmt, pct: markupPct };
+    }
+    return null;
+  }
+
   // 114형처럼 설정에 면적 범위가 없으면 목표 전용면적 ±5㎡(기존 타입 매칭 허용 오차와 같은 값)를 범위로 사용.
   function simEstTypeRange(cfg){
     var et = cfg.estimatedType;
@@ -1933,10 +1963,24 @@
       '</div>';
     }
 
+    var markupHtml = "";
+    var spl = splitNewSupply(simCurrentNewSupply);
+    if (cfg.lhMarkup && spl.lh && !spl.priv) {
+      var lm = cfg.lhMarkup;
+      markupHtml =
+        '<div class="sim-baseline" id="simMarkupText"></div>' +
+        '<div class="sim-row">' +
+          '<label>LH 가산율</label>' +
+          '<input type="number" class="sim-input" style="max-width:70px;" data-sim="markup" value="' + lm.defaultPct + '" />' +
+          '<span class="sim-unit">% (기본값 ' + lm.defaultPct + '% · 직접 조정 가능)</span>' +
+        '</div>' +
+        '<div class="sim-baseline" style="font-size:.64rem;">가산율 근거: ' + lm.note + '. 가산율은 과거 격차일 뿐 이 가격에 팔린다는 근거는 아닙니다.</div>';
+    }
     var mainBox =
       '<div class="sim-box">' +
         '<div class="sim-box-title">' + cfg.mainType.label + ' 예상 분양가</div>' +
         '<div class="sim-baseline">' + simNewSupplyLineHtml(simCurrentNewSupply, cfg.mainType.label, rName) + '</div>' +
+        markupHtml +
         txLines +
         '<div class="sim-baseline">' + simSoldLineHtml(simCurrentSold, cfg.mainType.label, rName, simCurrentPremium) + '</div>' +
         excludedNote +
@@ -1998,10 +2042,31 @@
 
   // 시뮬레이터 입력값이 바뀔 때마다(또는 패널을 처음 열었을 때) 결과 영역만 다시 계산해서 채운다.
   // 가격경쟁력 라벨은 신규 공급 대비 갭에만 붙고, 기축·전매·분양완료 대비 값은 숫자만 표시한다.
+  function simReadMarkup(){
+    var el = document.querySelector('[data-sim="markup"]');
+    if (!el) return (simCurrentCfg && simCurrentCfg.lhMarkup) ? simCurrentCfg.lhMarkup.defaultPct : null;
+    var v = parseFloat(el.value);
+    return isNaN(v) ? null : v;
+  }
+
   function renderSimulatorOutputs(){
     if (!simCurrentCfg) return;
     var cfg = simCurrentCfg;
     var mb = simCurrentMainBaseline;
+
+    var markupEl = document.getElementById("simMarkupText");
+    if (markupEl) {
+      var spl2 = splitNewSupply(simCurrentNewSupply);
+      var mp = simReadMarkup();
+      var lm = cfg.lhMarkup;
+      if (spl2.lh && lm && mp !== null) {
+        var lhAmt = spl2.lh.avgAmt;
+        markupEl.innerHTML = 'LH 기준 + 가산(참고 · 민간 신규 공급이 없어 대신 사용): <b>' + formatAmt(Math.round(lhAmt * (1 + mp / 100))) + '</b>' +
+          ' (LH ' + formatAmt(Math.round(lhAmt)) + ' × ' + (1 + mp / 100).toFixed(3) + ') · 근거 구간 ' + formatAmt(Math.round(lhAmt * (1 + lm.lowPct / 100))) + ' ~ ' + formatAmt(Math.round(lhAmt * (1 + lm.highPct / 100))) + ' (+' + lm.lowPct + '~' + lm.highPct + '%)';
+      } else {
+        markupEl.innerHTML = "";
+      }
+    }
 
     var mainInput = document.querySelector('[data-sim="main"]');
     var mainResultEl = document.getElementById("simMainResult");
@@ -2009,10 +2074,11 @@
       var mainAmt = parseFloat(mainInput.value);
       if (!isNaN(mainAmt) && mainAmt > 0) {
         var html = "";
-        var ns = simCurrentNewSupply;
-        if (ns && ns.available) {
-          var gap = computeSimGapPct(mainAmt, ns.weightedAvgAmt);
-          html += simResultRow('신규 공급 대비 갭', simGapText(gap) + simBadgeHtml(simCompetitivenessLabel(gap)));
+        var eb = simEffectiveBaseline(simCurrentNewSupply, cfg, simReadMarkup());
+        if (eb) {
+          var gap = computeSimGapPct(mainAmt, eb.amt);
+          var gapTitle = eb.kind === "lh_markup" ? ('LH 기준+가산(' + eb.pct + '%) 대비 갭') : '민간 신규 공급 대비 갭';
+          html += simResultRow(gapTitle, simGapText(gap) + simBadgeHtml(simCompetitivenessLabel(gap)));
         } else {
           html += simResultRow('신규 공급 대비 갭', '비교 기준 없음' + simBadgeHtml(null));
         }

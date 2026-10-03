@@ -1592,11 +1592,11 @@
       marketNote: "인근 일부 단지(부산에코델타시티디에트르더퍼스트 등)에서 마피·정가 매물이 다수 관찰됨(2026.09, 비공식 호가·미체결이라 숫자에는 반영하지 않음).",
       referenceGroups: [
         {
-          label: "명지 실거래 (참고 · 2016~2019년 준공 구축 포함)",
+          label: "명지 실거래 (참고 · 2016~2019년 준공 구축 포함)", shortLabel: "명지 실거래",
           names: ["더샵명지퍼스트월드2단지", "더샵명지퍼스트월드3단지", "명지대방노블랜드오션뷰2차", "명지국제신도시호반베르디움1차", "명지2차금강펜테리움센트럴파크", "명지국제신도시호반베르디움2차", "명지더웨스턴", "부산명지중흥S-클래스에듀오션", "명지국제신도시삼정그린코아더베스트", "e편한세상명지", "더힐시그니처"]
         },
         {
-          label: "다른 지역 신도시 시세참고 — 일광신도시(기장군 일광읍)",
+          label: "다른 지역 신도시 시세참고 — 일광신도시(기장군 일광읍)", shortLabel: "일광신도시 실거래",
           names: [
             "e편한세상일광", "이지더원1차오션포레", "일광 노르웨이숲 오션포레", "일광대성베르힐",
             "일광신도시비스타동원1차", "일광신도시비스타동원2차", "일광자이푸르지오1단지",
@@ -2025,7 +2025,7 @@
           : "";
         return (
           '<div class="sim-box">' +
-            '<div class="sim-box-title">' + cfg.mainType.label + ' 실거래 참고<span class="sim-est-tag">기준가 계산 미포함</span></div>' +
+            '<div class="sim-box-title">' + cfg.mainType.label + ' 실거래 참고<span class="sim-est-tag">상·중·하 판정 미포함</span></div>' +
             '<div class="sim-baseline">' + refText + '</div>' +
             noteHtml +
           '</div>'
@@ -2085,6 +2085,10 @@
         if (mb && mb.regular) html += simResultRow('기축 실거래 대비 (참고)', simGapText(computeSimGapPct(mainAmt, mb.regular.weightedAvgAmt)));
         if (mb && mb.presale) html += simResultRow('분양권 전매 대비 (참고)', simGapText(computeSimGapPct(mainAmt, mb.presale.weightedAvgAmt)));
         if (simCurrentSold && simCurrentSold.available) html += simResultRow('분양 완료 단지 대비 (참고)', simGapText(computeSimGapPct(mainAmt, simCurrentSold.weightedAvgAmt)));
+        (cfg.referenceGroups || []).forEach(function(g){
+          var rs = computeReferenceStats(cfg, g);
+          if (rs) html += simResultRow((g.shortLabel || g.label) + ' 대비 (참고)', simGapText(computeSimGapPct(mainAmt, rs.weightedAvgAmt)));
+        });
         mainResultEl.innerHTML = html;
       } else {
         mainResultEl.innerHTML = "";

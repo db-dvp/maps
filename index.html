@@ -520,6 +520,9 @@
     background:rgba(213,166,125,.18);border-radius:6px;padding:1px 6px;margin-left:4px;
     vertical-align:middle;
   }
+  .sim-details{margin:4px 0 2px;font-size:.68rem;color:var(--ink-soft);line-height:1.5;}
+  .sim-details summary{cursor:pointer;font-weight:700;color:var(--ink);}
+  .sim-details div{padding:3px 0;}
   .chart-legend{display:flex;gap:12px;flex-wrap:wrap;font-size:.68rem;color:var(--ink-soft);margin-bottom:6px;}
   .chart-legend-item{display:flex;align-items:center;gap:4px;}
   .chart-dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
@@ -893,7 +896,7 @@
   // "차트 색"과 "판정 색"이 헷갈리지 않도록 분리했다. 미분류는 배지를 아예 표시하지 않는다.
   var CLASSIFICATION_COLOR = { "성공":"#1a8754", "보통":"#c98a1f", "실패":"#c0392b" };
   // 3단계 분양가 시뮬레이터의 가격경쟁력 라벨도 같은 상태색 팔레트를 그대로 재사용(상=녹/중=주황/하=적).
-  var COMPETITIVENESS_COLOR = { "상":"#1a8754", "중":"#c98a1f", "하":"#c0392b" };
+  var COMPETITIVENESS_COLOR = { "상":"#1a8754", "중":"#c98a1f", "하":"#c0392b", "판정 불가":"#7a7f8c" };
   var BRAND_ICON_DATA = "data:image/png;base64,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";
 
 
@@ -1331,6 +1334,7 @@
             panelNote: row.panel_note || null,
             floorGapNote: row.floor_gap_note || null,
             successClassification: computeSuccessClassification(row),
+            saleStage: row.sale_stage || null, // 분양 단계(분양예정·분양중·분양완료) — 시뮬레이터의 신규 공급 판별에 사용
             recruitNoticeDate: row.recruit_notice_date || null,
             subscriptionPeriodText: row.subscription_period_text || null,
             sourceUrl: row.source_url || null,
@@ -1599,10 +1603,33 @@
     }
   };
 
-  // 주력 타입(예: 84형) 기준가 — 기준 단지들의 실거래를 전부 모아 가중평균(거래 1건=1표)으로 계산.
+  // ============================================================
+  // 4단계(2026.10) 분양가 시뮬레이터 개편 — 기준을 3축으로 분리
+  //   ① 신규 공급(같은 지역 타사 분양예정·분양중, 84형 분양가 세대수 가중평균) → 가격경쟁력 라벨(상/중/하)의 유일한 기준
+  //   ② 기축 실거래(일반매매, regular_sale) → 갭% 숫자만 표시(참고)
+  //   ③ 분양권 전매 실거래(presale_resale) → 갭% 숫자만 표시(참고)
+  //   + 최근 분양 완료 단지 분양가(참고) → 갭% 숫자만 표시
+  // 신규 공급 데이터가 없으면 라벨은 "판정 불가"이며, ②③ 값으로 대신 채우지 않는다.
+  // ============================================================
+
+  // (1) 거래 목록 → 건수/평균 총액/평당가 요약. 기존 computeMainTypeBaseline의 계산식을 그대로 함수로 뺀 것.
+  function summarizeBaselineTx(txs){
+    if (!txs.length) return null;
+    var totalAmt = txs.reduce(function(a,t){ return a + t.amt; }, 0);
+    var totalPy = txs.reduce(function(a,t){ return a + (t.area / PYEONG_SQM); }, 0);
+    return {
+      txCount: txs.length,
+      weightedAvgAmt: totalAmt / txs.length,
+      weightedPricePerPy: totalAmt / totalPy
+    };
+  }
+
+  // 주력 타입(예: 84형) 실거래 기준가 — 필터·계산은 기존과 동일(txCount/weightedAvgAmt/weightedPricePerPy 불변).
+  // 추가로 거래 유형별(regular=일반매매, presale=분양권 전매) 요약과 실제 거래가 있었던 단지 수를 함께 돌려준다.
   function computeMainTypeBaseline(cfg){
     var all = COMPARISON_COMPLEXES.concat(PROJECTS);
     var allTx = [];
+    var usedNames = {};
     cfg.baselineComplexNames.forEach(function(name){
       var entity = all.find(function(x){ return x.name === name; });
       if (!entity || !entity.txHistory) return;
@@ -1612,16 +1639,15 @@
         if (t.area < cfg.mainType.areaMin || t.area > cfg.mainType.areaMax) return;
         if (t.type !== "regular_sale" && t.type !== "presale_resale") return;
         allTx.push(t);
+        usedNames[name] = true;
       });
     });
-    if (!allTx.length) return null;
-    var totalAmt = allTx.reduce(function(a,t){ return a + t.amt; }, 0);
-    var totalPy = allTx.reduce(function(a,t){ return a + (t.area / PYEONG_SQM); }, 0);
-    return {
-      txCount: allTx.length,
-      weightedAvgAmt: totalAmt / allTx.length,
-      weightedPricePerPy: totalAmt / totalPy
-    };
+    var total = summarizeBaselineTx(allTx);
+    if (!total) return null;
+    total.complexCount = Object.keys(usedNames).length;
+    total.regular = summarizeBaselineTx(allTx.filter(function(t){ return t.type === "regular_sale"; }));
+    total.presale = summarizeBaselineTx(allTx.filter(function(t){ return t.type === "presale_resale"; }));
+    return total;
   }
 
   // "참고용" 인근 단지 그룹(cfg.referenceGroups의 항목 하나) — 기준가 계산에는 넣지 않고
@@ -1681,27 +1707,181 @@
     return "중";
   }
 
+  // (2) 신규 공급 / 분양 완료 단지 분양가 기준 ------------------------------------------
+  var SIM_NEW_SUPPLY_STAGES = ["presale_not_started", "in_progress"]; // 분양 준비 / 분양중
+  var SIM_REGION_NAME = { incheon:"인천", busan:"부산" };
+  function isNewSupplyStage(stage){ return SIM_NEW_SUPPLY_STAGES.indexOf(stage) !== -1; }
+  function isSoldStage(stage){ return stage === "completed"; }
+
+  // complex_unit_types.note에 "분양가 아님"이 적힌 타입은 분양가가 아니라 실거래 대용값이므로 분양가 산정에서 제외.
+  function isProxyUnitType(u){ return !!(u.note && u.note.indexOf("분양가 아님") !== -1); }
+
+  // 단지마다 DB에 적힌 가격 기준이 달라(최고가/평균 등) 평균과 섞이지 않게, 노트에 명시된 경우에만 목록에 병기.
+  function unitTypeBasisTag(u){
+    var n = u.note || "";
+    if (n.indexOf("(최고가)") !== -1) return "최고가 기준";
+    if (n.indexOf("평균값") !== -1) return "평균값";
+    return "";
+  }
+
+  // 같은 지역(regionKey) 타사 단지 중 stageFilter에 맞는 단지의 [areaMin, areaMax]㎡ 타입 분양가를 세대수 가중평균.
+  // 대상: PROJECTS 중 당사 현장(own_upcoming)이 아닌 것. 가격 또는 세대수가 없거나 실거래 대용값인 타입은 산정에서 빼고 사유를 기록.
+  function computeSupplyBaseline(regionKey, areaMin, areaMax, stageFilter){
+    var res = { regionKey: regionKey, noRegion: false, available: false, poolCount: 0,
+                complexCount: 0, unitCount: 0, weightedAvgAmt: null, items: [], skipped: [] };
+    if (!regionKey) { res.noRegion = true; return res; }
+    var pool = PROJECTS.filter(function(e){
+      return e.role !== "own_upcoming" && e.status !== "upcoming" &&
+        regionKeyOf(e.address) === regionKey && stageFilter(e.saleStage);
+    });
+    pool.sort(function(a, b){ return a.name.localeCompare(b.name, "ko"); });
+    res.poolCount = pool.length;
+    var sumAmtUnits = 0, sumUnits = 0;
+    pool.forEach(function(e){
+      var inRange = (e.unitTypes || []).filter(function(u){
+        return u.areaSqm !== null && u.areaSqm !== undefined && u.areaSqm >= areaMin && u.areaSqm <= areaMax;
+      });
+      if (!inRange.length) { res.skipped.push({ name: e.name, reason: "해당 타입 정보 없음" }); return; }
+      var ok = [], noPrice = 0, noUnits = 0, proxy = 0;
+      inRange.forEach(function(u){
+        if (isProxyUnitType(u)) { proxy++; return; }
+        if (u.priceAmt === null || u.priceAmt === undefined) { noPrice++; return; }
+        if (u.unitsCount === null || u.unitsCount === undefined || !(u.unitsCount > 0)) { noUnits++; return; }
+        ok.push(u);
+      });
+      if (!ok.length) {
+        var reason = noPrice > 0 ? "분양가 미공개" : (noUnits > 0 ? "세대수 미확인" : "분양가가 아닌 실거래 대용값");
+        res.skipped.push({ name: e.name, reason: reason });
+        return;
+      }
+      var cUnits = 0, cAmtUnits = 0;
+      ok.forEach(function(u){ cUnits += u.unitsCount; cAmtUnits += u.priceAmt * u.unitsCount; });
+      res.items.push({
+        name: e.name,
+        isPublic: e.name.indexOf("LH") !== -1,
+        units: cUnits,
+        avgAmt: cAmtUnits / cUnits,
+        types: ok.map(function(u){
+          return { typeName: u.typeName, units: u.unitsCount, price: u.priceAmt, basis: unitTypeBasisTag(u) };
+        })
+      });
+      sumAmtUnits += cAmtUnits;
+      sumUnits += cUnits;
+    });
+    if (res.items.length) {
+      res.available = true;
+      res.complexCount = res.items.length;
+      res.unitCount = sumUnits;
+      res.weightedAvgAmt = sumAmtUnits / sumUnits;
+    }
+    return res;
+  }
+
+  // 114형처럼 설정에 면적 범위가 없으면 목표 전용면적 ±5㎡(기존 타입 매칭 허용 오차와 같은 값)를 범위로 사용.
+  function simEstTypeRange(cfg){
+    var et = cfg.estimatedType;
+    if (et.areaMin !== undefined && et.areaMax !== undefined) return [et.areaMin, et.areaMax];
+    return [et.targetSqm - 5, et.targetSqm + 5];
+  }
+
   // 패널이 열려있는 동안의 시뮬레이터 상태(어떤 프로젝트의 설정/기준가를 쓰는 중인지).
   // 패널을 다시 그릴 때(openPanel/openComparisonPanel)마다 갱신·초기화된다.
   var simCurrentCfg = null;
   var simCurrentMainBaseline = null;
+  var simCurrentNewSupply = null;     // 주력 타입 신규 공급 기준(라벨 기준)
+  var simCurrentSold = null;          // 주력 타입 최근 분양 완료 단지 분양가(참고)
+  var simCurrentEstNewSupply = null;  // 추정 타입(114형) 신규 공급 기준(라벨 기준)
+
+  function simGapText(gap){ return (gap >= 0 ? "+" : "") + gap.toFixed(1) + "%"; }
+  function simResultRow(k, v){ return '<div class="sim-result-row"><span class="k">' + k + '</span><span class="v">' + v + '</span></div>'; }
+  // 라벨이 있으면 상/중/하 배지, 없으면(비교 기준 없음) 회색 "판정 불가" 배지.
+  function simBadgeHtml(label){
+    var text = label ? label : "판정 불가";
+    var color = COMPETITIVENESS_COLOR[text];
+    return '<span class="sim-gap-badge" style="background:' + color + '">가격경쟁력 · ' + text + '</span>';
+  }
+
+  function simSupplyDetailsHtml(sup){
+    var html = sup.items.map(function(it){
+      var tag = it.isPublic ? ' <span class="sim-est-tag">LH 공공분양</span>' : '';
+      var types = it.types.map(function(t){
+        return t.typeName + ' ' + t.units.toLocaleString() + '세대 ' + formatAmt(t.price) + (t.basis ? '(' + t.basis + ')' : '');
+      }).join(' · ');
+      return '<div><b>' + it.name + '</b>' + tag + '<br><span>' + types + '</span></div>';
+    }).join('');
+    if (sup.skipped.length) {
+      html += '<div>산정 제외: ' + sup.skipped.map(function(s){ return s.name + '(' + s.reason + ')'; }).join(', ') + '</div>';
+    }
+    return html;
+  }
+
+  // 신규 공급 기준 줄 — 값이 있으면 값 + 산정 단지 목록, 없으면 "없음/판정 불가" 사실을 그대로 표시.
+  function simNewSupplyLineHtml(sup, typeLabel, rName){
+    if (sup.noRegion) {
+      return '<b>신규 공급 기준: 없음</b> — 주소에서 지역(인천/부산)을 확인할 수 없어 산정하지 못했습니다. 가격경쟁력은 "판정 불가"입니다.';
+    }
+    if (sup.available) {
+      return '신규 공급 기준(' + rName + ' 타사 분양예정·분양중 · ' + typeLabel + ' 세대수 가중평균 · ' +
+        sup.complexCount + '개 단지 ' + sup.unitCount.toLocaleString() + '세대): <b>' + formatAmt(Math.round(sup.weightedAvgAmt)) + '</b>' +
+        '<details class="sim-details"><summary>산정 단지 보기</summary>' + simSupplyDetailsHtml(sup) + '</details>';
+    }
+    var why = sup.poolCount === 0
+      ? (rName + ' 지역에 등록된 타사 분양예정·분양중 단지가 없습니다.')
+      : (rName + ' 지역 타사 분양예정·분양중 단지 ' + sup.poolCount + '곳 중 ' + typeLabel + ' 분양가가 확인된 곳이 없습니다.');
+    return '<b>신규 공급 기준: 없음</b> — ' + why + ' 가격경쟁력은 "판정 불가"로 표시하며, 기축·전매 값으로 대신 채우지 않습니다.' +
+      (sup.skipped.length ? '<details class="sim-details"><summary>산정 제외 단지 보기</summary>' + simSupplyDetailsHtml(sup) + '</details>' : '');
+  }
+
+  function simSoldLineHtml(sup, typeLabel, rName){
+    if (sup.noRegion || !sup.available) {
+      return '최근 분양 완료 단지 분양가(참고): ' + (sup.noRegion ? '지역을 확인할 수 없습니다.' : (rName + ' 지역에서 ' + typeLabel + ' 분양가가 확인된 단지가 없습니다.'));
+    }
+    return '최근 분양 완료 단지 분양가(참고 · ' + rName + ' · ' + typeLabel + ' 세대수 가중평균 · ' +
+      sup.complexCount + '개 단지 ' + sup.unitCount.toLocaleString() + '세대): <b>' + formatAmt(Math.round(sup.weightedAvgAmt)) + '</b>' +
+      '<details class="sim-details"><summary>산정 단지 보기</summary>' + simSupplyDetailsHtml(sup) +
+      '<div>단지별로 DB에 적힌 가격 기준(최고가/평균 등)이 달라 목록에 병기했습니다.</div></details>';
+  }
+
+  function simTxLineHtml(title, s){
+    if (!s) return title + ': 해당 조건의 거래가 없습니다.';
+    return title + ' (' + s.txCount + '건 평균): <b>' + formatAmt(Math.round(s.weightedAvgAmt)) + '</b>';
+  }
 
   // 당사 분양예정 현장(own_upcoming) 패널에 표시할 시뮬레이터 HTML.
   // 설정이 없는 프로젝트(아직 SIMULATOR_CONFIG에 등록 안 된 현장)에서는 빈 문자열을 반환.
   function buildSimulatorHtml(p){
     var cfg = SIMULATOR_CONFIG[p.name];
-    if (!cfg) { simCurrentCfg = null; simCurrentMainBaseline = null; return ""; }
+    if (!cfg) {
+      simCurrentCfg = null; simCurrentMainBaseline = null;
+      simCurrentNewSupply = null; simCurrentSold = null; simCurrentEstNewSupply = null;
+      return "";
+    }
     simCurrentCfg = cfg;
     simCurrentMainBaseline = computeMainTypeBaseline(cfg);
     var mb = simCurrentMainBaseline;
+    var rk = regionKeyOf(p.address);
+    var rName = SIM_REGION_NAME[rk] || "해당 지역";
+    simCurrentNewSupply = computeSupplyBaseline(rk, cfg.mainType.areaMin, cfg.mainType.areaMax, isNewSupplyStage);
+    simCurrentSold = computeSupplyBaseline(rk, cfg.mainType.areaMin, cfg.mainType.areaMax, isSoldStage);
+    simCurrentEstNewSupply = null;
+    if (cfg.estimatedType) {
+      var er = simEstTypeRange(cfg);
+      simCurrentEstNewSupply = computeSupplyBaseline(rk, er[0], er[1], isNewSupplyStage);
+    }
 
-    var mainBaselineText = mb
-      ? ("기준가(가중평균 · " + cfg.minYear + "년 이후 · 인근 " + cfg.baselineComplexNames.length + "개 단지 실거래 " + mb.txCount + "건): <b>" + formatAmt(Math.round(mb.weightedAvgAmt)) + "</b>")
-      : "기준 단지의 실거래 데이터가 부족해 기준가를 계산할 수 없습니다.";
+    var txLines;
+    if (mb) {
+      txLines =
+        '<div class="sim-baseline">' + simTxLineHtml('기축 실거래 기준(참고 · ' + cfg.minYear + '년 이후 일반매매)', mb.regular) + '</div>' +
+        '<div class="sim-baseline">' + simTxLineHtml('분양권 전매 실거래 기준(참고 · ' + cfg.minYear + '년 이후)', mb.presale) + '</div>' +
+        '<div class="sim-baseline">기준 단지 ' + cfg.baselineComplexNames.length + '개 중 ' + mb.complexCount + '개 단지에서 ' + cfg.mainType.label + ' 실거래 ' + mb.txCount + '건 확인</div>';
+    } else {
+      txLines = '<div class="sim-baseline">기준 단지의 실거래 데이터가 부족해 기축·전매 실거래 기준을 계산할 수 없습니다.</div>';
+    }
 
     var excludedNote = "";
     if (cfg.excludedComplexes && cfg.excludedComplexes.length) {
-      excludedNote = '<div class="sim-baseline" style="margin-top:4px;">제외: ' +
+      excludedNote = '<div class="sim-baseline" style="margin-top:4px;">기축·전매 기준 제외: ' +
         cfg.excludedComplexes.map(function(e){ return e.name + '(' + e.reason + ')'; }).join(', ') +
       '</div>';
     }
@@ -1709,7 +1889,9 @@
     var mainBox =
       '<div class="sim-box">' +
         '<div class="sim-box-title">' + cfg.mainType.label + ' 예상 분양가</div>' +
-        '<div class="sim-baseline">' + mainBaselineText + '</div>' +
+        '<div class="sim-baseline">' + simNewSupplyLineHtml(simCurrentNewSupply, cfg.mainType.label, rName) + '</div>' +
+        txLines +
+        '<div class="sim-baseline">' + simSoldLineHtml(simCurrentSold, cfg.mainType.label, rName) + '</div>' +
         excludedNote +
         '<div class="sim-row">' +
           '<label>입력</label>' +
@@ -1724,6 +1906,7 @@
       estBox =
         '<div class="sim-box">' +
           '<div class="sim-box-title">' + cfg.estimatedType.label + ' 예상 분양가<span class="sim-est-tag">실거래 데이터 부족 · 추정치</span></div>' +
+          '<div class="sim-baseline">' + simNewSupplyLineHtml(simCurrentEstNewSupply, cfg.estimatedType.label, rName) + '</div>' +
           '<div class="sim-baseline" id="simEstBaselineText"></div>' +
           '<div class="sim-row">' +
             '<label>대형평형 할인율</label>' +
@@ -1763,11 +1946,11 @@
       ? ('<div class="sim-baseline" style="margin-top:4px;">' + cfg.marketNote + '</div>')
       : "";
 
-    return '<div class="sim-section"><div class="section-label">3단계 · 분양가 시뮬레이터</div>' + mainBox + estBox + refBoxes + marketNoteBox + '</div>';
+    return '<div class="sim-section"><div class="section-label">분양가 시뮬레이터</div>' + mainBox + estBox + refBoxes + marketNoteBox + '</div>';
   }
 
   // 시뮬레이터 입력값이 바뀔 때마다(또는 패널을 처음 열었을 때) 결과 영역만 다시 계산해서 채운다.
-  // 패널 전체를 다시 그리지 않으므로 입력 중이던 값/포커스가 유지된다.
+  // 가격경쟁력 라벨은 신규 공급 대비 갭에만 붙고, 기축·전매·분양완료 대비 값은 숫자만 표시한다.
   function renderSimulatorOutputs(){
     if (!simCurrentCfg) return;
     var cfg = simCurrentCfg;
@@ -1777,12 +1960,19 @@
     var mainResultEl = document.getElementById("simMainResult");
     if (mainInput && mainResultEl) {
       var mainAmt = parseFloat(mainInput.value);
-      if (mb && !isNaN(mainAmt) && mainAmt > 0) {
-        var gap = computeSimGapPct(mainAmt, mb.weightedAvgAmt);
-        var label = simCompetitivenessLabel(gap);
-        var gapText = (gap >= 0 ? "+" : "") + gap.toFixed(1) + "%";
-        var badge = label ? ('<span class="sim-gap-badge" style="background:' + COMPETITIVENESS_COLOR[label] + '">가격경쟁력 · ' + label + '</span>') : "";
-        mainResultEl.innerHTML = '<div class="sim-result-row"><span class="k">기준가 대비 갭</span><span class="v">' + gapText + badge + '</span></div>';
+      if (!isNaN(mainAmt) && mainAmt > 0) {
+        var html = "";
+        var ns = simCurrentNewSupply;
+        if (ns && ns.available) {
+          var gap = computeSimGapPct(mainAmt, ns.weightedAvgAmt);
+          html += simResultRow('신규 공급 대비 갭', simGapText(gap) + simBadgeHtml(simCompetitivenessLabel(gap)));
+        } else {
+          html += simResultRow('신규 공급 대비 갭', '비교 기준 없음' + simBadgeHtml(null));
+        }
+        if (mb && mb.regular) html += simResultRow('기축 실거래 대비 (참고)', simGapText(computeSimGapPct(mainAmt, mb.regular.weightedAvgAmt)));
+        if (mb && mb.presale) html += simResultRow('분양권 전매 대비 (참고)', simGapText(computeSimGapPct(mainAmt, mb.presale.weightedAvgAmt)));
+        if (simCurrentSold && simCurrentSold.available) html += simResultRow('분양 완료 단지 대비 (참고)', simGapText(computeSimGapPct(mainAmt, simCurrentSold.weightedAvgAmt)));
+        mainResultEl.innerHTML = html;
       } else {
         mainResultEl.innerHTML = "";
       }
@@ -1792,22 +1982,28 @@
       var discountInput = document.querySelector('[data-sim="discount"]');
       var estBaselineEl = document.getElementById("simEstBaselineText");
       var discountVal = discountInput ? parseFloat(discountInput.value) : undefined;
+      // 추정 기준가는 기존과 같은 계산(기축·전매 합산 주력 타입 평당가 × (1-할인율))이며 참고용이다.
       var estBaseline = computeEstimatedTypeBaseline(cfg, mb, discountVal);
       if (estBaselineEl) {
         estBaselineEl.innerHTML = estBaseline
-          ? ("추정 기준가(" + cfg.mainType.label + " 평당가에 할인율 " + estBaseline.discountPct + "% 적용): <b>" + formatAmt(Math.round(estBaseline.estimatedAmt)) + "</b>")
+          ? ("기축·전매 합산 기준 추정(참고 · " + cfg.mainType.label + " 평당가에 할인율 " + estBaseline.discountPct + "% 적용): <b>" + formatAmt(Math.round(estBaseline.estimatedAmt)) + "</b>")
           : "기준 단지의 실거래 데이터가 부족해 추정 기준가를 계산할 수 없습니다.";
       }
       var estInput = document.querySelector('[data-sim="est"]');
       var estResultEl = document.getElementById("simEstResult");
       if (estInput && estResultEl) {
         var estAmt = parseFloat(estInput.value);
-        if (estBaseline && !isNaN(estAmt) && estAmt > 0) {
-          var gap2 = computeSimGapPct(estAmt, estBaseline.estimatedAmt);
-          var label2 = simCompetitivenessLabel(gap2);
-          var gapText2 = (gap2 >= 0 ? "+" : "") + gap2.toFixed(1) + "%";
-          var badge2 = label2 ? ('<span class="sim-gap-badge" style="background:' + COMPETITIVENESS_COLOR[label2] + '">가격경쟁력 · ' + label2 + '</span>') : "";
-          estResultEl.innerHTML = '<div class="sim-result-row"><span class="k">추정 기준가 대비 갭</span><span class="v">' + gapText2 + badge2 + '</span></div>';
+        if (!isNaN(estAmt) && estAmt > 0) {
+          var html2 = "";
+          var ens = simCurrentEstNewSupply;
+          if (ens && ens.available) {
+            var gapN = computeSimGapPct(estAmt, ens.weightedAvgAmt);
+            html2 += simResultRow('신규 공급 대비 갭', simGapText(gapN) + simBadgeHtml(simCompetitivenessLabel(gapN)));
+          } else {
+            html2 += simResultRow('신규 공급 대비 갭', '비교 기준 없음' + simBadgeHtml(null));
+          }
+          if (estBaseline) html2 += simResultRow('추정 기준가 대비 (참고)', simGapText(computeSimGapPct(estAmt, estBaseline.estimatedAmt)));
+          estResultEl.innerHTML = html2;
         } else {
           estResultEl.innerHTML = "";
         }

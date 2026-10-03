@@ -1758,6 +1758,7 @@
       ok.forEach(function(u){ cUnits += u.unitsCount; cAmtUnits += u.priceAmt * u.unitsCount; });
       res.items.push({
         name: e.name,
+        dateLabel: e.dateLabel || "",
         isPublic: e.name.indexOf("LH") !== -1,
         units: cUnits,
         avgAmt: cAmtUnits / cUnits,
@@ -1810,42 +1811,6 @@
     return res;
   }
 
-  // 권장 분양가 구간: 아래 끝 = 신규 공급 평균 −5%(가격경쟁력 "상"의 경계, 규칙값 사용),
-  // 위 끝 = 신규 공급 평균 + 전매 프리미엄 평균(프리미엄이 0 이하이거나 없으면 신규 공급 평균까지).
-  function computeRecommendedRange(newSupply, premium){
-    if (!newSupply || !newSupply.available) return null;
-    var base = newSupply.weightedAvgAmt;
-    var lowAmt = base * (1 + PRICE_GAP_RULES.high_competitiveness_pct / 100);
-    var upPct = (premium && premium.available && premium.avgPct > 0) ? premium.avgPct : 0;
-    return { baseAmt: base, lowAmt: lowAmt, highAmt: base * (1 + upPct / 100), upPct: upPct,
-             hasPremium: !!(premium && premium.available) };
-  }
-
-  function simRecommendBoxHtml(cfg, rName, newSupply, premium){
-    var rec = computeRecommendedRange(newSupply, premium);
-    var title = cfg.mainType.label + ' 권장 분양가 구간';
-    if (!rec) {
-      return '<div class="sim-box"><div class="sim-box-title">' + title + '</div>' +
-        '<div class="sim-baseline"><b>판정 불가</b> — ' + rName + ' 지역에 ' + cfg.mainType.label +
-        ' 신규 공급 분양가가 없어 구간을 계산하지 않습니다. 기축·전매 값으로 대신 채우지 않습니다.</div></div>';
-    }
-    var premText = premium && premium.available
-      ? ('분양 완료 단지 전매 프리미엄 평균 <b>' + (premium.avgPct >= 0 ? '+' : '') + premium.avgPct.toFixed(1) + '%</b> (' +
-         premium.complexCount + '개 단지 ' + premium.txCount + '건)' +
-         (premium.avgPct <= 0 ? ' — 프리미엄이 없어 위 끝은 신규 공급 평균입니다' : ''))
-      : '분양 완료 단지 전매 프리미엄 자료 없음 — 위 끝은 신규 공급 평균입니다';
-    var detail = premium && premium.available
-      ? ('<details class="sim-details"><summary>단지별 전매 프리미엄 보기</summary>' + premium.items.map(function(it){
-          return '<div><b>' + it.name + '</b>: ' + (it.avgPct >= 0 ? '+' : '') + it.avgPct.toFixed(1) + '% (' + it.txCount + '건)</div>';
-        }).join('') + '</details>') : '';
-    return '<div class="sim-box"><div class="sim-box-title">' + title + '</div>' +
-      '<div class="sim-baseline" style="font-size:15px;"><b>' + formatAmt(Math.round(rec.lowAmt)) + ' ~ ' + formatAmt(Math.round(rec.highAmt)) + '</b></div>' +
-      '<div class="sim-baseline">신규 공급 평균 ' + formatAmt(Math.round(rec.baseAmt)) + ' 기준 · 아래 끝은 가격경쟁력 "상"의 경계(' +
-        PRICE_GAP_RULES.high_competitiveness_pct + '%)</div>' +
-      '<div class="sim-baseline">' + premText + '</div>' + detail +
-      '<div class="sim-baseline" style="margin-top:4px;">분양가상한제 적용 현장은 이 구간이 상한액을 넘지 않는지 별도로 확인해야 합니다.</div></div>';
-  }
-
   // 114형처럼 설정에 면적 범위가 없으면 목표 전용면적 ±5㎡(기존 타입 매칭 허용 오차와 같은 값)를 범위로 사용.
   function simEstTypeRange(cfg){
     var et = cfg.estimatedType;
@@ -1871,13 +1836,16 @@
     return '<span class="sim-gap-badge" style="background:' + color + '">가격경쟁력 · ' + text + '</span>';
   }
 
-  function simSupplyDetailsHtml(sup){
+  function simSupplyDetailsHtml(sup, premium){
     var html = sup.items.map(function(it){
+      var pm = premium && premium.items ? premium.items.find(function(x){ return x.name === it.name; }) : null;
+      var pmText = pm ? (' · 전매 프리미엄 ' + (pm.avgPct >= 0 ? '+' : '') + pm.avgPct.toFixed(1) + '%(' + pm.txCount + '건)') : '';
+      var dl = it.dateLabel ? ('<br><span>시점: ' + it.dateLabel + '</span>') : '';
       var tag = it.isPublic ? ' <span class="sim-est-tag">LH 공공분양</span>' : '';
       var types = it.types.map(function(t){
         return t.typeName + ' ' + t.units.toLocaleString() + '세대 ' + formatAmt(t.price) + (t.basis ? '(' + t.basis + ')' : '');
       }).join(' · ');
-      return '<div><b>' + it.name + '</b>' + tag + '<br><span>' + types + '</span></div>';
+      return '<div><b>' + it.name + '</b>' + tag + dl + '<br><span>' + types + pmText + '</span></div>';
     }).join('');
     if (sup.skipped.length) {
       html += '<div>산정 제외: ' + sup.skipped.map(function(s){ return s.name + '(' + s.reason + ')'; }).join(', ') + '</div>';
@@ -1902,14 +1870,14 @@
       (sup.skipped.length ? '<details class="sim-details"><summary>산정 제외 단지 보기</summary>' + simSupplyDetailsHtml(sup) + '</details>' : '');
   }
 
-  function simSoldLineHtml(sup, typeLabel, rName){
+  function simSoldLineHtml(sup, typeLabel, rName, premium){
     if (sup.noRegion || !sup.available) {
       return '최근 분양 완료 단지 분양가(참고): ' + (sup.noRegion ? '지역을 확인할 수 없습니다.' : (rName + ' 지역에서 ' + typeLabel + ' 분양가가 확인된 단지가 없습니다.'));
     }
     return '최근 분양 완료 단지 분양가(참고 · ' + rName + ' · ' + typeLabel + ' 세대수 가중평균 · ' +
       sup.complexCount + '개 단지 ' + sup.unitCount.toLocaleString() + '세대): <b>' + formatAmt(Math.round(sup.weightedAvgAmt)) + '</b>' +
-      '<details class="sim-details"><summary>산정 단지 보기</summary>' + simSupplyDetailsHtml(sup) +
-      '<div>단지별로 DB에 적힌 가격 기준(최고가/평균 등)이 달라 목록에 병기했습니다.</div></details>';
+      '<details class="sim-details"><summary>산정 단지 보기 (분양 시점 · 전매 프리미엄)</summary>' + simSupplyDetailsHtml(sup, premium) +
+      '<div>분양 시점이 단지마다 달라 가격을 시점 기준으로 보정하지 않았습니다. 단지별로 DB에 적힌 가격 기준(최고가/평균 등)이 달라 목록에 병기했습니다.</div></details>';
   }
 
   function simTxLineHtml(title, scope, s){
@@ -1957,13 +1925,12 @@
       '</div>';
     }
 
-    var recBox = simRecommendBoxHtml(cfg, rName, simCurrentNewSupply, simCurrentPremium);
     var mainBox =
       '<div class="sim-box">' +
         '<div class="sim-box-title">' + cfg.mainType.label + ' 예상 분양가</div>' +
         '<div class="sim-baseline">' + simNewSupplyLineHtml(simCurrentNewSupply, cfg.mainType.label, rName) + '</div>' +
         txLines +
-        '<div class="sim-baseline">' + simSoldLineHtml(simCurrentSold, cfg.mainType.label, rName) + '</div>' +
+        '<div class="sim-baseline">' + simSoldLineHtml(simCurrentSold, cfg.mainType.label, rName, simCurrentPremium) + '</div>' +
         excludedNote +
         '<div class="sim-row">' +
           '<label>입력</label>' +
@@ -2018,7 +1985,7 @@
       ? ('<div class="sim-baseline" style="margin-top:4px;">' + cfg.marketNote + '</div>')
       : "";
 
-    return '<div class="sim-section"><div class="section-label">분양가 시뮬레이터</div>' + recBox + mainBox + estBox + refBoxes + marketNoteBox + '</div>';
+    return '<div class="sim-section"><div class="section-label">분양가 시뮬레이터</div>' + mainBox + estBox + refBoxes + marketNoteBox + '</div>';
   }
 
   // 시뮬레이터 입력값이 바뀔 때마다(또는 패널을 처음 열었을 때) 결과 영역만 다시 계산해서 채운다.

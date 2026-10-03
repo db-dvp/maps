@@ -19,6 +19,8 @@
   var errEl = document.getElementById("authError");
 
   function unlock(){
+    // 3D 화면(3d/ 폴더)이 이 탭의 로그인 여부를 확인하는 표시(같은 탭 안에서만 유효)도 같이 남긴다.
+    try { sessionStorage.setItem("elium_auth_ok", "1"); } catch (e) {}
     gate.style.display = "none";
     appRoot.style.display = "flex";
     if (typeof startApp === "function") startApp();

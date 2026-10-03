@@ -1256,6 +1256,15 @@
           note: u.note || null
         });
       });
+      // 타입 정렬: 글자순(113이 80보다 앞)이 아니라 타입명 속 숫자 크기순(39→59→84→113), 같으면 이름순
+      Object.keys(unitTypesByComplex).forEach(function(k){
+        unitTypesByComplex[k].sort(function(a, b){
+          var ma = String(a.typeName || "").match(/\d+/), mb = String(b.typeName || "").match(/\d+/);
+          var na = ma ? parseInt(ma[0], 10) : 1e9, nb = mb ? parseInt(mb[0], 10) : 1e9;
+          if (na !== nb) return na - nb;
+          return String(a.typeName || "").localeCompare(String(b.typeName || ""), "ko", { numeric: true });
+        });
+      });
       ruleRows.forEach(function(r){
         if (r.rule_key === "success_min_rate" && r.rule_value !== null) CLASSIFICATION_RULES.success_min_rate = Number(r.rule_value);
         if (r.rule_key === "normal_min_rate" && r.rule_value !== null) CLASSIFICATION_RULES.normal_min_rate = Number(r.rule_value);

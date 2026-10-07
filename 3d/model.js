@@ -410,7 +410,7 @@ cxLOD(); window.__ready=true;
 // ---------- 메인 사이트와 주고받기 ----------
 window.__goView=(name)=>{ if(views[name]) go(name,false,1300); };
 window.__hasView=(name)=>!!views[name];
-window.__focusName=(name)=>{ const o=labelObjs.find(x=>x.userData.name===name); if(!o) return false;
+window.__focusName=(name)=>{ let o=labelObjs.find(x=>x.userData.name===name); if(!o){ const ux=(meta.complexes||[]).find(c=>c.key==='upcoming'); if(ux&&ux.name===name) o=labelObjs.find(x=>x.userData.k==='site'); } if(!o) return false;
   const ci=(meta.complexes||[]).findIndex(c=>c.name===name)+1, bb=CXBOX[ci];
   const p=o.position, cx=bb?(bb[0]+bb[2])/2:p.x, cz=bb?(bb[1]+bb[3])/2:p.z, gy=hSmooth(cx,cz);
   const K=2.2; // 이전보다 멀리서(단지 전체가 여유 있게 보이도록)

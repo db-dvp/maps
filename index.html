@@ -2743,7 +2743,7 @@
         } else if (d.t === "site") {
           var map_ = { gy: "incheon", bs: "busan", il: "ilgwang", home: "korea" };
           controlsEl.querySelectorAll(".view-btn").forEach(function(x){ x.classList.toggle("active", x.getAttribute("data-view") === map_[d.id]); });
-          closeContBubble();
+          closeContBubble(); if (d.id === "home") { try { clearProjectScope(); document.getElementById("panel").classList.remove("open"); } catch (err) {} }
         }
       });
 

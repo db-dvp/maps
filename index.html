@@ -328,6 +328,10 @@
      마커 점(핀) 자체 크기는 그대로 — 이름표만 대상. updateMarkerLabelTier()가 지도 zoom_changed
      이벤트마다 #map에 아래 클래스를 넣고 뺀다. */
   #map.marker-labels-hidden .marker-label{display:none;}
+  /* 2026.10.07: 가까이 확대하면(카카오 level 3 이하) 마커 점+이름표를 함께 키운다. */
+  .marker-pin{transition:transform .2s ease;}
+  #map.marker-labels-near .marker-pin{transform:scale(1.2);}
+  #map.marker-labels-close .marker-pin{transform:scale(1.4);}
   #map.marker-labels-compact .marker-label{font-size:9px;padding:2px 6px;}
   #map.marker-labels-compact .marker-label-sm{font-size:8.5px;padding:1.5px 5px;}
   #map.marker-labels-compact .marker-label-brand{font-size:9.5px;padding:2px 7px;}
@@ -2717,8 +2721,8 @@
         if (d.t === "cx-click") {
           var mk = (typeof markers !== "undefined") ? markers.filter(function(x){ return x.data && x.data.name === d.name; })[0] : null;
           if (!mk) return;
-          showContBubble(mk, d.x, d.y);
-          if (mk.kind === "project") openPanel(mk.data, false); else openComparisonPanel(mk.data);
+          closeContBubble();
+          activateMarker(mk);
         } else if (d.t === "droneText" && window.__contMode) {
           var t = document.getElementById("m3dDroneOverlayText"), dots = document.getElementById("m3dDroneOverlayDots"), ov = document.getElementById("m3dDroneOverlay");
           if (t) t.textContent = "드론 비행 · " + (d.i + 1) + "/" + d.n + " · " + d.text;
@@ -3140,13 +3144,16 @@
         '<div class="marker-dot marker-dot-sm" style="background:' + STATUS_COLOR[p.status] + '"></div>' +
         '<div class="marker-label marker-label-sm">' + p.shortLabel + '</div>';
     }
-    el.addEventListener("click", function(){ openPanel(p, approximate); });
+    el.addEventListener("click", function(){
+      var mk = markers.filter(function(x){ return x.data === p; })[0];
+      if (mk) activateMarker(mk); else openPanel(p, approximate);
+    });
 
     var overlay = new kakao.maps.CustomOverlay({
       position: pos, content: el, yAnchor: 0.5, xAnchor: 0.5, zIndex: markerZIndex(p.status)
     });
     overlay.setMap(map);
-    markers.push({kind:"project", data:p, overlay:overlay});
+    markers.push({kind:"project", data:p, overlay:overlay, approximate:!!approximate});
     refreshMarkers();
     scheduleCompareRender();
   }
@@ -3158,7 +3165,10 @@
     el.innerHTML =
       '<div class="marker-dot marker-dot-sm" style="background:' + c.age.color + '"></div>' +
       '<div class="marker-label marker-label-sm">' + c.name + '</div>';
-    el.addEventListener("click", function(){ openComparisonPanel(c); });
+    el.addEventListener("click", function(){
+      var mk = markers.filter(function(x){ return x.data === c; })[0];
+      if (mk) activateMarker(mk); else openComparisonPanel(c);
+    });
 
     var overlay = new kakao.maps.CustomOverlay({
       position: pos, content: el, yAnchor: 0.5, xAnchor: 0.5, zIndex: markerZIndex(c.age.key)
@@ -3230,11 +3240,15 @@
     var mapEl = document.getElementById("map");
     if (!mapEl || !map) return;
     var lvl = map.getLevel();
-    mapEl.classList.remove("marker-labels-hidden", "marker-labels-compact");
+    mapEl.classList.remove("marker-labels-hidden", "marker-labels-compact", "marker-labels-near", "marker-labels-close");
     if (lvl >= 8) {
       mapEl.classList.add("marker-labels-hidden");
     } else if (lvl >= 4) {
       mapEl.classList.add("marker-labels-compact");
+    } else if (lvl <= 2) {
+      mapEl.classList.add("marker-labels-close");
+    } else {
+      mapEl.classList.add("marker-labels-near");
     }
   }
 
@@ -3275,13 +3289,23 @@
 
   // 검색 결과 선택 / 비교표 행 클릭 / 지도 마커 클릭이 공유하는 공통 동작:
   // 필터를 "전체"로 풀어서 항상 보이게 하고, 지도를 이동시키고, 상세 패널을 연다.
-  function focusMarker(m){
-    // 현재 필터에 가려져 있을 수 있으므로 "전체"로 전환해 항상 보이게 한다.
-    activeFilters = new Set(["all"]);
-    document.querySelectorAll("#unifiedFilters .filter-btn").forEach(function(b){
-      b.classList.toggle("active", b.getAttribute("data-filter") === "all");
-    });
-    refreshMarkers();
+  // 2026.10.07: 지도 마커(2D)·이름표(3D)를 눌러도 목록 행을 눌렀을 때와 똑같이 그 단지로 이동 + 상세 패널.
+  // opts.fromMap=true(마커/이름표 직접 클릭)일 땐 이미 화면에 보이는 마커이므로 필터를 건드리지 않고,
+  // 이미 더 확대돼 있으면 축소하지 않고 중심만 옮긴다.
+  function activateMarker(m){
+    if (projectScopeFilter && m.data.name !== projectScopeLabel) openComparePopup(m);
+    else focusMarker(m, { fromMap: true });
+  }
+  function focusMarker(m, opts){
+    var fromMap = !!(opts && opts.fromMap);
+    if (!fromMap) {
+      // 현재 필터에 가려져 있을 수 있으므로 "전체"로 전환해 항상 보이게 한다.
+      activeFilters = new Set(["all"]);
+      document.querySelectorAll("#unifiedFilters .filter-btn").forEach(function(b){
+        b.classList.toggle("active", b.getAttribute("data-filter") === "all");
+      });
+      refreshMarkers();
+    }
 
     var pos = m.overlay.getPosition();
     // 2026.09.20(6차): 아직 지도가 전국 단위(인천+부산이 한 화면에 다 보이는 정도로 축소된
@@ -3301,7 +3325,7 @@
     if (regionBounds) {
       map.setBounds(regionBounds, 60, 60, 60, 60);
     } else {
-      map.setLevel(4);
+      map.setLevel(fromMap ? Math.min(map.getLevel(), 4) : 4);
       map.setCenter(pos);
     }
     // 18차: 4번 요청 — 3D가 보이는 상태면 맵박스 카메라도 같은 위치로 옮긴다(2D만 움직이던 버그 수정).
@@ -3309,7 +3333,7 @@
     if (window.__contMode && window.contPost) window.contPost({ t: "focus", name: m.data.name });
 
     if (m.kind === "project") {
-      openPanel(m.data, false);
+      openPanel(m.data, fromMap ? !!m.approximate : false);
     } else {
       openComparisonPanel(m.data);
     }

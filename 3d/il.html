@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<script>try{if(sessionStorage.getItem('elium_auth_ok')!=='1'){location.replace('/maps/');}}catch(e){}</script>
+<script>try{var __ok=sessionStorage.getItem('elium_auth_ok')==='1';if(!__ok){var __u=parseInt(localStorage.getItem('elium_auth_until')||'0',10);if(__u>Date.now()){sessionStorage.setItem('elium_auth_ok','1');__ok=true;}}if(!__ok){if(window.top===window){location.replace('/maps/');}else{document.documentElement.style.display='none';}}}catch(e){}</script>
 <title>일광 콘타모형</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">

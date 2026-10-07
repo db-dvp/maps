@@ -446,3 +446,4 @@ if (EMBED){
   window.addEventListener('message',(e)=>{ const d=e.data||{}; if(d.t==='focus') window.__focusName(d.name); else if(d.t==='view') window.__goView(d.v); else if(d.t==='rotate') window.__rotate(d.on); });
   toTop({t:'model-ready',site:SITE});
 }
+document.addEventListener('keydown',function(e){ if(e.key==='Escape' && window.parent!==window){ try{ window.parent.postMessage({t:'esc'}, location.origin); }catch(_){} } });

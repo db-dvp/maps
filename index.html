@@ -2718,7 +2718,7 @@
       window.addEventListener("message", function(e){
         if (e.origin !== location.origin) return;
         var d = e.data || {};
-        if (d.t === "cx-click") {
+        if (d.t === "esc") { document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); } else if (d.t === "cx-click") {
           var mk = (typeof markers !== "undefined") ? markers.filter(function(x){ return x.data && x.data.name === d.name; })[0] : null;
           if (!mk) return;
           closeContBubble();
@@ -3476,7 +3476,7 @@
     popupCurrentEntity = m.data;
     popupTxFilter = { floor: "all", area: "all" };
     // 3D(콘타) 화면의 요약 말풍선이 팝업 뒤에 남아 비쳐 보이지 않도록 비교 팝업을 열 때 자동으로 닫는다.
-    var __cb = document.getElementById("contBubble"); if (__cb) __cb.style.display = "none";
+    var __cb = document.getElementById("contBubble"); if (__cb) __cb.style.display = "none"; try { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); window.focus(); } catch (e) {}
     clearComparePopupMapDecorations();
     resetComparePopupPosition(); // 새로 열 때마다 화면 가운데로(이전에 드래그해서 옮겨둔 위치는 초기화)
 

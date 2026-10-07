@@ -299,5 +299,6 @@ map.once('load', ()=>{
 function setZoomLimit(){ map.setMinZoom(Math.max(3, homeCam().zoom - 0.6)); }
 })();
 </script>
+<script>document.addEventListener('keydown',function(e){ if(e.key==='Escape' && window.parent!==window){ try{ window.parent.postMessage({t:'esc'}, location.origin); }catch(_){} } });</script>
 </body>
 </html>

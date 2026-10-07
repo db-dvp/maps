@@ -1846,6 +1846,12 @@
       return { amt: sp.lh.avgAmt * (1 + markupPct / 100), kind: "lh_markup", lhAmt: sp.lh.avgAmt, pct: markupPct };
     }
     // 신규 공급이 전혀 없는 현장(부산): 인근 단지(기준 단지) 실거래 가중평균을 판정 기준으로 사용(cfg.nearbyLabel).
+    if (cfg && cfg.nearbyLabel && simCurrentSold && simCurrentSold.available) {
+      var basisEl = (typeof document !== "undefined") ? document.querySelector('[data-sim="basis"]') : null;
+      if (basisEl && basisEl.value === "sold") {
+        return { amt: simCurrentSold.weightedAvgAmt, kind: "sold", count: simCurrentSold.complexCount, units: simCurrentSold.unitCount };
+      }
+    }
     if (cfg && cfg.nearbyLabel && simCurrentMainBaseline && simCurrentMainBaseline.weightedAvgAmt) {
       return { amt: simCurrentMainBaseline.weightedAvgAmt, kind: "nearby", count: simCurrentMainBaseline.complexCount, txCount: simCurrentMainBaseline.txCount };
     }
@@ -2035,6 +2041,15 @@
           '<input type="number" class="sim-input" data-sim="main" placeholder="예: 65000" />' +
           '<span class="sim-unit">만원</span>' +
         '</div>' +
+        ((cfg.nearbyLabel && simCurrentSold && simCurrentSold.available)
+          ? ('<div class="sim-row" style="margin-top:2px;">' +
+               '<label style="min-width:auto;">판정 기준</label>' +
+               '<select class="sim-input" style="max-width:none;" data-sim="basis">' +
+                 '<option value="nearby">인근 단지 시세 (전매 포함)</option>' +
+                 '<option value="sold">분양 완료 단지 분양가</option>' +
+               '</select>' +
+             '</div>')
+          : '') +
         (simCurrentFloor
           ? ('<div class="sim-row" style="margin-top:2px;">' +
                '<label style="min-width:auto;"><input type="checkbox" data-sim="garden" /> 1층 정원형(특화) 세대 있음</label>' +
@@ -2163,7 +2178,7 @@
         var eb = simEffectiveBaseline(simCurrentNewSupply, cfg, simReadMarkup());
         if (eb) {
           var gap = computeSimGapPct(mainAmt, eb.amt);
-          var gapTitle = eb.kind === "nearby" ? ('인근 단지(' + eb.count + '곳) 실거래 대비 갭 · 전매 포함 시세') : eb.kind === "lh_markup" ? ('LH 기준+가산(' + eb.pct + '%) 대비 갭') : '민간 신규 공급 대비 갭';
+          var gapTitle = eb.kind === "sold" ? ('분양 완료 단지(' + eb.count + '곳) 분양가 대비 갭 · 분양 시점 보정 없음') : eb.kind === "nearby" ? ('인근 단지(' + eb.count + '곳) 실거래 대비 갭 · 전매 포함 시세') : eb.kind === "lh_markup" ? ('LH 기준+가산(' + eb.pct + '%) 대비 갭') : '민간 신규 공급 대비 갭';
           html += simResultRow(gapTitle, simGapText(gap) + simBadgeHtml(simCompetitivenessLabel(gap)));
         } else {
           html += simResultRow('신규 공급 대비 갭', '비교 기준 없음' + simBadgeHtml(null));

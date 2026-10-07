@@ -1256,15 +1256,6 @@
           note: u.note || null
         });
       });
-      // 타입 정렬: 글자순(113이 80보다 앞)이 아니라 타입명 속 숫자 크기순(39→59→84→113), 같으면 이름순
-      Object.keys(unitTypesByComplex).forEach(function(k){
-        unitTypesByComplex[k].sort(function(a, b){
-          var ma = String(a.typeName || "").match(/\d+/), mb = String(b.typeName || "").match(/\d+/);
-          var na = ma ? parseInt(ma[0], 10) : 1e9, nb = mb ? parseInt(mb[0], 10) : 1e9;
-          if (na !== nb) return na - nb;
-          return String(a.typeName || "").localeCompare(String(b.typeName || ""), "ko", { numeric: true });
-        });
-      });
       ruleRows.forEach(function(r){
         if (r.rule_key === "success_min_rate" && r.rule_value !== null) CLASSIFICATION_RULES.success_min_rate = Number(r.rule_value);
         if (r.rule_key === "normal_min_rate" && r.rule_value !== null) CLASSIFICATION_RULES.normal_min_rate = Number(r.rule_value);
@@ -2068,7 +2059,7 @@
             '<span class="sim-unit">% (기본값 ' + PRICING_RULES.large_unit_discount_pct + '% · 직접 조정 가능)</span>' +
           '</div>' +
           '<div class="sim-row">' +
-            '<label>입력</label>' +
+            '<label>' + (simCurrentFloor ? '중층 기준 입력' : '입력') + '</label>' +
             '<input type="number" class="sim-input" data-sim="est" placeholder="예: 84000" />' +
             '<span class="sim-unit">만원</span>' +
           '</div>' +
@@ -2205,8 +2196,14 @@
       var estResultEl = document.getElementById("simEstResult");
       if (estInput && estResultEl) {
         var estAmt = parseFloat(estInput.value);
+        var estMidInput = estAmt;
         if (!isNaN(estAmt) && estAmt > 0) {
           var html2 = "";
+          // 84형과 같이 중층 입력 → 전체 평균 환산(114형은 실거래가 거의 없어 84형에서 구한 평균 환산 계수를 그대로 사용 — 추정)
+          if (simCurrentFloor) {
+            estAmt = estMidInput * simCurrentFloor.avgFactor;
+            html2 += '<div class="sim-baseline" style="font-size:.64rem;">중층 ' + formatAmt(Math.round(estMidInput)) + ' → 전체 평균 ' + formatAmt(Math.round(estAmt)) + '로 환산해 비교(84형 층별 비율을 그대로 적용한 추정 · 114형 층별 거래 표본 부족).</div>';
+          }
           var ens = simCurrentEstNewSupply;
           if (ens && ens.available) {
             var gapN = computeSimGapPct(estAmt, ens.weightedAvgAmt);

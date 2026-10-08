@@ -392,7 +392,7 @@ document.getElementById('vIC').onclick=()=>go('ic');
 go(location.hash==='#site'?'site':'all', true);
 
 
-function cxLOD(){ for(const o of labelObjs){ const k=o.userData.k; if(k!=='cx'&&k!=='mtn') continue; const dist=camera.position.distanceTo(o.position); const sc=Math.max(0.8,Math.min(k==='cx'?2.6:1,2200/dist)); const el=o.element; if(k==='cx'){ el.style.fontSize=(12*sc).toFixed(1)+'px'; el.style.padding=(2*Math.max(1,sc)).toFixed(1)+'px '+(7*sc).toFixed(1)+'px'; } else { el.style.fontSize=(12*sc).toFixed(1)+'px'; } el.style.visibility='visible'; } }
+function cxLOD(){ for(const o of labelObjs){ const k=o.userData.k; if(k!=='cx'&&k!=='mtn') continue; const dist=camera.position.distanceTo(o.position); const sc=Math.max(0.6,Math.min(k==='cx'?2.4:1,k==='cx'?Math.pow(1100/dist,1.6):1100/dist)); const el=o.element; if(k==='cx'){ el.style.fontSize=(11*sc).toFixed(1)+'px'; el.style.padding=(1*Math.max(1,sc)).toFixed(1)+'px '+(6*sc).toFixed(1)+'px'; } else { el.style.fontSize=(12*sc).toFixed(1)+'px'; } el.style.visibility='visible'; } }
 controls.addEventListener('change',cxLOD);
 // 통계
 const mts=meta.labels.filter(l=>l.k==='mtn').map(l=>({t:l.t,h:parseFloat((l.t.match(/(\d+)m$/)||[0,0])[1])})).sort((a,b)=>b.h-a.h);

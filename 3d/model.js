@@ -374,10 +374,10 @@ let anim=null;
 function pose(pos, tgt, instant, dur=1100){
   const p0=camera.position.clone(), t0=controls.target.clone();
   const p1=new THREE.Vector3(...pos), t1=new THREE.Vector3(...tgt);
-  if (instant || matchMedia('(prefers-reduced-motion: reduce)').matches){ anim=null; camera.position.copy(p1); controls.target.copy(t1); return; }
+  if (instant || matchMedia('(prefers-reduced-motion: reduce)').matches){ anim=null; camera.position.copy(p1); controls.target.copy(t1); try{cxLOD();}catch(_){} return; }
   const start=performance.now();
   anim=(now)=>{ const k=Math.min(1,(now-start)/dur), e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;
-    camera.position.lerpVectors(p0,p1,e); controls.target.lerpVectors(t0,t1,e); if(k>=1) anim=null; };
+    camera.position.lerpVectors(p0,p1,e); controls.target.lerpVectors(t0,t1,e); try{cxLOD();}catch(_){} if(k>=1) anim=null; };
 }
 function go(name, instant, dur){ const v=views[name]; pose(v.pos, v.tgt, instant, dur); }
 // 전체 현장 지도(index)에서 들어올 때: 위에서 내려다본 자세 → 기본 시점으로 이어지는 연출
@@ -392,7 +392,7 @@ document.getElementById('vIC').onclick=()=>go('ic');
 go(location.hash==='#site'?'site':'all', true);
 
 
-function cxLOD(){ for(const o of labelObjs){ const k=o.userData.k; if(k!=='cx'&&k!=='mtn') continue; const dist=camera.position.distanceTo(o.position); const sc=k==='cx'?Math.max(0.55,Math.min(2.6,dist<=2200?2200/dist:Math.pow(2200/dist,2))):Math.max(0.6,Math.min(1,1100/dist)); const el=o.element; if(k==='cx'){ el.style.fontSize=(12*sc).toFixed(1)+'px'; el.style.padding=(2*Math.max(1,sc)).toFixed(1)+'px '+(7*sc).toFixed(1)+'px'; } else { el.style.fontSize=(12*sc).toFixed(1)+'px'; } el.style.visibility='visible'; } }
+function cxLOD(){ for(const o of labelObjs){ const k=o.userData.k; if(k!=='cx'&&k!=='mtn') continue; const dist=camera.position.distanceTo(o.position); const sc=k==='cx'?Math.max(0.55,Math.min(2.6,1200/dist)):Math.max(0.6,Math.min(1,1100/dist)); const el=o.element; if(k==='cx'){ el.style.fontSize=(12*sc).toFixed(1)+'px'; el.style.padding=(2*Math.max(1,sc)).toFixed(1)+'px '+(7*sc).toFixed(1)+'px'; } else { el.style.fontSize=(12*sc).toFixed(1)+'px'; } el.style.visibility='visible'; } }
 controls.addEventListener('change',cxLOD);
 // 통계
 const mts=meta.labels.filter(l=>l.k==='mtn').map(l=>({t:l.t,h:parseFloat((l.t.match(/(\d+)m$/)||[0,0])[1])})).sort((a,b)=>b.h-a.h);

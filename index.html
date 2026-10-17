@@ -1240,7 +1240,7 @@
     var complexCols = ["id","role","name","short_label","address","lat","lng","build_year","units",
       "type_info","presale_price_note","current_price_note","competition_rate_note","unsold_status_note",
       "status_label","panel_note","block","date_label","max_floor_obs","map_status","landmark",
-      "baseline_amt","baseline_area","presale_is_proxy","floor_gap_note",
+      "baseline_amt","baseline_area","presale_is_proxy","floor_gap_note","rental_units",
       "avg_competition_rate","had_unsold_history","unsold_resolved","sale_stage",
       "recruit_notice_date","subscription_period_text","source_url"].join(",");
     var txCols = "id,complex_id,transaction_type,area_sqm,floor,price_man,contract_date";
@@ -1310,6 +1310,7 @@
             address: row.address,
             buildYear: row.build_year,
             units: row.units,
+            rentalUnits: (row.rental_units === null || row.rental_units === undefined) ? null : Number(row.rental_units),
             landmark: row.landmark || "",
             presalePrice: row.presale_price_note || null,
             currentPrice: row.current_price_note || null,
@@ -1341,6 +1342,7 @@
             status: row.map_status || (row.role === "own_upcoming" ? "upcoming" : "competitor"),
             statusLabel: row.status_label,
             units: row.units,
+            rentalUnits: (row.rental_units === null || row.rental_units === undefined) ? null : Number(row.rental_units),
             // 인천계양·부산에코델타 당사 현장은 분양예정 대신 M/H(모델하우스) 오픈일로 표기(2026.11 오픈 예정).
             dateLabel: (row.role === "own_upcoming" && /인천계양|부산에코델타/.test(row.name || "")) ? "M/H 26.11 오픈예정" : row.date_label,
             typeInfo: row.type_info,
@@ -3607,7 +3609,7 @@
       scheduledInfoHtml +
       '<div class="section-label">기본정보</div>' +
       '<div class="stat-grid">' +
-        '<div class="stat-cell"><div class="k">세대수</div><div class="v">' + p.units + '세대</div></div>' +
+        '<div class="stat-cell"><div class="k">세대수</div><div class="v">' + p.units + '세대' + (p.rentalUnits > 0 ? ' (임대 ' + p.rentalUnits + ')' : '') + '</div></div>' +
         '<div class="stat-cell"><div class="k">타입</div><div class="v">' + p.typeInfo + '</div></div>' +
         extraStats +
       '</div>' +
@@ -3652,7 +3654,7 @@
     var maxFloorTxt = c.maxFloorObs ? (c.maxFloorObs + "층") : "자료 없음";
     var buildYearTxt = c.buildYear ? ("준공 " + c.buildYear + "년") : "준공예정(미준공)";
     var elapsedTxt = c.buildYear ? ((CURRENT_YEAR - c.buildYear) + "년") : "-";
-    var unitsTxt = c.units ? (c.units + "세대") : "확인 안됨";
+    var unitsTxt = c.units ? (c.units + "세대" + (c.rentalUnits > 0 ? " (임대 " + c.rentalUnits + ")" : "")) : "확인 안됨";
     var chartId = containerId + "_floorChart";
     var txId = isPopup ? (containerId + "_txSection") : "txSectionRoot";
     document.getElementById(containerId).innerHTML =

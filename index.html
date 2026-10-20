@@ -3033,7 +3033,7 @@
       if (row) { e.preventDefault(); row.click(); }
     });
 
-    document.getElementById("panelClose").addEventListener("click", function(){
+    document.getElementById("panelClose").addEventListener("click", function(){ if (projectScopeFilter && !regionScopeOnly) clearProjectScope();
       document.getElementById("panel").classList.remove("open");
     });
 

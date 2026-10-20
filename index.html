@@ -1549,6 +1549,10 @@
     return names;
   }
 
+  function isElimScopeActive(){
+    var pn = document.getElementById("panel");
+    return !!(projectScopeFilter && !regionScopeOnly && currentComplex && currentComplex.name === projectScopeLabel && pn && pn.classList.contains("open"));
+  }
   function applyRegionScope(v){
     var sid = v === "incheon" ? "gy" : (v === "busan" ? "bs" : (v === "ilgwang" ? "il" : null));
     if (!sid) { clearProjectScope(); return; }
@@ -3017,7 +3021,7 @@
       var cid = row.getAttribute("data-cid");
       var m = markers.find(function(mm){ return String(mm.data.id) === cid; });
       if (!m) return;
-      if (projectScopeFilter && !regionScopeOnly && m.data.name !== projectScopeLabel) {
+      if (isElimScopeActive() && m.data.name !== projectScopeLabel) {
         openComparePopup(m);
       } else {
         focusMarker(m);
@@ -3290,7 +3294,7 @@
   // opts.fromMap=true(마커/이름표 직접 클릭)일 땐 이미 화면에 보이는 마커이므로 필터를 건드리지 않고,
   // 이미 더 확대돼 있으면 축소하지 않고 중심만 옮긴다.
   function activateMarker(m){
-    if (projectScopeFilter && !regionScopeOnly && m.data.name !== projectScopeLabel) openComparePopup(m);
+    if (isElimScopeActive() && m.data.name !== projectScopeLabel) openComparePopup(m);
     else focusMarker(m, { fromMap: true });
   }
   function focusMarker(m, opts){

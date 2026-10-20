@@ -3033,7 +3033,7 @@
       if (row) { e.preventDefault(); row.click(); }
     });
 
-    document.getElementById("panelClose").addEventListener("click", function(){ if (projectScopeFilter && !regionScopeOnly) clearProjectScope();
+    document.getElementById("panelClose").addEventListener("click", function(){ if (projectScopeFilter && !regionScopeOnly) { var ab=document.querySelector(".view-btn.active"); var rv=ab&&ab.getAttribute("data-view"); if(rv==="incheon"||rv==="busan"||rv==="ilgwang") applyRegionScope(rv); else clearProjectScope(); }
       document.getElementById("panel").classList.remove("open");
     });
 

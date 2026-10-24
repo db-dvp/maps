@@ -481,6 +481,11 @@
   .floorplan-modal-content{position:relative;background:#fff;border-radius:12px;padding:18px;max-width:min(95vw,900px);max-height:94vh;box-shadow:0 12px 40px rgba(0,0,0,.35);}
   .floorplan-modal-close{position:absolute;top:8px;right:8px;width:32px;height:32px;border:none;background:var(--paper);border-radius:50%;font-size:1.1rem;line-height:1;cursor:pointer;color:var(--ink);z-index:2;}
   .floorplan-modal-title{font-weight:700;font-size:.85rem;margin:0 32px 8px 2px;}
+  /* 기본형/확장형 도면이 둘 다 있을 때만 보이는 전환 탭(파일명 규칙: X.jpg=기본형, X-2.jpg 또는 X-ext.jpg=확장형) */
+  .floorplan-variant-tabs{display:none;gap:6px;margin:0 0 8px 2px;}
+  .floorplan-variant-tabs.show{display:flex;}
+  .floorplan-variant-tabs button{border:1px solid var(--line-strong);background:var(--paper);color:var(--ink-soft);font-size:.74rem;font-weight:700;padding:5px 12px;border-radius:999px;cursor:pointer;font-family:inherit;}
+  .floorplan-variant-tabs button.active{background:var(--indigo);color:#fff;border-color:var(--indigo);}
   /* 도면 확대/스크롤 뷰포트(2026.09.19 추가, 2026.09.26 수정) — 이미지를 항상 뷰포트 "가로폭"에
      맞춰 원래 비율 그대로 꽉 채워서 보여주고(너무 가늘고 작게 쪼그라들지 않게), 세로로 긴 도면
      (예: 인천계양 A6블록처럼 평면도+3D입체도+마감표가 이어진 긴 이미지)은 뷰포트가 자체
@@ -878,6 +883,10 @@
       <div class="floorplan-modal-content">
         <button type="button" class="floorplan-modal-close" id="floorPlanModalClose" aria-label="닫기">&times;</button>
         <div class="floorplan-modal-title" id="floorPlanModalTitle"></div>
+        <div class="floorplan-variant-tabs" id="floorPlanVariantTabs">
+          <button type="button" data-variant="base" class="active">기본형</button>
+          <button type="button" data-variant="ext">확장형</button>
+        </div>
         <div class="floorplan-modal-viewport" id="floorPlanModalViewport">
           <img class="floorplan-modal-img" id="floorPlanModalImg" src="" alt="도면" draggable="false">
         </div>
@@ -959,8 +968,6 @@
   function buildUnitTypesHtml(entity){
     var types = entity.unitTypes;
     if (!types || !types.length) return '';
-    // 전용면적 작은 타입이 위로, 큰 타입이 뒤로 (면적 같으면 타입명 숫자순)
-    types = types.slice().sort(function(a,b){ var aa=(a.areaSqm==null)?1e9:Math.floor(a.areaSqm), bb=(b.areaSqm==null)?1e9:Math.floor(b.areaSqm); if(aa!==bb) return aa-bb; return String(a.typeName).localeCompare(String(b.typeName),"ko",{numeric:true}); });
     var rows = types.map(function(t){
       var area = (t.areaSqm === null || t.areaSqm === undefined) ? '확인불가' : (t.areaSqm + '㎡');
       var units = (t.unitsCount === null || t.unitsCount === undefined) ? '확인불가' : (t.unitsCount.toLocaleString() + '세대');
@@ -1009,11 +1016,57 @@
     titleEl.textContent = (title ? (title + " ") : "") + "도면";
     resetFloorPlanZoom();
     modal.classList.add("open");
+    setupFloorPlanVariants(url);
   }
+  // 같은 폴더에 확장형 도면(X-2.jpg 또는 X-ext.jpg)이 있으면 기본형/확장형 전환 탭을 보여준다.
+  // 없으면(대부분의 단지) 탭 없이 예전처럼 한 장만 보인다. DB 변경 없이 파일명 규칙만 사용.
+  var floorPlanVariantToken = 0;
+  var floorPlanVariantUrls = { base: null, ext: null };
+  function setupFloorPlanVariants(baseUrl){
+    var tabs = document.getElementById("floorPlanVariantTabs");
+    if (!tabs) return;
+    var token = ++floorPlanVariantToken;
+    floorPlanVariantUrls = { base: baseUrl, ext: null };
+    tabs.classList.remove("show");
+    Array.prototype.forEach.call(tabs.querySelectorAll("button"), function(b){ b.classList.toggle("active", b.getAttribute("data-variant") === "base"); });
+    var m = String(baseUrl).match(/^(.*)\.(jpe?g|png|webp)$/i);
+    if (!m) return;
+    var cands = [m[1] + "-2." + m[2], m[1] + "-ext." + m[2]];
+    (function tryNext(i){
+      if (i >= cands.length || token !== floorPlanVariantToken) return;
+      var probe = new Image();
+      probe.onload = function(){
+        if (token !== floorPlanVariantToken) return;
+        floorPlanVariantUrls.ext = cands[i];
+        tabs.classList.add("show");
+      };
+      probe.onerror = function(){ tryNext(i + 1); };
+      probe.src = cands[i];
+    })(0);
+  }
+  function switchFloorPlanVariant(kind){
+    var url = floorPlanVariantUrls[kind];
+    if (!url) return;
+    var tabs = document.getElementById("floorPlanVariantTabs");
+    Array.prototype.forEach.call(tabs.querySelectorAll("button"), function(b){ b.classList.toggle("active", b.getAttribute("data-variant") === kind); });
+    document.getElementById("floorPlanModalImg").src = url;
+    resetFloorPlanZoom();
+  }
+  (function bindFloorPlanVariantTabs(){
+    var tabs = document.getElementById("floorPlanVariantTabs");
+    if (!tabs) return;
+    tabs.addEventListener("click", function(e){
+      var b = e.target.closest("button[data-variant]");
+      if (b) switchFloorPlanVariant(b.getAttribute("data-variant"));
+    });
+  })();
   function closeFloorPlanModal(){
     var modal = document.getElementById("floorPlanModal");
     modal.classList.remove("open");
     document.getElementById("floorPlanModalImg").src = "";
+    floorPlanVariantToken++;
+    var vt = document.getElementById("floorPlanVariantTabs");
+    if (vt) vt.classList.remove("show");
     resetFloorPlanZoom();
   }
 
@@ -1551,10 +1604,6 @@
     return names;
   }
 
-  function isElimScopeActive(){
-    var pn = document.getElementById("panel");
-    return !!(projectScopeFilter && !regionScopeOnly && currentComplex && currentComplex.name === projectScopeLabel && pn && pn.classList.contains("open"));
-  }
   function applyRegionScope(v){
     var sid = v === "incheon" ? "gy" : (v === "busan" ? "bs" : (v === "ilgwang" ? "il" : null));
     if (!sid) { clearProjectScope(); return; }
@@ -3023,7 +3072,7 @@
       var cid = row.getAttribute("data-cid");
       var m = markers.find(function(mm){ return String(mm.data.id) === cid; });
       if (!m) return;
-      if (isElimScopeActive() && m.data.name !== projectScopeLabel) {
+      if (projectScopeFilter && !regionScopeOnly && m.data.name !== projectScopeLabel) {
         openComparePopup(m);
       } else {
         focusMarker(m);
@@ -3035,7 +3084,7 @@
       if (row) { e.preventDefault(); row.click(); }
     });
 
-    document.getElementById("panelClose").addEventListener("click", function(){ if (projectScopeFilter && !regionScopeOnly) { var ab=document.querySelector(".view-btn.active"); var rv=ab&&ab.getAttribute("data-view"); if(rv==="incheon"||rv==="busan"||rv==="ilgwang") applyRegionScope(rv); else clearProjectScope(); }
+    document.getElementById("panelClose").addEventListener("click", function(){
       document.getElementById("panel").classList.remove("open");
     });
 
@@ -3296,7 +3345,7 @@
   // opts.fromMap=true(마커/이름표 직접 클릭)일 땐 이미 화면에 보이는 마커이므로 필터를 건드리지 않고,
   // 이미 더 확대돼 있으면 축소하지 않고 중심만 옮긴다.
   function activateMarker(m){
-    if (isElimScopeActive() && m.data.name !== projectScopeLabel) openComparePopup(m);
+    if (projectScopeFilter && !regionScopeOnly && m.data.name !== projectScopeLabel) openComparePopup(m);
     else focusMarker(m, { fromMap: true });
   }
   function focusMarker(m, opts){

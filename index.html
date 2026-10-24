@@ -960,7 +960,7 @@
     var types = entity.unitTypes;
     if (!types || !types.length) return '';
     // 전용면적 작은 타입이 위로, 큰 타입이 뒤로 (면적 같으면 타입명 숫자순)
-    types = types.slice().sort(function(a,b){ var aa=(a.areaSqm==null)?1e9:a.areaSqm, bb=(b.areaSqm==null)?1e9:b.areaSqm; if(aa!==bb) return aa-bb; return String(a.typeName).localeCompare(String(b.typeName),"ko",{numeric:true}); });
+    types = types.slice().sort(function(a,b){ var aa=(a.areaSqm==null)?1e9:Math.floor(a.areaSqm), bb=(b.areaSqm==null)?1e9:Math.floor(b.areaSqm); if(aa!==bb) return aa-bb; return String(a.typeName).localeCompare(String(b.typeName),"ko",{numeric:true}); });
     var rows = types.map(function(t){
       var area = (t.areaSqm === null || t.areaSqm === undefined) ? '확인불가' : (t.areaSqm + '㎡');
       var units = (t.unitsCount === null || t.unitsCount === undefined) ? '확인불가' : (t.unitsCount.toLocaleString() + '세대');

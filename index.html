@@ -966,7 +966,7 @@
   // 타입별 분양가/면적/세대수 표 — "분양예정(타사 현장)" 카테고리에서 주로 쓰지만,
   // complex_unit_types 테이블 자체는 비교단지(향후 ④번 도면 작업)에도 공용으로 쓰도록 설계함.
   function buildUnitTypesHtml(entity){
-    var types = entity.unitTypes;
+    var types = (entity.unitTypes || []).slice().sort(function(a, b){ var x = (a.areaSqm == null) ? 1e9 : Number(a.areaSqm); var y = (b.areaSqm == null) ? 1e9 : Number(b.areaSqm); if (x !== y) return x - y; return String(a.typeName).localeCompare(String(b.typeName), 'ko', {numeric: true}); });
     if (!types || !types.length) return '';
     var rows = types.map(function(t){
       var area = (t.areaSqm === null || t.areaSqm === undefined) ? '확인불가' : (t.areaSqm + '㎡');

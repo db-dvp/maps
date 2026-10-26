@@ -21,7 +21,8 @@
   .tag{position:absolute;pointer-events:none;font-size:10px;font-weight:600;color:#1c2433;background:rgba(255,255,255,.7);padding:0 3px;border-radius:3px;transform:translate(-50%,-50%);white-space:nowrap}
   .note{position:absolute;right:12px;bottom:10px;font-size:11px;color:var(--soft);background:rgba(251,250,247,.85);padding:4px 8px;border-radius:6px}
   #rowOv,#rowA,#tOv,label[for=tOv]{display:none!important}
-  .row:has(#tOv){display:none!important}
+  .row:has(#tOv),.row:has(#tFloor){display:none!important}
+  .panel{max-width:none!important}.panel h1{white-space:nowrap}
 </style>
 </head>
 <body>
@@ -47,7 +48,7 @@ if(!/^data\/[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\.json$/.test(__q)){document.body.inne
 const PLAN=await (await fetch(__q,{cache:'no-cache'})).json();
 PLAN.imageUrl='data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 const IMG_URL=PLAN.imageUrl, IMGW=PLAN.imageSize[0], IMGH=PLAN.imageSize[1], CROP=PLAN.crop||[0,0,IMGW,IMGH];
-document.title=PLAN.name+' 3D'; document.getElementById('ttl').textContent=PLAN.name; document.getElementById('sub').innerHTML='전용 '+PLAN.exclusiveAreaM2+'㎡';
+document.title=PLAN.name+' 3D'; document.getElementById('ttl').textContent=PLAN.name.replace('발코니 확장형 기준','확장형 기준').replace(/^계양\s*/,''); document.getElementById('sub').innerHTML='전용 '+PLAN.exclusiveAreaM2+'㎡';
 if(!PLAN.furniture) document.getElementById('rowKit').style.display='none';
 if(PLAN.furniture!=='jeil-59b') document.getElementById('rowUp').style.display='none';
 const M=PLAN.mPerPx, H=PLAN.wallHeight;
@@ -281,7 +282,15 @@ $('tKit').onchange=e=>kitG.visible=e.target.checked;
 $('tUp').onchange=e=>upG.visible=e.target.checked;
 $('tOv').onchange=e=>{ov.visible=e.target.checked;$('rowA').style.display=e.target.checked?'flex':'none';};
 $('ovA').oninput=e=>ovMat.opacity=e.target.value/100;
-function view(top){ctl.target.set(3,0,0);if(top){cam.position.set(3,30,0.001);}else{cam.position.set(-8,25,17);}ctl.update();}
+const __bb=new THREE.Box3().union(new THREE.Box3().setFromObject(floorG)).union(new THREE.Box3().setFromObject(wallG));
+const __c=__bb.getCenter(new THREE.Vector3()), __s=__bb.getSize(new THREE.Vector3()), __span=Math.max(__s.x,__s.z);
+function view(top){
+  const d=Math.max(20,__span*2.2);
+  ctl.target.set(__c.x,0,__c.z);
+  if(top){cam.position.set(__c.x,d*1.15,__c.z+0.001);}
+  else{cam.position.set(__c.x-d*0.34,d*0.77,__c.z+d*0.52);}
+  ctl.update();
+}
 $('vTop').onclick=()=>view(true); $('vIso').onclick=()=>view(false);
 window.__ov=(on,a)=>{$('tOv').checked=on;ov.visible=on;ovMat.opacity=a;};
 window.__view=view; window.__cam=cam; window.__ctl=ctl; window.__X=X; window.__Z=Z;

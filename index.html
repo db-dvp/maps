@@ -398,7 +398,7 @@
     max-height:320px;overflow-y:auto;
   }
   .tx-row{
-    display:grid;grid-template-columns:.8fr .6fr .95fr 1.1fr .8fr;gap:6px;align-items:center;
+    display:grid;grid-template-columns:.75fr .85fr .95fr 1.05fr .8fr;gap:6px;align-items:center;
     padding:6px 10px;font-size:.72rem;border-bottom:1px solid var(--line);
   }
   .tx-row:last-child{border-bottom:none;}
@@ -411,7 +411,14 @@
   }
   .tx-row-head span:last-child{text-align:right;}
   .tx-date{color:var(--ink-soft);}
-  .tx-area{color:var(--ink-soft);}
+  .tx-area{color:var(--ink-soft);display:flex;flex-direction:column;line-height:1.25;}
+  .tx-type{font-size:.62rem;color:var(--ink-soft);display:flex;align-items:center;gap:3px;flex-wrap:wrap;}
+  .tx-struct{display:inline-block;font-size:.58rem;font-weight:700;padding:0 4px;border-radius:3px;border:1px solid;line-height:1.4;}
+  .tx-struct-pan{color:#1f6feb;border-color:#1f6feb;}
+  .tx-struct-tap{color:#d9480f;border-color:#d9480f;}
+  .tx-struct-na{color:#9a8f78;border-color:#cfc6b3;}
+  .tx-struct-summary{font-size:.66rem;color:var(--ink-soft);margin:-2px 0 8px;}
+  .tx-struct-summary b{color:var(--ink);}
   .tx-floor{font-weight:700;color:var(--ink);}
   .tx-amt{font-weight:700;}
   .tx-change{font-weight:700;text-align:right;display:flex;flex-direction:column;align-items:flex-end;line-height:1.3;}
@@ -980,12 +987,13 @@
       var units = (t.unitsCount === null || t.unitsCount === undefined) ? '확인불가' : (t.unitsCount.toLocaleString() + '세대');
       var price = (t.priceAmt === null || t.priceAmt === undefined) ? '확인불가' : formatAmt(t.priceAmt);
       var extra = [];
-      if (t.structureType) extra.push(t.structureType);
+      if (normStruct(t.structureType)) extra.push(normStruct(t.structureType));
       if (t.hasAlphaRoom === true) extra.push('알파룸 있음');
       if (t.roomCount !== null && t.roomCount !== undefined) extra.push(t.roomCount + '개룸');
       var priceCell = price + (extra.length ? (' <span style="color:var(--ink-soft);font-size:.9em;">(' + extra.join(' · ') + ')</span>') : '');
       // 타입명과 전용면적을 한 칸("39A (39.88㎡)")으로 합치고, 도면이 있으면 그 타입 칸을 눌러 도면을 연다(별도 '도면' 열 제거).
-      var typeLabel = t.typeName + ((t.areaSqm === null || t.areaSqm === undefined) ? '' : (' <span style="font-weight:400;color:var(--ink-soft);">(' + area + ')</span>'));
+      var dispName = t.displayName || t.typeName;
+      var typeLabel = dispName + ((dispName !== t.typeName) ? (' <span style="font-weight:400;color:var(--ink-soft);font-size:.9em;">' + t.typeName + '</span>') : '') + ((t.areaSqm === null || t.areaSqm === undefined) ? '' : (' <span style="font-weight:400;color:var(--ink-soft);">(' + area + ')</span>'));
       var typeCell = t.floorPlanUrl
         ? ('<button type="button" class="floorplan-link unittype-name" data-plan-url="' + t.floorPlanUrl + '" data-plan-title="' + t.typeName + '" title="눌러서 도면 보기">' + typeLabel + '</button>')
         : ('<span class="unittype-name">' + typeLabel + '</span>');
@@ -1196,8 +1204,36 @@
     return "고층";
   }
 
+  // 전용면적 관용 표기(소수점 버림): 84.99 → 84㎡, 80.78 → 80㎡ (분양공고 주택형 표기와 동일)
   function areaLabel(area){
-    return Math.round(area) + "㎡";
+    return Math.floor(Number(area) + 1e-9) + "㎡";
+  }
+  // 판상/탑상 표기 정규화 ('타워형'·'판상형(4Bay)' 등 옛 값도 흡수)
+  function normStruct(v){
+    if (!v) return null;
+    if (v.indexOf('판상') !== -1) return '판상';
+    if (v.indexOf('탑상') !== -1 || v.indexOf('타워') !== -1) return '탑상';
+    return null;
+  }
+  // 거래 1건 → 타입(표시이름)과 판상/탑상. unit_type_id가 있으면 그 타입,
+  // 없으면 정확한 전용면적(4자리)이 같은 타입들(예: 108A/108B 공유)로 판단.
+  function txTypeInfo(t, c){
+    var types = (c && c.unitTypes) || [];
+    var hit = [];
+    if (t.unitTypeId) hit = types.filter(function(u){ return u.id === t.unitTypeId; });
+    if (!hit.length && t.areaExact !== null && t.areaExact !== undefined) {
+      hit = types.filter(function(u){ return u.areaExact !== null && Math.abs(u.areaExact - t.areaExact) < 0.00005; });
+    }
+    if (!hit.length) return { label: null, struct: null };
+    var names = hit.map(function(u){ return u.displayName || u.typeName; });
+    var structs = hit.map(function(u){ return normStruct(u.structureType); });
+    var st = structs.every(function(x){ return x && x === structs[0]; }) ? structs[0] : null;
+    return { label: names.join('/'), struct: st };
+  }
+  function structBadge(st, hasAny){
+    if (st === '판상') return '<span class="tx-struct tx-struct-pan">판상</span>';
+    if (st === '탑상') return '<span class="tx-struct tx-struct-tap">탑상</span>';
+    return hasAny ? '<span class="tx-struct tx-struct-na">미확인</span>' : '';
   }
 
   // 최초분양가(또는 준공 후 실거래가 대용치) 대비 변동률(%). 면적이 다를 수 있으므로
@@ -1278,13 +1314,13 @@
   var COMPARISON_COMPLEXES = []; // Supabase complexes(role=comparison) + transactions에서 런타임에 채워짐 (loadDataFromSupabase 참고)
 
   var map, geocoder, places, markers = [], activeFilters = new Set(["all"]);
-  var currentComplex = null, txFloorFilter = "all", txAreaFilter = "all";
+  var currentComplex = null, txFloorFilter = "all", txAreaFilter = "all", txStructFilter = "all";
   // ⑥-1(2026.09.20): 당사 현장(엘리움) 패널을 열면, 그 현장을 위해 등록해둔 비교단지·참고단지만
   // 비교표에 남기고 나머지는 숨긴다(SIMULATOR_CONFIG의 baselineComplexNames/referenceGroups 재사용).
   var projectScopeFilter = null, projectScopeLabel = null, regionScopeOnly = false;
   // 2026.09.20: 비교 스코프 팝업(openComparePopup)의 자체 상태 — 옆 패널의 currentComplex/
   // txFloorFilter/txAreaFilter와는 완전히 분리되어 있어 팝업을 열고 닫아도 옆 패널에 영향 없음.
-  var popupCurrentEntity = null, popupTxFilter = { floor: "all", area: "all" };
+  var popupCurrentEntity = null, popupTxFilter = { floor: "all", area: "all", struct: "all" };
 
   // ============================================================
   // Supabase 연동: 하드코딩 배열 대신 실제 DB(complexes/transactions)에서
@@ -1349,10 +1385,10 @@
       "baseline_amt","baseline_area","presale_is_proxy","floor_gap_note","rental_units",
       "avg_competition_rate","had_unsold_history","unsold_resolved","sale_stage",
       "recruit_notice_date","subscription_period_text","source_url"].join(",");
-    var txCols = "id,complex_id,transaction_type,area_sqm,floor,price_man,contract_date";
+    var txCols = "id,complex_id,transaction_type,area_sqm,floor,price_man,contract_date,area_exact,apt_dong,unit_type_id";
     var ruleCols = "rule_key,rule_value";
     // 타입별 정보(분양예정 타입별 분양가 + 추후 ④번 도면 작업에서도 같이 쓰는 테이블) — 없으면(아직 테이블 미생성) 조용히 빈 배열로.
-    var unitTypeCols = "id,complex_id,type_name,area_sqm,units_count,price_amt,room_count,structure_type,has_alpha_room,floor_plan_url,note";
+    var unitTypeCols = "id,complex_id,type_name,display_name,area_exact,area_sqm,units_count,price_amt,room_count,structure_type,has_alpha_room,floor_plan_url,note";
 
     return Promise.all([
       supabaseFetchAll("complexes", complexCols, "name"),
@@ -1367,7 +1403,10 @@
       var unitTypesByComplex = {};
       unitTypeRows.forEach(function(u){
         (unitTypesByComplex[u.complex_id] = unitTypesByComplex[u.complex_id] || []).push({
+          id: u.id,
           typeName: u.type_name,
+          displayName: u.display_name || u.type_name,
+          areaExact: (u.area_exact === null || u.area_exact === undefined) ? null : Number(u.area_exact),
           areaSqm: (u.area_sqm === null || u.area_sqm === undefined) ? null : Number(u.area_sqm),
           unitsCount: (u.units_count === null || u.units_count === undefined) ? null : Number(u.units_count),
           priceAmt: (u.price_amt === null || u.price_amt === undefined) ? null : Number(u.price_amt),
@@ -1405,7 +1444,10 @@
             y: parts[0] ? parseInt(parts[0], 10) : null,
             m: parts[1] ? parseInt(parts[1], 10) : null,
             d: parts[2] ? parseInt(parts[2], 10) : null,
-            type: t.transaction_type
+            type: t.transaction_type,
+            areaExact: (t.area_exact === null || t.area_exact === undefined) ? null : Number(t.area_exact),
+            dong: t.apt_dong || null,
+            unitTypeId: t.unit_type_id || null
           };
         });
 
@@ -3145,6 +3187,8 @@
       if (ft) { txFloorFilter = ft.getAttribute("data-txfloor"); renderTxSection(); return; }
       var at = e.target.closest("[data-txarea]");
       if (at) { txAreaFilter = at.getAttribute("data-txarea"); renderTxSection(); return; }
+      var st = e.target.closest("[data-txstruct]");
+      if (st) { txStructFilter = st.getAttribute("data-txstruct"); renderTxSection(); return; }
       // 타입별 정보 표의 "도면보기" — 외부 사이트로 새 탭을 여는 대신 지도 화면 가운데에 모달로 바로 보여줌
       var pt = e.target.closest("[data-plan-url]");
       if (pt) { openFloorPlanModal(pt.getAttribute("data-plan-url"), pt.getAttribute("data-plan-title")); return; }
@@ -3157,16 +3201,19 @@
       var ft = e.target.closest("[data-txfloor]");
       var at = e.target.closest("[data-txarea]");
       var pt = e.target.closest("[data-plan-url]");
-      if (!ft && !at && !pt) return;
+      var stc = e.target.closest("[data-txstruct]");
+      if (!ft && !at && !pt && !stc) return;
       if (ft) popupTxFilter.floor = ft.getAttribute("data-txfloor");
       if (at) popupTxFilter.area = at.getAttribute("data-txarea");
+      if (stc) popupTxFilter.struct = stc.getAttribute("data-txstruct");
       if (pt) { openFloorPlanModal(pt.getAttribute("data-plan-url"), pt.getAttribute("data-plan-title")); return; }
       if (popupCurrentEntity) {
         renderTxSection({
           complex: popupCurrentEntity,
           root: document.getElementById("comparePopupInner_txSection"),
           floorFilter: popupTxFilter.floor,
-          areaFilter: popupTxFilter.area
+          areaFilter: popupTxFilter.area,
+          structFilter: popupTxFilter.struct
         });
       }
     });
@@ -3577,7 +3624,7 @@
 
   function openComparePopup(m){
     popupCurrentEntity = m.data;
-    popupTxFilter = { floor: "all", area: "all" };
+    popupTxFilter = { floor: "all", area: "all", struct: "all" };
     // 3D(콘타) 화면의 요약 말풍선이 팝업 뒤에 남아 비쳐 보이지 않도록 비교 팝업을 열 때 자동으로 닫는다.
     var __cb = document.getElementById("contBubble"); if (__cb) __cb.style.display = "none"; try { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); window.focus(); } catch (e) {}
     clearComparePopupMapDecorations();
@@ -3654,6 +3701,7 @@
       currentComplex = p;
       txFloorFilter = "all";
       txAreaFilter = "all";
+      txStructFilter = "all";
       // 당사 현장(엘리움)이면 비교표를 "같은 지역(주소 기준 인천/부산) 단지만"으로 좁힌다.
       // 그 외(비교단지·타사 현장 등)를 클릭하면 원래 범위로 돌아간다.
       if (p.status === "upcoming") {
@@ -3749,6 +3797,7 @@
       currentComplex = c;
       txFloorFilter = "all";
       txAreaFilter = "all";
+      txStructFilter = "all";
       if (!regionScopeOnly) { projectScopeFilter = null; projectScopeLabel = null; }
       simCurrentCfg = null;
       simCurrentMainBaseline = null;
@@ -3785,7 +3834,7 @@
     }
     renderFloorPriceChart(chartId, c);
     if (isPopup) {
-      renderTxSection({ complex: c, root: document.getElementById(txId), floorFilter: "all", areaFilter: "all" });
+      renderTxSection({ complex: c, root: document.getElementById(txId), floorFilter: "all", areaFilter: "all", structFilter: "all" });
     } else {
       renderTxSection();
       if (typeof renderCompareTable === "function") renderCompareTable();
@@ -3804,6 +3853,7 @@
     if (!root) return;
     var floorFilter = (opts.floorFilter !== undefined) ? opts.floorFilter : txFloorFilter;
     var areaFilterVal = (opts.areaFilter !== undefined) ? opts.areaFilter : txAreaFilter;
+    var structFilterVal = (opts.structFilter !== undefined) ? opts.structFilter : txStructFilter;
     var txs = c.txHistory || [];
     if (txs.length === 0) {
       root.innerHTML = '<div class="tx-section"><div class="tx-title">층별·면적별 실거래 내역</div><div class="note">국토부 실거래가 표본에서 확인된 거래가 없습니다.</div></div>';
@@ -3813,7 +3863,7 @@
 
     var areaLabels = [];
     txs.forEach(function(t){
-      var lab = areaLabel(t.area);
+      var lab = areaLabel(t.areaExact || t.area);
       if (areaLabels.indexOf(lab) === -1) areaLabels.push(lab);
     });
     areaLabels.sort(function(a,b){ return parseInt(a) - parseInt(b); });
@@ -3830,12 +3880,36 @@
         return '<button class="filter-btn tx-chip' + active + '" data-txarea="' + lab + '">' + lab + '</button>';
       })).join("");
 
-    var filtered = txs.filter(function(t){
+    // 판상/탑상: 타입별 정보에 하나라도 판정이 있는 단지만 필터·배지를 보여줌
+    var hasStruct = (c.unitTypes || []).some(function(u){ return !!normStruct(u.structureType); });
+    txs.forEach(function(t){ t._ti = txTypeInfo(t, c); });
+    var structChips = hasStruct ? ["all","판상","탑상"].map(function(f){
+      var active = (structFilterVal === f) ? " active" : "";
+      return '<button class="filter-btn tx-chip' + active + '" data-txstruct="' + f + '">' + (f === "all" ? "전체" : f) + '</button>';
+    }).join("") : "";
+    var baseFiltered = txs.filter(function(t){
       var fb = floorBucketLabel(t.f, maxFloor);
       if (floorFilter !== "all" && fb !== floorFilter) return false;
-      if (areaFilterVal !== "all" && areaLabel(t.area) !== areaFilterVal) return false;
+      if (areaFilterVal !== "all" && areaLabel(t.areaExact || t.area) !== areaFilterVal) return false;
       return true;
     });
+    var filtered = baseFiltered.filter(function(t){
+      if (hasStruct && structFilterVal !== "all" && t._ti.struct !== structFilterVal) return false;
+      return true;
+    });
+    // 판상/탑상 평균 요약 (층·면적 필터 적용, 최근 1년 거래 기준)
+    var structSummary = "";
+    if (hasStruct) {
+      var nowY = new Date().getFullYear(), nowM = new Date().getMonth() + 1;
+      var recent = baseFiltered.filter(function(t){ return t.amt && ((nowY - t.y) * 12 + (nowM - t.m)) <= 12; });
+      var grp = { "판상": [], "탑상": [] };
+      recent.forEach(function(t){ if (grp[t._ti.struct]) grp[t._ti.struct].push(t.amt); });
+      var avg = function(a){ return a.reduce(function(x,y){ return x+y; },0) / a.length; };
+      var parts = ["판상","탑상"].filter(function(k){ return grp[k].length; }).map(function(k){
+        return k + ' <b>' + formatAmt(Math.round(avg(grp[k]))) + '</b> (' + grp[k].length + '건)';
+      });
+      if (parts.length) structSummary = '<div class="tx-struct-summary">최근 1년 평균 · ' + parts.join(' / ') + (areaFilterVal === "all" ? ' <span style="opacity:.8">— 면적을 골라 비교하세요</span>' : '') + '</div>';
+    }
     filtered.sort(function(a,b){
       if (b.y !== a.y) return b.y - a.y;
       if (b.m !== a.m) return b.m - a.m;
@@ -3847,7 +3921,9 @@
       var cmp = computeTxPctChange(t, c);
       return '<div class="tx-row">' +
         '<span class="tx-date">' + t.y + '.' + String(t.m).padStart(2,"0") + '</span>' +
-        '<span class="tx-area">' + areaLabel(t.area) + '</span>' +
+        '<span class="tx-area">' + areaLabel(t.areaExact || t.area) +
+          ((t._ti.label || hasStruct) ? ('<span class="tx-type">' + (t._ti.label || '') + ' ' + structBadge(t._ti.struct, hasStruct) + '</span>') : '') +
+        '</span>' +
         '<span class="tx-floor">' + fb + '(' + t.f + '층)</span>' +
         '<span class="tx-amt">' + formatAmt(t.amt) + '</span>' +
         formatPctChange(cmp.pct, cmp.label, cmp.isProxy) +
@@ -3855,7 +3931,7 @@
     }).join("");
     var headerRow =
       '<div class="tx-row tx-row-head">' +
-        '<span>날짜</span><span>면적</span><span>층수</span><span>가격</span><span class="tx-change">최초 대비</span>' +
+        '<span>날짜</span><span>면적·타입</span><span>층수</span><span>가격</span><span class="tx-change">최초 대비</span>' +
       '</div>';
     if (!rows) rows = '<div class="note" style="padding:8px 0;">해당 조건의 거래 표본이 없습니다.</div>';
 
@@ -3874,6 +3950,7 @@
         baselineNote +
         '<div class="tx-filter-row">' + floorChips + '</div>' +
         '<div class="tx-filter-row">' + areaChips + '</div>' +
+        (hasStruct ? ('<div class="tx-filter-row">' + structChips + '</div>' + structSummary) : '') +
         '<div class="tx-list">' + headerRow + rows + '</div>' +
       '</div>';
   }

@@ -482,6 +482,11 @@
   .floorplan-modal-close{position:absolute;top:8px;right:8px;width:32px;height:32px;border:none;background:var(--paper);border-radius:50%;font-size:1.1rem;line-height:1;cursor:pointer;color:var(--ink);z-index:2;}
   .floorplan-modal-title{font-weight:700;font-size:.85rem;margin:0 32px 8px 2px;}
   /* 기본형/확장형 도면이 둘 다 있을 때만 보이는 전환 탭(파일명 규칙: X.jpg=기본형, X-2.jpg 또는 X-ext.jpg=확장형) */
+  /* 3D 보기(2026.10 시범): fp3d/data/<폴더>/<타입>.json 이 있는 도면에서만 버튼 표시 */
+  .floorplan-3d-btn{display:none;margin:0 0 8px 8px;border:1px solid var(--indigo);background:#fff;color:var(--indigo);font-size:.74rem;font-weight:700;padding:5px 12px;border-radius:999px;cursor:pointer;font-family:inherit;}
+  .floorplan-3d-btn.show{display:inline-block;}
+  .floorplan-3d-frame{display:none;width:min(90vw,860px);height:80vh;border:0;border-radius:8px;background:#f4f4f4;}
+  .floorplan-3d-frame.show{display:block;}
   .floorplan-variant-tabs{display:none;gap:6px;margin:0 0 8px 2px;}
   .floorplan-variant-tabs.show{display:flex;}
   .floorplan-variant-tabs button{border:1px solid var(--line-strong);background:var(--paper);color:var(--ink-soft);font-size:.74rem;font-weight:700;padding:5px 12px;border-radius:999px;cursor:pointer;font-family:inherit;}
@@ -887,6 +892,8 @@
           <button type="button" data-variant="base" class="active">기본형</button>
           <button type="button" data-variant="ext">확장형</button>
         </div>
+        <button type="button" class="floorplan-3d-btn" id="floorPlan3dBtn">3D로 보기 (확장형 기준)</button>
+        <iframe class="floorplan-3d-frame" id="floorPlan3dFrame" title="3D 도면" allowfullscreen></iframe>
         <div class="floorplan-modal-viewport" id="floorPlanModalViewport">
           <img class="floorplan-modal-img" id="floorPlanModalImg" src="" alt="도면" draggable="false">
         </div>
@@ -1017,7 +1024,50 @@
     resetFloorPlanZoom();
     modal.classList.add("open");
     setupFloorPlanVariants(url);
+    setupFloorPlan3d(url);
   }
+  // 3D 보기: 도면 주소 .../floorplans/naver/<폴더>/<타입>(-2|-ext).jpg → fp3d/data/<폴더>/<타입>.json 이 있을 때만 버튼 표시
+  var floorPlan3dToken = 0, floorPlan3dKey = null;
+  function floorPlan3dReset(){
+    var b = document.getElementById("floorPlan3dBtn"), f = document.getElementById("floorPlan3dFrame");
+    if (b){ b.classList.remove("show"); b.textContent = "3D로 보기 (확장형 기준)"; }
+    if (f){ f.classList.remove("show"); f.removeAttribute("src"); }
+    var vp = document.getElementById("floorPlanModalViewport"); if (vp) vp.style.display = "";
+    var ct = document.querySelector("#floorPlanModal .floorplan-modal-controls"); if (ct) ct.style.display = "";
+    floorPlan3dKey = null;
+  }
+  function setupFloorPlan3d(url){
+    var token = ++floorPlan3dToken;
+    floorPlan3dReset();
+    var m = String(url).match(/\/floorplans\/naver\/([A-Za-z0-9_-]+)\/([A-Za-z0-9_]+?)(?:-2|-ext)?\.(?:jpe?g|png|webp)$/i);
+    if (!m) return;
+    var key = m[1].toLowerCase() + "/" + m[2].toLowerCase();
+    fetch("fp3d/data/" + key + ".json", { method: "HEAD", cache: "no-cache" }).then(function(r){
+      if (r.ok && token === floorPlan3dToken){
+        floorPlan3dKey = key;
+        document.getElementById("floorPlan3dBtn").classList.add("show");
+      }
+    }).catch(function(){});
+  }
+  function toggleFloorPlan3d(){
+    var b = document.getElementById("floorPlan3dBtn"), f = document.getElementById("floorPlan3dFrame");
+    var vp = document.getElementById("floorPlanModalViewport");
+    var ct = document.querySelector("#floorPlanModal .floorplan-modal-controls");
+    if (!floorPlan3dKey) return;
+    var on = !f.classList.contains("show");
+    if (on){
+      f.src = "fp3d/viewer.html?d=data/" + floorPlan3dKey + ".json";
+      f.classList.add("show"); vp.style.display = "none"; if (ct) ct.style.display = "none";
+      b.textContent = "도면 보기";
+    } else {
+      f.classList.remove("show"); f.removeAttribute("src"); vp.style.display = ""; if (ct) ct.style.display = "";
+      b.textContent = "3D로 보기 (확장형 기준)";
+    }
+  }
+  (function bindFloorPlan3d(){
+    var b = document.getElementById("floorPlan3dBtn");
+    if (b) b.addEventListener("click", toggleFloorPlan3d);
+  })();
   // 같은 폴더에 확장형 도면(X-2.jpg 또는 X-ext.jpg)이 있으면 기본형/확장형 전환 탭을 보여준다.
   // 없으면(대부분의 단지) 탭 없이 예전처럼 한 장만 보인다. DB 변경 없이 파일명 규칙만 사용.
   var floorPlanVariantToken = 0;
@@ -1065,6 +1115,7 @@
     modal.classList.remove("open");
     document.getElementById("floorPlanModalImg").src = "";
     floorPlanVariantToken++;
+    floorPlan3dToken++; floorPlan3dReset();
     var vt = document.getElementById("floorPlanVariantTabs");
     if (vt) vt.classList.remove("show");
     resetFloorPlanZoom();

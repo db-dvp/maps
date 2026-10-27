@@ -2456,7 +2456,7 @@
   // 층구간(저/중/고층)별 평균 평당가 + 표본 수 계산
   function computeTierStats(entity){
     var maxFloor = computeMaxFloor(entity);
-    var txs = (entity.txHistory || []).filter(function(t){ return t.area && t.amt && t.y && t.f; });
+    var txs = (entity.txHistory || []).filter(function(t){ return t.area && t.amt && t.y && t.f && t.y >= 2025; });
     var groups = {};
     txs.forEach(function(t){
       var pricePerPyeong = (t.amt / t.area) * PYEONG_SQM; // 만원/평 (전용면적 기준, 3.3㎡=1평)
@@ -2787,7 +2787,7 @@
       // ---- 단지 이름표를 눌렀을 때 뜨는 요약 말풍선(예전 Mapbox 3D 말풍선과 같은 내용) ----
       function bubbleEsc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(ch){ return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[ch]; }); }
       function bubbleSummary(c){
-        var txs = (c.txHistory || []).filter(function(t){ return t.amt && t.area; });
+        var txs = (c.txHistory || []).filter(function(t){ return t.amt && t.area && t.y && t.y >= 2025; });
         if (!txs.length) return null;
         txs = txs.slice().sort(function(a, b){ return ((b.y||0)*400 + (b.m||0)*31 + (b.d||0)) - ((a.y||0)*400 + (a.m||0)*31 + (a.d||0)); });
         var t = txs[0], pct = null;
@@ -3829,14 +3829,14 @@
         '<div class="stat-cell"><div class="k">세대수</div><div class="v">' + unitsTxt + '</div></div>' +
         '<div class="stat-cell"><div class="k">경과연수</div><div class="v">' + elapsedTxt + '</div></div>' +
         '<div class="stat-cell"><div class="k">최고층수(관찰)</div><div class="v">' + maxFloorTxt + '</div></div>' +
-        '<div class="stat-cell"><div class="k">거래건수(21.01~26.08)</div><div class="v">' + c.txHistory.length + '건</div></div>' +
+        '<div class="stat-cell"><div class="k">거래건수(25.01~현재)</div><div class="v">' + c.txHistory.filter(function(t){ return t.y && t.y >= 2025; }).length + '건</div></div>' +
       '</div>' +
       '<div class="addr-box"><div class="k">주소</div>' + c.address + '</div>' +
       '<div class="addr-box"><div class="k">' + presaleLabel + '</div>' + presale + '</div>' +
       buildUnitTypesHtml(c) +
       '<div id="' + chartId + '"></div>' +
       '<div id="' + txId + '"></div>' +
-      '<div class="note">· 분양가: 뉴스·분양공고 기준 (미확인 단지는 준공 후 첫 실거래가)<br>· 실거래: 국토부 매매 2021.01~2026.10 (신고 지연분은 추후 반영, 60㎡ 이하 제외)<br>· 최고층수: 거래에서 관찰된 값 (실제와 다를 수 있음)<br>· 향 정보 없음</div>';
+      '<div class="note">· 분양가: 뉴스·분양공고 기준 (미확인 단지는 준공 후 첫 실거래가)<br>· 실거래: 국토부 매매 2025.01~2026.10 (신고 지연분은 추후 반영, 60㎡ 이하 제외)<br>· 최고층수: 거래에서 관찰된 값 (실제와 다를 수 있음)<br>· 향 정보 없음</div>';
     if (!isPopup) {
       document.getElementById("panel").classList.add("open");
     }
@@ -3862,7 +3862,7 @@
     var floorFilter = (opts.floorFilter !== undefined) ? opts.floorFilter : txFloorFilter;
     var areaFilterVal = (opts.areaFilter !== undefined) ? opts.areaFilter : txAreaFilter;
     var structFilterVal = (opts.structFilter !== undefined) ? opts.structFilter : txStructFilter;
-    var txs = c.txHistory || [];
+    var txs = (c.txHistory || []).filter(function(t){ return t.y && t.y >= 2025; });
     if (txs.length === 0) {
       root.innerHTML = '<div class="tx-section"><div class="tx-title">층별·면적별 실거래 내역</div><div class="note">국토부 실거래가 표본에서 확인된 거래가 없습니다.</div></div>';
       return;

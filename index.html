@@ -417,6 +417,7 @@
   .tx-struct-pan{color:#1f6feb;border-color:#1f6feb;}
   .tx-struct-tap{color:#d9480f;border-color:#d9480f;}
   .tx-struct-na{color:#9a8f78;border-color:#cfc6b3;}
+  .unittype-name .tx-struct{margin-left:4px;vertical-align:1px;}
   .tx-struct-summary{font-size:.66rem;color:var(--ink-soft);margin:-2px 0 8px;}
   .tx-struct-summary b{color:var(--ink);}
   .tx-floor{font-weight:700;color:var(--ink);}
@@ -987,15 +988,18 @@
       var units = (t.unitsCount === null || t.unitsCount === undefined) ? '확인불가' : (t.unitsCount.toLocaleString() + '세대');
       var price = (t.priceAmt === null || t.priceAmt === undefined) ? '확인불가' : formatAmt(t.priceAmt);
       var extra = [];
-      if (normStruct(t.structureType)) extra.push(normStruct(t.structureType));
       if (t.hasAlphaRoom === true) extra.push('알파룸 있음');
       if (t.roomCount !== null && t.roomCount !== undefined) extra.push(t.roomCount + '개룸');
       var priceCell = price + (extra.length ? (' <span style="color:var(--ink-soft);font-size:.9em;">(' + extra.join(' · ') + ')</span>') : '');
       // 타입명과 전용면적을 한 칸("39A (39.88㎡)")으로 합치고, 도면이 있으면 그 타입 칸을 눌러 도면을 연다(별도 '도면' 열 제거).
       var dispName = t.displayName || t.typeName;
-      var typeLabel = dispName + ((dispName !== t.typeName) ? (' <span style="font-weight:400;color:var(--ink-soft);font-size:.9em;">' + t.typeName + '</span>') : '') + ((t.areaSqm === null || t.areaSqm === undefined) ? '' : (' <span style="font-weight:400;color:var(--ink-soft);">(' + area + ')</span>'));
+      // 표에는 전용 기준 타입명 + 판상/탑상 배지만. 공식명·정확한 면적은 도면 모달 제목으로.
+      var st = normStruct(t.structureType);
+      var typeLabel = dispName + (st ? (' ' + structBadge(st, true)) : '');
+      var exactArea = (t.areaExact !== null && t.areaExact !== undefined) ? t.areaExact : t.areaSqm;
+      var planTitle = dispName + ' (' + ((dispName !== t.typeName) ? ('공급 ' + t.typeName + ' · ') : '') + '전용 ' + (exactArea === null || exactArea === undefined ? '확인불가' : (exactArea + '㎡')) + ')';
       var typeCell = t.floorPlanUrl
-        ? ('<button type="button" class="floorplan-link unittype-name" data-plan-url="' + t.floorPlanUrl + '" data-plan-title="' + t.typeName + '" title="눌러서 도면 보기">' + typeLabel + '</button>')
+        ? ('<button type="button" class="floorplan-link unittype-name" data-plan-url="' + t.floorPlanUrl + '" data-plan-title="' + planTitle + '" title="눌러서 도면 보기">' + typeLabel + '</button>')
         : ('<span class="unittype-name">' + typeLabel + '</span>');
       return '<div class="unittype-row">' + typeCell +
         '<span>' + units + '</span><span>' + priceCell + '</span></div>';
@@ -1003,7 +1007,7 @@
     return '<div class="tx-section">' +
       '<div class="section-label tx-title">타입별 정보</div>' +
       '<div class="unittype-list">' +
-        '<div class="unittype-row unittype-row-head"><span>타입 (전용면적)</span><span>세대수</span><span>분양가</span></div>' +
+        '<div class="unittype-row unittype-row-head"><span>타입</span><span>세대수</span><span>분양가</span></div>' +
         rows +
       '</div>' +
       (types.some(function(x){ return x.floorPlanUrl; }) ? '<div class="note" style="margin-top:4px;">밑줄 친 타입을 누르면 도면이 열립니다.</div>' : '') +

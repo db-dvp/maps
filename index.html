@@ -2393,9 +2393,10 @@
   }
 
   function computeMaxFloor(entity){
+    if (entity.maxFloorObs) return entity.maxFloorObs;
     var mx = 0;
-    (entity.txHistory || []).forEach(function(t){ if (t.y && t.y >= 2025 && t.f && t.f > mx) mx = t.f; });
-    return mx || entity.maxFloorObs || null;
+    (entity.txHistory || []).forEach(function(t){ if (t.f && t.f > mx) mx = t.f; });
+    return mx || null;
   }
 
   function linearRegression(points){
@@ -3827,7 +3828,7 @@
       '<div class="stat-grid">' +
         '<div class="stat-cell"><div class="k">세대수</div><div class="v">' + unitsTxt + '</div></div>' +
         '<div class="stat-cell"><div class="k">경과연수</div><div class="v">' + elapsedTxt + '</div></div>' +
-        '<div class="stat-cell"><div class="k">최고층수(관찰)</div><div class="v">' + maxFloorTxt + '</div></div>' +
+        '<div class="stat-cell"><div class="k">최고층수</div><div class="v">' + maxFloorTxt + '</div></div>' +
         '<div class="stat-cell"><div class="k">거래건수(25.01~현재)</div><div class="v">' + c.txHistory.filter(function(t){ return t.y && t.y >= 2025; }).length + '건</div></div>' +
       '</div>' +
       '<div class="addr-box"><div class="k">주소</div>' + c.address + '</div>' +

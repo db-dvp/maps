@@ -1457,7 +1457,7 @@
             dong: t.apt_dong || null,
             unitTypeId: t.unit_type_id || null
           };
-        });
+        }).filter(function(t){ return t.y && t.y >= 2025; }); // 2021~2024 거래는 화면·계산에서 제외 (DB에는 보존)
 
         if (row.role === "comparison") {
           var c = {

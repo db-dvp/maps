@@ -2393,10 +2393,9 @@
   }
 
   function computeMaxFloor(entity){
-    if (entity.maxFloorObs) return entity.maxFloorObs;
     var mx = 0;
-    (entity.txHistory || []).forEach(function(t){ if (t.f && t.f > mx) mx = t.f; });
-    return mx || null;
+    (entity.txHistory || []).forEach(function(t){ if (t.y && t.y >= 2025 && t.f && t.f > mx) mx = t.f; });
+    return mx || entity.maxFloorObs || null;
   }
 
   function linearRegression(points){
@@ -3814,7 +3813,7 @@
     var badge = '<span class="status-badge" style="background:' + age.color + ';color:' + age.textColor + '">비교단지 · ' + age.label + '</span>';
     var presaleLabel = c.presaleIsProxy ? '최초 분양가 <span class="proxy-tag">준공 후 실거래가 대용</span>' : '최초 분양가';
     var presale = c.presalePrice ? c.presalePrice : '자료 없음 (온라인 확인 불가)';
-    var maxFloorTxt = c.maxFloorObs ? (c.maxFloorObs + "층") : "자료 없음";
+    var mfObs = computeMaxFloor(c); var maxFloorTxt = mfObs ? (mfObs + "층") : "자료 없음";
     var buildYearTxt = c.buildYear ? ("준공 " + c.buildYear + "년") : "준공예정(미준공)";
     var elapsedTxt = c.buildYear ? ((CURRENT_YEAR - c.buildYear) + "년") : "-";
     var unitsTxt = c.units ? (c.units + "세대" + (c.rentalUnits > 0 ? " (임대 " + c.rentalUnits + ")" : "")) : "확인 안됨";

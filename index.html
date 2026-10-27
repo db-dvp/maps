@@ -398,7 +398,7 @@
     max-height:320px;overflow-y:auto;
   }
   .tx-row{
-    display:grid;grid-template-columns:.75fr .85fr .95fr 1.05fr .8fr;gap:6px;align-items:center;
+    display:grid;grid-template-columns:.7fr .95fr .7fr 1.2fr .85fr;gap:4px;align-items:center;
     padding:6px 10px;font-size:.72rem;border-bottom:1px solid var(--line);
   }
   .tx-row:last-child{border-bottom:none;}
@@ -421,7 +421,9 @@
   .tx-struct-summary{font-size:.66rem;color:var(--ink-soft);margin:-2px 0 8px;}
   .tx-struct-summary b{color:var(--ink);}
   .tx-floor{font-weight:700;color:var(--ink);}
-  .tx-amt{font-weight:700;}
+  .tx-amt{font-weight:700;white-space:nowrap;}
+  .tx-fb{font-weight:500;font-size:.62rem;color:var(--ink-soft);}
+  .tx-area-main{display:flex;align-items:center;gap:4px;white-space:nowrap;}
   .tx-change{font-weight:700;text-align:right;display:flex;flex-direction:column;align-items:flex-end;line-height:1.3;}
   .tx-change-sub{font-size:.6rem;font-weight:500;color:var(--ink-soft);}
   .tx-change-up{color:#c1443c;}
@@ -995,7 +997,9 @@
       var dispName = t.displayName || t.typeName;
       // 표에는 전용 기준 타입명 + 판상/탑상 배지만. 공식명·정확한 면적은 도면 모달 제목으로.
       var st = normStruct(t.structureType);
-      var typeLabel = dispName; // 판상/탑상 배지는 실거래 목록에만 표시(단지 공통)
+      var exactForLabel = (t.areaExact !== null && t.areaExact !== undefined) ? t.areaExact : t.areaSqm;
+      // 판상/탑상 배지는 실거래 목록에만 표시(단지 공통). 표에는 타입명 + 전용면적(내림 정수㎡)
+      var typeLabel = dispName + ((exactForLabel !== null && exactForLabel !== undefined && !isNaN(Number(exactForLabel))) ? (' <span style="color:var(--ink-soft);font-size:.9em;font-weight:400;">(' + areaLabel(exactForLabel) + ')</span>') : '');
       var exactArea = (t.areaExact !== null && t.areaExact !== undefined) ? t.areaExact : t.areaSqm;
       var planTitle = dispName + ' (' + ((dispName !== t.typeName) ? ('공급 ' + t.typeName + ' · ') : '') + '전용 ' + (exactArea === null || exactArea === undefined ? '확인불가' : (exactArea + '㎡')) + ')';
       var typeCell = t.floorPlanUrl
@@ -3920,22 +3924,29 @@
       return (b.d||0) - (a.d||0);
     });
 
+    // 같은 정수㎡에 타입 라벨이 2개 이상일 때만(예: 84A/84B) 타입명을 따로 표시 → 대부분 한 줄로
+    var lblByArea = {};
+    filtered.forEach(function(t){ var k = areaLabel(t.areaExact || t.area); (lblByArea[k] = lblByArea[k] || {})[t._ti.label || ''] = 1; });
     var rows = filtered.map(function(t){
       var fb = floorBucketLabel(t.f, maxFloor);
+      var fbShort = fb ? fb.charAt(0) : '';
       var cmp = computeTxPctChange(t, c);
+      var ak = areaLabel(t.areaExact || t.area);
+      var multi = Object.keys(lblByArea[ak] || {}).length > 1;
+      var badge = structBadge(t._ti.struct, hasStruct);
       return '<div class="tx-row">' +
         '<span class="tx-date">' + t.y + '.' + String(t.m).padStart(2,"0") + '</span>' +
-        '<span class="tx-area">' + areaLabel(t.areaExact || t.area) +
-          ((t._ti.label || hasStruct) ? ('<span class="tx-type">' + (t._ti.label || '') + ' ' + structBadge(t._ti.struct, hasStruct) + '</span>') : '') +
+        '<span class="tx-area"><span class="tx-area-main">' + ak + (badge ? (' ' + badge) : '') + '</span>' +
+          ((multi && t._ti.label) ? ('<span class="tx-type">' + t._ti.label + '</span>') : '') +
         '</span>' +
-        '<span class="tx-floor">' + fb + '(' + t.f + '층)</span>' +
+        '<span class="tx-floor">' + t.f + '층<span class="tx-fb">' + (fbShort ? ' ' + fbShort : '') + '</span></span>' +
         '<span class="tx-amt">' + formatAmt(t.amt) + '</span>' +
         formatPctChange(cmp.pct, cmp.label, cmp.isProxy) +
       '</div>';
     }).join("");
     var headerRow =
       '<div class="tx-row tx-row-head">' +
-        '<span>날짜</span><span>면적·타입</span><span>층수</span><span>가격</span><span class="tx-change">최초 대비</span>' +
+        '<span>날짜</span><span>면적</span><span>층</span><span>가격</span><span class="tx-change">최초 대비</span>' +
       '</div>';
     if (!rows) rows = '<div class="note" style="padding:8px 0;">해당 조건의 거래 표본이 없습니다.</div>';
 
